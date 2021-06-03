@@ -1,0 +1,7 @@
+{
+    "cSpell.words": [
+        "rmt"
+    ],
+    "python.pythonPath": "venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": ["rmt"]
+}
