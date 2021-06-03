@@ -1,2 +1,2 @@
-# rmt-app
+# RMT-APP
 Reactor Modeling Tools 
