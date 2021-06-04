@@ -1,10 +1,12 @@
-import numpy as np
-
 # model input
 
-# feed
+# import package/module
+import numpy as np
+
+# feed properties
+# ----------------
 # H2/COx ratio
-H2COxRatio = 2
+H2COxRatio = 2.0
 # CO2/CO ratio
 CO2COxRatio = 0.8
 # mole fraction
@@ -24,4 +26,4 @@ tmf = y0_H2 + y0_CO + y0_CO2 + y0_H2O + y0_CH3OH + y0_DME
 # CO2/CO2+CO ratio
 CO2CO2CORatio = y0_CO2/(y0_CO2+y0_CO)
 # res
-fres = np.array([y0_H2, y0_CO, y0_CO2])
+feedMoFri = np.array([y0_H2, y0_CO2, y0_H2O, y0_CO, y0_CH3OH, y0_DME])
