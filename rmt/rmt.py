@@ -1,26 +1,65 @@
-# REACTOR MODELING TOOLS
-# -----------------------
+# REACTOR MODELING TOOLS IN PYTHON
+# ---------------------------------
 
-# import package/module
-import data
+# import packages/modules
 import timeit
 import docs
+from docs.rmtCore import rmtCoreClass
 
 
-# tic
-tic = timeit.timeit()
+def main():
+    """
+        Reactor Modeling Tools in Python
+    """
+    pass
 
-# display feed
-print(f"feed mole fraction: {data.feedMoFri}")
-print(data.bed_por)
 
-# docs
-x = docs.MW_mix
-print(f"mixture MW: {x}")
+def rmtExe(modelInput):
+    """
+        This script check model input, then starts computation
+    """
 
-# tac
-tac = timeit.timeit()
+    # tic
+    tic = timeit.timeit()
 
-# computation time [s]
-comTime = (tac - tic)*1000
-print(f"computation time: {comTime}")
+    # check input data
+    # model type
+    modelType = modelInput['model']
+    print(f"model type: {modelType}")
+
+    # operating conditions
+    pressure = modelInput['operating-conditions']['pressure']
+    print(f"pressure: {pressure}")
+    temperature = modelInput['operating-conditions']['temperature']
+    print(f"temperature: {temperature}")
+
+    # feed
+    FeMoFri = modelInput['feed']['mole-fraction']
+    print(f"FeMoFri: {FeMoFri}")
+    FeFlRa = modelInput['feed']['molar-flowrate']
+    print(f"FeFlRa: {FeFlRa}")
+    FeCom = modelInput['feed']['components']
+    print(f"FeCom: {FeCom}")
+
+    # init class
+    rmtCore = rmtCoreClass(modelType, modelInput)
+
+    # init computation
+    resModel = rmtCore.modExe()
+
+    # tac
+    tac = timeit.timeit()
+
+    # computation time [s]
+    comTime = (tac - tic)*1000
+
+    # result
+    res = {
+        "resModel": resModel,
+        "comTime": comTime
+    }
+    return res
+
+
+if __name__ == "__main__":
+    main()
