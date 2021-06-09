@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
+        "kgcat",
         "rmt",
+        "scipy",
         "sgvp"
     ],
     "python.pythonPath": "venv\\Scripts\\python.exe",

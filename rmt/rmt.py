@@ -38,6 +38,8 @@ def rmtExe(modelInput):
     print(f"FeMoFri: {FeMoFri}")
     FeFlRa = modelInput['feed']['molar-flowrate']
     print(f"FeFlRa: {FeFlRa}")
+    MoFl = modelInput['feed']['molar-flux']
+    print(f"MoFl: {MoFl}")
     FeCom = modelInput['feed']['components']
     print(f"FeCom: {FeCom}")
 

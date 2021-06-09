@@ -30,4 +30,4 @@ class errGeneralClass(errHandlerClass):
             return 'errGeneralClass has not raised'
 
 
-raise errGeneralClass(1, "typing error!")
+# raise errGeneralClass(1, "typing error!")

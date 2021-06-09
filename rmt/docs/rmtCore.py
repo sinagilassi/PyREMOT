@@ -4,11 +4,12 @@
 # import packages/modules
 from data.inputDataReactor import *
 from core.setting import modelTypes, M1
-from docs.pbReactor import runM1
-from docs.cReactor import conventionalReactorClass
+# from docs.pbReactor import runM1
+from docs.cReactor import conventionalReactorClass as cRec
+from docs.pbReactor import PackedBedReactorClass as pbRec
 
 
-class rmtCoreClass:
+class rmtCoreClass(pbRec, cRec):
     """
         script for different modeling modes
     """
@@ -21,6 +22,8 @@ class rmtCoreClass:
     def __init__(self, modelMode, modelInput):
         self.modelMode = modelMode
         self.modelInput = modelInput
+        # pbRec
+        pbRec.__init__(self, modelInput)
 
     def modExe(self):
         """
@@ -37,8 +40,7 @@ class rmtCoreClass:
             more info, check --help M1
         """
         # class init
-        modelInput = self.modelInput
-        pbRec = runM1(modelInput)
+        # modelInput = self.modelInput
         # start cal
-        res = pbRec.runM1()
+        res = self.runM1()
         return res

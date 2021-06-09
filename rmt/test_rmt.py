@@ -32,7 +32,7 @@ y0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
 ct0 = calConcentration(feedMoFr, P, T)
 # print(f"component concentration: {ct0}")
 
-# total concentration
+# total concentration [kmol/m3]
 ct0T = calTotalConcentration(ct0)
 # print(f"total concentration: {ct0T}")
 
@@ -74,6 +74,7 @@ modelInput = {
     "feed": {
         "mole-fraction": feedMoFr,
         "molar-flowrate": Ft0,
+        "molar-flux": Fl0,
         "components": {
             "shell": ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"],
             "tube": [],
