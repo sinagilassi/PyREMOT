@@ -1,9 +1,15 @@
 {
     "cSpell.words": [
+        "Xpoint",
+        "Xpoints",
+        "Ypoints",
         "kgcat",
+        "pltc",
         "rmt",
         "scipy",
-        "sgvp"
+        "sgvp",
+        "xlabel",
+        "ylabel"
     ],
     "python.pythonPath": "venv\\Scripts\\python.exe",
     "python.analysis.extraPaths": ["rmt"]

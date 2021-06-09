@@ -2,11 +2,12 @@
 # -------------------------
 
 # import packages/modules
-from core.errors import errGeneralClass as errGeneral
 import numpy as np
-from data.inputDataReactor import *
 from scipy.integrate import solve_ivp
+from core.errors import errGeneralClass as errGeneral
+from data.inputDataReactor import *
 from core import constants as CONST
+from library.plot import plotClass as pltc
 
 
 class PackedBedReactorClass:
@@ -32,6 +33,11 @@ class PackedBedReactorClass:
             "temperature": T
         }
 
+        # component list
+        compList = self.modelInput['feed']['components']['shell']
+        labelList = compList.copy()
+        labelList.append("Flux")
+
         # initial values
         # -> mole fraction
         MoFri = self.modelInput['feed']['mole-fraction']
@@ -50,11 +56,31 @@ class PackedBedReactorClass:
         sol = solve_ivp(PackedBedReactorClass.modelEquationM1,
                         t, IV, args=(P, T))
 
-        # res
-        x = sol.y
-        print(x)
+        # ode result
+        successStatus = sol.success
+        dataX = sol.t
+        dataYs = sol.y
 
-        res = x
+        # check
+        if successStatus:
+            # plot setting
+            XYList = pltc.plots2DSetXYList(dataX, dataYs)
+            # -> label
+            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # plot result
+            # pltc.plots2D(dataList, "Reactor Length (m)",
+            #              "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+
+        else:
+            XYList = []
+            dataList = []
+
+        # return
+        res = {
+            "XYList": XYList,
+            "dataList": dataList
+        }
+
         return res
 
     # model equations

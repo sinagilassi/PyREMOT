@@ -7,6 +7,7 @@ from core import constants as CONST
 from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
+import json
 
 
 # operating conditions
@@ -86,4 +87,8 @@ modelInput = {
 
 # run exe
 res = rmtExe(modelInput)
-print(f"modeling result: {res}")
+# print(f"modeling result: {res}")
+
+# save modeling result
+with open('modelingRes.json', 'w') as f:
+    json.dump(res, f)
