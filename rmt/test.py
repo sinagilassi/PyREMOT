@@ -42,5 +42,12 @@ data = [
 # sRes.saveListToText(c0)
 # sRes.saveListToCSV(c, ["name", "age", "year"])
 
-aStr = a1.join(",")
-print(aStr)
+# aStr = a1.join(",")
+# print(aStr)
+
+
+def f(x):
+    return x + 2
+
+
+y = f(x)
