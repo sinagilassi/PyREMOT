@@ -15,3 +15,6 @@ PI_CONST = math.pi
 Pstp = 101325
 #  temperature [K]
 Tstp = 273.15
+
+# reference temperature
+Tref = Tstp + 25.00
