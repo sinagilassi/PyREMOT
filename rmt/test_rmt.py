@@ -62,12 +62,11 @@ reactionSet = {
     "R1": "CO2 + 3H2 <=> CH3OH + H2O",
     "R2": "CO + H2O <=> H2 + CO2",
     "R3": "2CH3OH <=> DME + H2O",
-    "RT": "3CO + 3H2 <=> CH3OCH3 + CO2"
 }
 
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "M2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

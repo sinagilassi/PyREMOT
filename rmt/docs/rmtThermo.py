@@ -4,8 +4,11 @@
 # import packages/modules
 import numpy as np
 import re
+# internals
 from core.constants import Tref
 from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
+from core.utilities import roundNum
+# from .rmtUtility import
 
 
 def main():
@@ -41,16 +44,46 @@ def calHeatCapacityAtConstantPressure(comList, T):
 
         # convert to numpy array
         Cpi = np.array(_Cpi)
+        # print("Cpi: ", Cpi)
         # res
         return Cpi
     except Exception as e:
         print(e)
 
 
+def calMeanHeatCapacityAtConstantPressure(comList, T2, T1=Tref):
+    """
+        cal: mean heat capacity at constant pressure 
+        unit: [kJ/kmol.K] 
+
+        args:
+            comList: name of components
+            T2: final temperature [K]
+            T1: reference temperature [K]
+    """
+    # try/except
+    try:
+        # cp at T1 [kJ/kmol.K]
+        CpT1 = calHeatCapacityAtConstantPressure(comList, T1)
+        # cp at T2 [kJ/kmol.K]
+        CpT2 = calHeatCapacityAtConstantPressure(comList, T2)
+        # cp average
+        CpAvg = (CpT1 + CpT2)*0.50
+        # print("CpAvg: ", CpAvg)
+        # res
+        return CpAvg
+    except Exception as e:
+        print(e)
+
+
 def calMixtureHeatCapacityAtConstantPressure(MoFri, HeCaCoPri):
     """
-        cal: heat capacity at constant pressure of mixture
+        cal: heat capacity at constant pressure of mixture 
         unit: [kJ/kmol.K] 
+
+        args:
+            MoFri: mole fraction of components 
+            HeCaCoPri: heat capacity at constant pressure of components [kJ/kmol.K]
     """
     # try/except
     try:
@@ -83,12 +116,8 @@ def calEnthalpyChange(comList, T2, T1=Tref):
     """
     # try/except
     try:
-        # cp at T1 [kJ/kmol.K]
-        CpT1 = calHeatCapacityAtConstantPressure(comList, T1)
-        # cp at T2 [kJ/kmol.K]
-        CpT2 = calHeatCapacityAtConstantPressure(comList, T2)
-        # cp average
-        CpAvg = (CpT1 + CpT2)*0.50
+        # cp average [kJ/kmol.K]
+        CpAvg = calMeanHeatCapacityAtConstantPressure(comList, T2, T1)
 
         # enthalpy change [kJ/kmol]
         dH = CpAvg*(T2 - T1)
@@ -101,7 +130,7 @@ def calEnthalpyChange(comList, T2, T1=Tref):
 def calStandardEnthalpyOfReaction(reaExpr):
     """
         cal: standard enthalpy of reaction at 25C
-        unit: [kJ/mol]
+        unit: [kJ/kmol]
 
         args:
             reaExpr: reaction expression:  
@@ -116,13 +145,14 @@ def calStandardEnthalpyOfReaction(reaExpr):
         reaType = reaExpr.replace("<", "").replace(">", "")
         # reactant/products list
         compR = reaType.replace(r" ", "").split("=")
-        print(f"compR1 {compR}")
+        # print(f"compR1 {compR}")
 
         # componets
         reactantList = re.findall(r"([0-9.]*)([a-zA-Z0-9.]+)", compR[0])
-        print(f"reactantList {reactantList}")
+        # print(f"reactantList {reactantList}")
         productList = re.findall(r"([0-9.]*)([a-zA-Z0-9.]+)", compR[1])
-        print(f"productList {productList}")
+        # print(f"productList {productList}")
+        # print("------------------")
 
         # standard heat of formation at 25
         _dHf25iReactantList = []
@@ -152,9 +182,16 @@ def calStandardEnthalpyOfReaction(reaExpr):
         dHf25iReactantList = np.array(_dHf25iReactantList).flatten()
         dHf25iProductList = np.array(_dHf25iProductList).flatten()
 
+        # print(f"dHf25iReactantList {dHf25iReactantList}")
+        # print(f"dHf25iProductList {dHf25iProductList}")
+
         # standard heat of formation at 25 [kJ/kmol]
-        dHf25 = (np.sum(dHf25iProductList) -
-                 np.sum(dHf25iReactantList))/1000.00
+        dHf25iProductListSum = np.sum(dHf25iProductList)
+        dHf25iReactantListSum = np.sum(dHf25iReactantList)
+        # print(f"dHf25iProductListSum {dHf25iProductListSum}")
+        # print(f"dHf25iReactantListSum {dHf25iReactantListSum}")
+
+        dHf25 = (dHf25iProductListSum-dHf25iReactantListSum)*1000.00
         # res
         return dHf25
     except Exception as e:
@@ -214,3 +251,69 @@ def calGasHourlySpaceVelocity(VoFlRa, ReVo):
         return GaHoSpVe
     except Exception as e:
         print(e)
+
+# NOTE
+
+
+def calEnthalpyChangeOfReaction(reactionListSorted, T):
+    """
+        cal: standard enthalpy of reaction at 25C
+        unit: [kJ/kmol]
+
+        args:
+            reactionListSorted: reaction expression dict
+            T: temperature [K]
+    """
+    # try/except
+    try:
+        # reaction list
+        # print(f"reactionListSorted {reactionListSorted}")
+
+        # enthalpy change list
+        EnChList = []
+
+        # reactant coefficient
+        for item in reactionListSorted:
+            # reactants
+            _reactants = [i['symbol'] for i in item['reactants']]
+            _reactantCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                _reactants, T)
+            # reactant coeff
+            _reactantCoeff = [i['coeff'] for i in item['reactants']]
+            # convertion
+            _loop1 = np.array(_reactantCpMeanList)
+            _loop2 = np.array(_reactantCoeff)
+            _loop3 = np.dot(_loop1, _loop2)
+            # print(_loop1, _loop2, _loop3)
+
+            # products
+            _products = [i['symbol'] for i in item['products']]
+            _productCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                _products, T)
+            # product coeff
+            _productCoeff = [i['coeff'] for i in item['products']]
+            # convertion
+            _loop5 = np.array(_productCpMeanList)
+            _loop6 = np.array(_productCoeff)
+            _loop7 = np.dot(_loop5, _loop6)
+            # print(_loop5, _loop6, _loop7)
+
+            # Cp mean of reaction
+            CpMean = _loop7 + _loop3
+            # print(f"CpMean: {CpMean}")
+
+            # enthalpy change between Tref and T [kJ/kmol]
+            EnChT = CpMean*(T - Tref)
+            # print(f"EnChT: {EnChT}")
+
+            # store
+            EnChList.append(EnChT)
+
+        # res
+        return EnChList
+    except Exception as e:
+        print(e)
+
+
+if __name__ == "__main__":
+    main()
