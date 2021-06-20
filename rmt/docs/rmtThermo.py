@@ -74,6 +74,7 @@ def calMeanHeatCapacityAtConstantPressure(comList, T2, T1=Tref):
         return CpAvg
     except Exception as e:
         print(e)
+        raise
 
 
 def calMixtureHeatCapacityAtConstantPressure(MoFri, HeCaCoPri):
@@ -284,7 +285,6 @@ def calEnthalpyChangeOfReaction(reactionListSorted, T):
             _loop1 = np.array(_reactantCpMeanList)
             _loop2 = np.array(_reactantCoeff)
             _loop3 = np.dot(_loop1, _loop2)
-            # print(_loop1, _loop2, _loop3)
 
             # products
             _products = [i['symbol'] for i in item['products']]
@@ -296,7 +296,6 @@ def calEnthalpyChangeOfReaction(reactionListSorted, T):
             _loop5 = np.array(_productCpMeanList)
             _loop6 = np.array(_productCoeff)
             _loop7 = np.dot(_loop5, _loop6)
-            # print(_loop5, _loop6, _loop7)
 
             # Cp mean of reaction
             CpMean = _loop7 + _loop3
@@ -313,6 +312,7 @@ def calEnthalpyChangeOfReaction(reactionListSorted, T):
         return EnChList
     except Exception as e:
         print(e)
+        raise
 
 
 if __name__ == "__main__":

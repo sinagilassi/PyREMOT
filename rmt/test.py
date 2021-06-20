@@ -3,6 +3,7 @@ from library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
 from library.saveResult import saveResultClass as sRes
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from core.utilities import *
 
 from docs.rmtThermo import *
 
@@ -88,11 +89,11 @@ reactionSet = {
 # print(f"StHeRe25: {StHeRe25}")
 
 #
-res1 = rmtUtil.buildReactionCoefficient(reactionSet)
-print("res1: ", res1)
-res2 = rmtUtil.buildReactionCoeffVector(res1)
-print("res2: ", res2)
-# fun
+# res1 = rmtUtil.buildReactionCoefficient(reactionSet)
+# print("res1: ", res1)
+# res2 = rmtUtil.buildReactionCoeffVector(res1)
+# print("res2: ", res2)
+# # fun
 
 
 # def cpFun(T): return eval("T + 1")
@@ -124,3 +125,11 @@ T2 = 300
 # # mixture gas heat capacity [kJ/kmol.K]
 # CpMeanMixture = calMixtureHeatCapacityAtConstantPressure(MoFri, CpMean)
 # print(f"Cp mean mixture {CpMeanMixture}")
+
+#  round number
+# a = [100.25419542, 5423.6587]
+# b = roundNum(a, 4)
+# print("b: ", b)
+
+# c = np.power(2.5, 3)
+# print(type(c))

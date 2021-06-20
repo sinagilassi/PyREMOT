@@ -18,9 +18,9 @@ T = 523
 
 # set feed mole fraction
 # H2/COx ratio
-H2COxRatio = 2.0
+H2COxRatio = 1
 # CO2/CO ratio
-CO2COxRatio = 0.8
+CO2COxRatio = 0.5
 feedMoFr = setFeedMoleFraction(H2COxRatio, CO2COxRatio)
 # print(f"feed mole fraction: {feedMoFr}")
 
@@ -66,7 +66,7 @@ reactionSet = {
 
 # model input - feed
 modelInput = {
-    "model": "M2",
+    "model": "M1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -89,5 +89,5 @@ res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
 
 # save modeling result
-with open('modelingRes.json', 'w') as f:
-    json.dump(res, f)
+# with open('modelingRes.json', 'w') as f:
+#     json.dump(res, f)

@@ -9,7 +9,8 @@ appConfig = {
     "calculation": {
         "roundAccuracy": 3,
         "roundAccuracyMole": 4,
-        "roundAccuracyConcentration": 4
+        "roundAccuracyConcentration": 4,
+        "roundAccuracyReaction": 5
     }
 }
 
@@ -19,3 +20,5 @@ ROUND_FUN_ACCURACY = appConfig['calculation']['roundAccuracy']
 MOLE_FRACTION_ACCURACY = appConfig['calculation']['roundAccuracyMole']
 # concentration
 CONCENTRATION_ACCURACY = appConfig['calculation']['roundAccuracyConcentration']
+# reaction rate
+REACTION_RATE_ACCURACY = appConfig['calculation']['roundAccuracyReaction']
