@@ -11,6 +11,7 @@ from docs.pbReactor import PackedBedReactorClass as pbRec
 from data.componentData import componentDataStore
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import calEnthalpyChangeOfReaction
+from .rmtReaction import rmtReactionClass as rmtRec
 
 
 class rmtCoreClass(pbRec, cRec):
@@ -31,6 +32,8 @@ class rmtCoreClass(pbRec, cRec):
         compList = self.modelInput['feed']['components']['shell']
         # reaction list
         reactionList = self.modelInput['reactions']
+        # reaction rate list
+        reactionRateList = self.modelInput['reaction-rates']
 
         # init database
         internalDataSet = self.initComponentData(compList)
@@ -40,11 +43,16 @@ class rmtCoreClass(pbRec, cRec):
         reactionListSortedSet = self.initReaction(reactionList)
         # print(reactionCoeffSet)
 
+        # reaction rate expression
+        reactionRateExpressionSet = self.initReactionRate(reactionRateList)
+        # test fun
+        # ans1 = reactionRateExpressionSet[0].reactionRateFunSet(T=1, P=2, y=3)
+        # print("ans1: ", ans1)
+
         # pbRec
         pbRec.__init__(self, modelInput, internalDataSet,
                        reactionListSortedSet)
 
-# NOTE
     def modExe(self):
         """
             select modeling script based on model type
@@ -55,9 +63,6 @@ class rmtCoreClass(pbRec, cRec):
             return self.M1Init()
         elif modelMode == M2:
             return self.M2Init()
-
-
-# NOTE
 
     def M1Init(self):
         """
@@ -71,8 +76,6 @@ class rmtCoreClass(pbRec, cRec):
         res = self.runM1()
         return res
 
-# NOTE
-
     def M2Init(self):
         """
             M1 model
@@ -85,7 +88,6 @@ class rmtCoreClass(pbRec, cRec):
         res = self.runM2()
         return res
 
-# NOTE
     def initComponentData(self, compList):
         """
             initialize component data as:
@@ -111,7 +113,6 @@ class rmtCoreClass(pbRec, cRec):
         except Exception as e:
             raise
 
-# NOTE
     def initReaction(self, reactionDict):
         """
             initialize reaction list to find stoichiometric coefficient
@@ -124,7 +125,34 @@ class rmtCoreClass(pbRec, cRec):
             # reaction stoichiometric coefficient vector
             reactionStochCoeff = rmtUtil.buildReactionCoeffVector(
                 reactionListSorted)
+
+            # reaction rate expression list
+
             # res
             return reactionListSorted
+        except Exception as e:
+            raise
+
+    def initReactionRate(self, reactionRateDict):
+        """
+            initialize reaction rate expr list 
+        """
+        # try/except
+        try:
+            # reaction rate expr no
+            reactionRateExprNo = list(reactionRateDict.keys())
+            # reaction rate expr list
+            reactionRateExprList = []
+
+            # reaction rate expression list
+            for i in reactionRateDict:
+                _loop = rmtRec(reactionRateDict[i])
+                # print("reaction rate expr: ",
+                #       _loop.reactionRateFunSet(T=1, P=2, y=3))
+                # add to list
+                reactionRateExprList.append(_loop)
+
+            # res
+            return reactionRateExprList
         except Exception as e:
             raise

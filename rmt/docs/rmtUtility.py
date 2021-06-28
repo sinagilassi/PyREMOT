@@ -180,3 +180,17 @@ class rmtUtilityClass:
             return reactionCoeff
         except Exception as e:
             raise
+
+    @staticmethod
+    def buildreactionRateExpr(reactionRateExprDict):
+        """
+        build a list of reaction rate expression 
+        args:
+            reactionRateExprDict: a dictionary contains all reaction rate expr
+            {"R1": "r1(C,T,y), ...}
+        """
+        # try/except
+        try:
+            print(0)
+        except Exception as e:
+            raise

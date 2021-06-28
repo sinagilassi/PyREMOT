@@ -64,9 +64,16 @@ reactionSet = {
     "R3": "2CH3OH <=> DME + H2O",
 }
 
+reactionRateSet = {
+    "R1": "T+ P + y + 1",
+    "R2": "T+ P + y + 2",
+    "R3": "T+ P + y + 3",
+}
+
+
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "M2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -81,12 +88,13 @@ modelInput = {
             "medium": []
         }
     },
-    "reactions": reactionSet
+    "reactions": reactionSet,
+    "reaction-rates": reactionRateSet
 }
 
 # run exe
 res = rmtExe(modelInput)
-# print(f"modeling result: {res}")
+print(f"modeling result: {res}")
 
 # save modeling result
 # with open('modelingRes.json', 'w') as f:

@@ -2,6 +2,7 @@
 # -------------
 
 # import packages/modules
+from typing import List
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -34,27 +35,38 @@ class plotClass:
     @staticmethod
     def plots2D(data, xLabel, yLabel, title=""):
         """
-            data:
-                data[i]:
-                    xs[i]:
-                        point list
-                    yx[i]:
-                        point list
-                    linestyle (ls): solid (-), dotted (:), dashed (--), dashdor (-.)
-                    color (c):
-                    label: legend in the figure 
-            xLabel: x axis name
-            yLabel: y axis name
-            title: plot title
+        data:
+            data[i]:
+                xs[i]:
+                    point list
+                yx[i]:
+                    point list
+                linestyle (ls): solid (-), dotted (:), dashed (--), dashdor (-.)
+                color (c):
+                label: legend in the figure 
+        xLabel: x axis name
+        yLabel: y axis name
+        title: plot title
         """
-        lineNo = range(len(data))
-        lineXs = [item['x'] for item in data]
-        lineYs = [item['y'] for item in data]
-        lineLegend = [item['leg'] if 'leg' in item.keys()
-                      else "line" for item in data]
+        # check data type
+        if isinstance(data, List):
+            lineNo = range(len(data))
+            lineXs = [item['x'] for item in data]
+            lineYs = [item['y'] for item in data]
+            lineLegend = [item['leg'] if 'leg' in item.keys()
+                          else "line" for item in data]
 
-        for i in lineNo:
-            plt.plot(lineXs[i], lineYs[i], label=lineLegend[i])
+            for i in lineNo:
+                plt.plot(lineXs[i], lineYs[i], label=lineLegend[i])
+        else:
+            lineXs = data['x']
+            lineYs = data['y']
+            if 'leg' in data.keys():
+                lineLegend = data['leg']
+            else:
+                lineLegend = "line"
+
+            plt.plot(lineXs, lineYs, label=lineLegend)
 
         # title
         if len(title) > 0:
@@ -93,3 +105,58 @@ class plotClass:
             })
         # res
         return dataList
+
+    @staticmethod
+    def plots2DSub(dataList, xLabel, yLabel, title=""):
+        """
+        dataList:
+            data[i]:
+                xs[i]:
+                    point list
+                yx[i]:
+                    point list
+                linestyle (ls): solid (-), dotted (:), dashed (--), dashdor (-.)
+                color (c):
+                label: legend in the figure 
+        xLabel: x axis name
+        yLabel: y axis name
+        title: plot title 
+        """
+        # plot no
+        plotNo = len(dataList)
+        # set subplot
+        figure, axis = plt.subplots(plotNo)
+        # load data
+        for i in range(plotNo):
+            # check data type
+            if isinstance(dataList[i], List):
+                lineNo = range(len(dataList[i]))
+                lineXs = [item['x'] for item in dataList[i]]
+                lineYs = [item['y'] for item in dataList[i]]
+                lineLegend = [item['leg'] if 'leg' in item.keys()
+                              else "line" for item in dataList[i]]
+
+                for j in lineNo:
+                    axis[i].plot(lineXs[j], lineYs[j], label=lineLegend[j])
+            else:
+                lineXs = dataList[i]['x']
+                lineYs = dataList[i]['y']
+                if 'leg' in dataList[i].keys():
+                    lineLegend = dataList[i]['leg']
+                else:
+                    lineLegend = "line"
+
+                axis[i].plot(lineXs, lineYs, label=lineLegend)
+
+        # title
+        if len(title) > 0:
+            plt.title(title)
+
+        # labels
+        # plt.xlabel(xLabel)
+        # plt.ylabel(yLabel)
+        # # legend
+        # plt.legend()
+
+        # display
+        plt.show()

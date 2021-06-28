@@ -29,7 +29,6 @@ class PackedBedReactorClass:
         self.internalData = internalData
         self.reactionListSorted = reactionListSorted
 
-# NOTE
     @property
     def internalData(cls):
         return cls._internalData
@@ -39,7 +38,6 @@ class PackedBedReactorClass:
         cls._internalData.clear()
         cls._internalData.extend(value)
 
-# NOTE
     def runM1(self):
         """
             M1 modeling case
@@ -77,7 +75,7 @@ class PackedBedReactorClass:
 
         # ode call
         sol = solve_ivp(PackedBedReactorClass.modelEquationM1,
-                        t, IV, t_eval=times, args=(P, T))
+                        t, IV, method="LSODA", t_eval=times, args=(P, T))
 
         # ode result
         successStatus = sol.success
@@ -106,7 +104,6 @@ class PackedBedReactorClass:
 
         return res
 
-# NOTE
     def runM2(self):
         """
             M2 modeling case
@@ -124,6 +121,12 @@ class PackedBedReactorClass:
         compList = self.modelInput['feed']['components']['shell']
         labelList = compList.copy()
         labelList.append("Flux")
+        labelList.append("Temperature")
+
+        # component no
+        compNo = len(compList)
+        indexFlux = compNo
+        indexTemp = indexFlux + 1
 
         # initial values
         # -> mole fraction
@@ -146,29 +149,53 @@ class PackedBedReactorClass:
             list(map(calStandardEnthalpyOfReaction, reactionList)))
 
         # time span
-        t = (0.0, rea_L)
+        # t = (0.0, rea_L)
+        t = np.array([0, rea_L])
         t_span = np.array([0, rea_L])
-        times = np.linspace(t_span[0], t_span[1], 20)
+        times = np.linspace(t_span[0], t_span[1], 100)
         # tSpan = np.linspace(0, rea_L, 25)
 
         # ode call
         sol = solve_ivp(PackedBedReactorClass.modelEquationM2,
-                        t, IVSet, t_eval=times, args=(P, compList, StHeRe25, reactionListSorted))
+                        t, IVSet, method="LSODA", t_eval=times, args=(P, compList, StHeRe25, reactionListSorted))
 
         # ode result
         successStatus = sol.success
         dataX = sol.t
+        # all results
         dataYs = sol.y
+        # concentration
+        dataYs1 = sol.y[0:compNo, :]
+        labelListYs1 = labelList[0:compNo]
+        # flux
+        dataYs2 = sol.y[indexFlux, :]
+        labelListYs2 = labelList[indexFlux]
+        # temperature
+        dataYs3 = sol.y[indexTemp, :]
+        labelListYs3 = labelList[indexTemp]
 
         # check
         if successStatus is True:
-            # plot setting
+            # plot setting: build (x,y) series
             XYList = pltc.plots2DSetXYList(dataX, dataYs)
-            # -> label
+            # -> add label
             dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # datalists
+            dataLists = [dataList[0:compNo],
+                         dataList[indexFlux], dataList[indexTemp]]
+            # subplot result
+            pltc.plots2DSub(dataLists, "Reactor Length (m)",
+                            "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+
             # plot result
-            # pltc.plots2D(dataList, "Reactor Length (m)",
+            # pltc.plots2D(dataList[0:compNo], "Reactor Length (m)",
             #              "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+
+            # pltc.plots2D(dataList[indexFlux], "Reactor Length (m)",
+            #              "Flux (kmol/m^2.s)", "1D Plug-Flow Reactor")
+
+            # pltc.plots2D(dataList[indexTemp], "Reactor Length (m)",
+            #              "Temperature (K)", "1D Plug-Flow Reactor")
 
         else:
             XYList = []
@@ -182,13 +209,12 @@ class PackedBedReactorClass:
 
         return res
 
-# NOTE
     def modelEquationM1(t, y, P, T):
         """
             M1 model
             mass balance equations
-            modelParameters: 
-                pressure [Pa] 
+            modelParameters:
+                pressure [Pa]
                 temperature [K]
         """
         # operating conditions
@@ -255,7 +281,6 @@ class PackedBedReactorClass:
                 dxdt_CO, dxdt_CH3OH, dxdt_DME, dxdt_T]
         return dxdt
 
-# NOTE
     def modelReactions(P, T, y):
         try:
             # pressure [Pa]
@@ -333,11 +358,11 @@ class PackedBedReactorClass:
         """
             M2 model
             mass and energy balance equations
-            modelParameters: 
-                pressure [Pa] 
+            modelParameters:
+                pressure [Pa]
                 compList: component list
                 StHeRe25: standard heat of reaction at 25C
-                reactionListSorted: reaction list 
+                reactionListSorted: reaction list
         """
         # REVIEW
         # t
@@ -402,6 +427,16 @@ class PackedBedReactorClass:
         # overall heat of reaction
         OvHeReT = np.dot(Ri, HeReT)
 
+        # FIXME
+        # cooling temperature
+        Tm = 523
+        # overall heat transfer coefficient [J/s.m2.K]
+        U = 100
+        #  heat transfer area over volume [m2/m3]
+        a = 4/rea_D
+        Ua = U*a
+        Qm = (Ua*(T - Tm))*1e-3
+
         # mass balance equation
         # loop vars
         A1 = 1/MoFl
@@ -423,7 +458,7 @@ class PackedBedReactorClass:
         #  overall
         dxdt_Tot = B1*R_T
         # temperature
-        dxdt_T = C1*(-OvHeReT)
+        dxdt_T = C1*(-OvHeReT - Qm)
 
         # build diff/dt
         dxdt = [dxdt_H2, dxdt_CO2, dxdt_H2O,
