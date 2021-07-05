@@ -4,17 +4,18 @@
 # import packages/modules
 from pprint import pprint
 from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2
+from core.setting import modelTypes, M1, M2, M3
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
+from docs.batchReactor import batchReactorClass as bRec
 from data.componentData import componentDataStore
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import calEnthalpyChangeOfReaction
 from .rmtReaction import rmtReactionClass as rmtRec
 
 
-class rmtCoreClass(pbRec, cRec):
+class rmtCoreClass(pbRec, cRec, bRec):
     """
         script for different modeling modes
     """
@@ -53,6 +54,9 @@ class rmtCoreClass(pbRec, cRec):
         pbRec.__init__(self, modelInput, internalDataSet,
                        reactionListSortedSet)
 
+        bRec.__init__(self, modelInput, internalDataSet,
+                      reactionListSortedSet)
+
     def modExe(self):
         """
             select modeling script based on model type
@@ -63,30 +67,8 @@ class rmtCoreClass(pbRec, cRec):
             return self.M1Init()
         elif modelMode == M2:
             return self.M2Init()
-
-    def M1Init(self):
-        """
-            M1 model
-            more info, check --help M1
-        """
-        # class init
-        # modelInput = self.modelInput
-
-        # start cal
-        res = self.runM1()
-        return res
-
-    def M2Init(self):
-        """
-            M1 model
-            more info, check --help M1
-        """
-        # class init
-        # modelInput = self.modelInput
-
-        # start cal
-        res = self.runM2()
-        return res
+        elif modelMode == M3:
+            return self.M3Init()
 
     def initComponentData(self, compList):
         """
@@ -146,13 +128,46 @@ class rmtCoreClass(pbRec, cRec):
 
             # reaction rate expression list
             for i in reactionRateDict:
-                _loop = rmtRec(reactionRateDict[i])
-                # print("reaction rate expr: ",
-                #       _loop.reactionRateFunSet(T=1, P=2, y=3))
-                # add to list
+                if i != "VAR":
+                    _loop = rmtRec(reactionRateDict[i])
+                    # print("reaction rate expr: ",
+                    #       _loop.reactionRateFunSet(T=1, P=2, y=3))
+                    # add to list
+                else:
+                    _loop = reactionRateDict[i]
+
                 reactionRateExprList.append(_loop)
 
             # res
             return reactionRateExprList
         except Exception as e:
             raise
+
+    def M1Init(self):
+        """
+            M1 model
+            more info, check --help M1
+        """
+        # class init
+        # modelInput = self.modelInput
+
+        # start cal
+        res = self.runM1()
+        return res
+
+    def M2Init(self):
+        """
+            M1 model
+            more info, check --help M1
+        """
+        # class init
+        # modelInput = self.modelInput
+
+        # start cal
+        res = self.runM2()
+        return res
+
+    def M3Init(self):
+        """
+        M3 Model: Batch Reactor
+        """

@@ -56,6 +56,8 @@ Ft0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)/1000
 #  initial concentration[kmol/m3]
 Ct0 = Ft0/VoFlRa
 
+# component all
+compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
 
 # reactions
 reactionSet = {
@@ -70,10 +72,28 @@ reactionRateSet = {
     "R3": "T+ P + y + 3",
 }
 
+# NOTE
+# batch reactor (constant volume) [mol/m^3]
+brCt0 = [50, 50, 0]
+
+# component list
+compList1 = ["A", "B", "C"]
+
+# reactions
+reactionSet1 = {
+    "R1": "A + B => C",
+}
+reactionRateSet1 = {
+    "VAR": "",
+    "R1": "\
+        k = 3.35e-5 \
+        k*C[A]*C[B]",
+}
+
 
 # model input - feed
 modelInput = {
-    "model": "M2",
+    "model": "M3",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -82,14 +102,15 @@ modelInput = {
         "mole-fraction": feedMoFr,
         "molar-flowrate": Ft0,
         "molar-flux": Fl0,
+        "concentration": brCt0,
         "components": {
-            "shell": ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"],
+            "shell": compList1,
             "tube": [],
             "medium": []
         }
     },
-    "reactions": reactionSet,
-    "reaction-rates": reactionRateSet
+    "reactions": reactionSet1,
+    "reaction-rates": reactionRateSet1
 }
 
 # run exe

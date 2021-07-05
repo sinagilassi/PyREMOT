@@ -13,7 +13,13 @@ modelTypes = {
         "des":
             "packed bed reactor, non-isothermal, plug-flow, no pressure drop"
     },
+    "M3": {
+        "id": "M3",
+        "des":
+            "batch reactor"
+    },
 }
 
 M1 = modelTypes['M1']['id']
 M2 = modelTypes['M2']['id']
+M3 = modelTypes['M3']['id']
