@@ -16,7 +16,7 @@ class rmtReactionClass:
         """
         # try/except
         try:
-            # temperature  [K]
+            # temperature [K]
             T = kwargs['T']
             # pressure [Pa]
             P = kwargs['P']
