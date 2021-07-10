@@ -18,8 +18,14 @@ modelTypes = {
         "des":
             "batch reactor"
     },
+    "M4": {
+        "id": "M4",
+        "des":
+            "plug-flow reactor"
+    },
 }
 
 M1 = modelTypes['M1']['id']
 M2 = modelTypes['M2']['id']
 M3 = modelTypes['M3']['id']
+M4 = modelTypes['M4']['id']

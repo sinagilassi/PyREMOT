@@ -3,7 +3,7 @@
 # import packages/modules
 import numpy as np
 from data import *
-from core import constants as CONST
+from core import constants as CONST, R_CONST
 from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
@@ -73,7 +73,8 @@ reactionRateSet = {
 }
 
 # NOTE
-# batch reactor (constant volume) [mol/m^3]
+# batch reactor (constant volume) M3
+# concentration [mol/m^3]
 brCt0 = [50, 50, 0]
 
 # component list
@@ -90,19 +91,70 @@ reactionRateSet1 = {
         k*C[A]*C[B]",
 }
 
+# NOTE
+# plug-flow reactor M4
+
+# component list
+compList1 = ["A", "K", "M"]
+
+# reactions
+reactionSet1 = {
+    "R1": "2CH4 => C2H4 + 2H2",
+}
+
+# inlet volumetric flowrate [m^3/s]
+VoFlRa0 = 2
+# inlet mole fraction
+MoFri0 = np.array([1, 0, 0])
+# inlet concentration species [mol/m^3]
+CoSpi0 = np.array([18.8, 0, 0])
+# inlet molar flowrate [mol/s]
+# component
+MoFlRai0 = VoFlRa0*CoSpi0
+# total
+MoFlRa0 = np.sum(MoFlRai0)
+# pressure [Pa]
+P0 = 1.61
+# temperature [K]
+T0 = 1150
+
+# forward frequency factor
+A1 = 8.2e14
+# forward activation energy [J/mol]
+E1 = 284.5e3
+# rate constant
+k1 = A1*np.exp(-E1/(R_CONST*T))
+# reaction rate expression
+reactionRateSet1 = {
+    "R1": lambda P, T, CoSpi: A1*np.exp(-E1/(R_CONST*T))*CoSpi['CH4']
+}
+
+# external heat
+# overall heat transfer coefficient [J/m^2.s.K]
+U = 100
+# effective heat transfer area per unit of reactor volume [m^2/m^3]
+a = 4/rea_D
+# medium temperature [K]
+Tm = 1035
+#
+externalHeat = {
+    "OvHeTrCo": U,
+    "EfHeTrAr": a,
+    "MeTe": Tm
+}
 
 # model input - feed
 modelInput = {
-    "model": "M3",
+    "model": "M4",
     "operating-conditions": {
-        "pressure": P,
-        "temperature": T,
+        "pressure": P0,
+        "temperature": T0,
     },
     "feed": {
-        "mole-fraction": feedMoFr,
-        "molar-flowrate": Ft0,
-        "molar-flux": Fl0,
-        "concentration": brCt0,
+        "mole-fraction": MoFri0,
+        "molar-flowrate": MoFlRa0,
+        "molar-flux": 0,
+        "concentration": CoSpi0,
         "components": {
             "shell": compList1,
             "tube": [],
@@ -110,7 +162,8 @@ modelInput = {
         }
     },
     "reactions": reactionSet1,
-    "reaction-rates": reactionRateSet1
+    "reaction-rates": reactionRateSet1,
+    "external-heat": externalHeat
 }
 
 # run exe

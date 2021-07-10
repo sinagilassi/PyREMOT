@@ -5,7 +5,7 @@
 import numpy as np
 import re
 # internals
-from core.constants import Tref
+from core.constants import Tref, R_CONST
 from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
 from core.utilities import roundNum
 # from .rmtUtility import
@@ -313,6 +313,29 @@ def calEnthalpyChangeOfReaction(reactionListSorted, T):
     except Exception as e:
         print(e)
         raise
+
+
+def calVolumetricFlowrateIG(P, T, MoFlRai):
+    """
+    calculate: volumetric flowrate of ideal gas (IG) [m^3/s]
+    args:
+        P: pressure [Pa]
+        T: temperature [K]
+        MoFlRai: component molar flowrate [mol/m^3]
+    """
+    VoFlRa = (R_CONST*T/P)*np.sum(MoFlRai)
+    return VoFlRa
+
+
+def calConcentrationIG(MoFlRai, VoFlRa):
+    """
+    calculate: concentration species species of ideal gas (IG) [mol/m^3]
+    args: 
+        MoFlRai: component molar flowrate [mol/m^3]
+        VoFlRa: total volumetric flowrate [m^3/s]
+    """
+    CoSpi = MoFlRai/VoFlRa
+    return CoSpi
 
 
 if __name__ == "__main__":

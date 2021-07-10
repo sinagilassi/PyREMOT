@@ -194,3 +194,17 @@ class rmtUtilityClass:
             print(0)
         except Exception as e:
             raise
+
+    @staticmethod
+    def moleFractionFromConcentrationSpecies(CoSpi):
+        """
+        calculate: mole fraction
+        args:
+            CoSpi: concentration species [mol/m^3]
+        """
+        # try/except
+        try:
+            MoFri = CoSpi/np.sum(CoSpi)
+            return MoFri
+        except Exception as e:
+            raise

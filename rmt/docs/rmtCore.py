@@ -4,11 +4,12 @@
 # import packages/modules
 from pprint import pprint
 from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2, M3
+from core.setting import modelTypes, M1, M2, M3, M4
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
 from docs.batchReactor import batchReactorClass as bRec
+from docs.pfReactor import PlugFlowReactorClass as pfRec
 from data.componentData import componentDataStore
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import calEnthalpyChangeOfReaction
@@ -69,6 +70,8 @@ class rmtCoreClass(pbRec, cRec, bRec):
             return self.M2Init()
         elif modelMode == M3:
             return self.M3Init()
+        elif modelMode == M4:
+            return self.M4Init()
 
     def initComponentData(self, compList):
         """
@@ -171,3 +174,15 @@ class rmtCoreClass(pbRec, cRec, bRec):
         """
         M3 Model: Batch Reactor
         """
+
+    def M4Init(self):
+        """
+        M4 Model: Plug-flow Reactor
+        """
+        # init plug-flow reactor
+        pfRecInit = pfRec(self.modelInput, self.internalDataSet,
+                          self.reactionListSortedSet)
+        # run algorithm
+        res = pfRecInit.runM1()
+        # result
+        return res
