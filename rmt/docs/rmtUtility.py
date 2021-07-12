@@ -20,14 +20,34 @@ class rmtUtilityClass:
     @staticmethod
     def mixtureMolecularWeight(MoFri, MWi):
         """
-            calculate mixture molecular weight
+        calculate mixture molecular weight [g/mol]
+        args:
+            MoFri: component mole fraction
+            MWi: molecular weight [g/mol]
         """
-        # check
-        if len(MoFri) != len(MWi):
-            raise Exception("elements are not equal")
+        # try/exception
+        try:
+            # check
+            if not isinstance(MoFri, np.ndarray):
+                if isinstance(MoFri, List):
+                    MoFri0 = np.array(MoFri)
+            else:
+                MoFri0 = np.copy(MoFri)
 
-        MixMoWe = 1
-        return MixMoWe
+            if not isinstance(MWi, np.ndarray):
+                if isinstance(MWi, List):
+                    MWi0 = np.array(MWi)
+            else:
+                MWi0 = np.copy(MWi)
+
+            # check
+            if MoFri0.size != MWi0.size:
+                raise Exception("elements are not equal")
+            #
+            MixMoWe = np.dot(MoFri0, MWi0)
+            return MixMoWe
+        except Exception as e:
+            print(e)
 
     @staticmethod
     def volumetricFlowrateSTP(VoFlRa, P, T):
