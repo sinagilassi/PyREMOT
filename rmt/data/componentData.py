@@ -12,6 +12,8 @@ MW_CO = 28.01
 MW_CH3OH = 32.04
 MW_DME = 46.07
 MW_N2 = 28
+MW_CH4 = 16.04
+MW_C2H4 = 28.05
 # ->
 MWi = [MW_H2, MW_CO2, MW_H2O, MW_CO, MW_CH3OH, MW_DME]
 
@@ -23,6 +25,8 @@ Tc_H2O = 647.14
 Tc_CO = 132.85
 Tc_DME = 400
 Tc_N2 = 126.192
+Tc_CH4 = 190.56
+Tc_C2H4 = 282.34
 
 # critical pressure [bar]
 Pc_CO2 = 73.74
@@ -32,6 +36,8 @@ Pc_H2O = 220.64
 Pc_CO = 34.94
 Pc_DME = 53
 Pc_N2 = 33.98
+Pc_CH4 = 45.99
+Pc_C2H4 = 50.41
 
 # acentric factor
 w_CO2 = 0.239
@@ -41,6 +47,8 @@ w_H2O = 0.344
 w_CO = 0.066
 w_DME = 0.200
 w_N2 = 0.039
+w_CH4 = 0.011
+w_C2H4 = 0.087
 
 # heat of formation at 25C [kJ/mol]
 dHf25_CO2 = -393.51
@@ -214,7 +222,45 @@ componentDataStore = {
                 "unit": "kJ/mol",
                 "val": dGf25_N2
             }
-        }
+        },
+        {
+            "symbol": "CH4",
+            "MW": MW_CH4,
+            "Pc": Pc_CH4,
+            "Tc": Tc_CH4,
+            "w": w_CH4,
+            "Cp": {
+                "unit": "kJ/kmol.K",
+                "expr": "19.875 + 5.021E-02*T + 1.268E-05*(T**2) + -11.004E-09*(T**3)"
+            },
+            "dHf25": {
+                "unit": "kJ/mol",
+                "val": dHf25_CH4
+            },
+            "dGf25": {
+                "unit": "kJ/mol",
+                "val": dGf25_CH4
+            }
+        },
+        {
+            "symbol": "C2H4",
+            "MW": MW_C2H4,
+            "Pc": Pc_C2H4,
+            "Tc": Tc_C2H4,
+            "w": w_C2H4,
+            "Cp": {
+                "unit": "kJ/kmol.K",
+                "expr": "3.950 + 15.628E-02*T + -8.339E-05*(T**2) + 17.657E-09*(T**3)"
+            },
+            "dHf25": {
+                "unit": "kJ/mol",
+                "val": dHf25_C2H4
+            },
+            "dGf25": {
+                "unit": "kJ/mol",
+                "val": dGf25_C2H4
+            }
+        },
     ]
 }
 
@@ -225,6 +271,10 @@ componentData = componentDataStore['payload']
 def retriveData(mode):
     pass
 
+
+# component symbol
+componentSymbolList = tuple([
+    item['symbol'] for item in componentData])
 
 # heat capacity at constant pressure [kJ/kmol.K]
 heatCapacityAtConstatPresureList = tuple([

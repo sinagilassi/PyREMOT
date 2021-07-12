@@ -54,7 +54,7 @@ class rmtUtilityClass:
     @staticmethod
     def reactorCrossSectionArea(BePo, ReDi):
         """
-            calculate reactor cross section area 
+            calculate reactor cross section area
             BePo: bed porosity [-]
             ReDi: reactor diameter [m]
             ReCrSeAr [m^2]
@@ -67,7 +67,7 @@ class rmtUtilityClass:
         """
             return component no. and name (symbol)
             args:
-                compList: list of components' symbols 
+                compList: list of components' symbols
         """
         # try/except
         try:
@@ -91,7 +91,7 @@ class rmtUtilityClass:
     def buildReactionList(reactionDict):
         """
             return reaction list [string]
-            args: 
+            args:
                 reactionDict: reaction dict
         """
         # try/except
@@ -164,10 +164,10 @@ class rmtUtilityClass:
             #
             for element in reactionListSorted:
                 # reactant coefficient
-                _loop1 = [float(item['coeff'])
+                _loop1 = [[item['symbol'], float(item['coeff'])]
                           for item in element['reactants']]
                 # product coefficient
-                _loop2 = [float(item['coeff'])
+                _loop2 = [[item['symbol'], float(item['coeff'])]
                           for item in element['products']]
                 # vector
                 _loop3 = []
@@ -181,10 +181,10 @@ class rmtUtilityClass:
         except Exception as e:
             raise
 
-    @staticmethod
+    @ staticmethod
     def buildreactionRateExpr(reactionRateExprDict):
         """
-        build a list of reaction rate expression 
+        build a list of reaction rate expression
         args:
             reactionRateExprDict: a dictionary contains all reaction rate expr
             {"R1": "r1(C,T,y), ...}
@@ -195,7 +195,7 @@ class rmtUtilityClass:
         except Exception as e:
             raise
 
-    @staticmethod
+    @ staticmethod
     def moleFractionFromConcentrationSpecies(CoSpi):
         """
         calculate: mole fraction
@@ -206,5 +206,34 @@ class rmtUtilityClass:
         try:
             MoFri = CoSpi/np.sum(CoSpi)
             return MoFri
+        except Exception as e:
+            raise
+
+    @staticmethod
+    def buildComponentList(componentDataDict):
+        """ 
+        build component list participated in the reaction
+        this list is used for component availability in the app database
+        """
+        # try/except
+        try:
+            # all
+            compList0 = []
+            # shell
+            shellComp = componentDataDict['shell']
+            if shellComp:
+                compList0.extend(shellComp)
+            # tube
+            tubeComp = componentDataDict['tube']
+            if tubeComp:
+                compList0.extend(tubeComp)
+            # medium
+            mediumComp = componentDataDict['medium']
+            if mediumComp:
+                compList0.extend(mediumComp)
+            # all
+            compList = list(dict.fromkeys(compList0))
+            return compList
+
         except Exception as e:
             raise

@@ -5,6 +5,8 @@
 import timeit
 import docs
 from docs.rmtCore import rmtCoreClass
+from data.componentData import componentSymbolList
+from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 
 def main():
@@ -18,49 +20,62 @@ def rmtExe(modelInput):
     """
         This script check model input, then starts computation
     """
+    # try/exception
+    try:
+        # tic
+        tic = timeit.timeit()
 
-    # tic
-    tic = timeit.timeit()
+        # check input data
+        # model type
+        modelType = modelInput['model']
+        # print(f"model type: {modelType}")
 
-    # check input data
-    # model type
-    modelType = modelInput['model']
-    print(f"model type: {modelType}")
+        # operating conditions
+        pressure = modelInput['operating-conditions']['pressure']
+        # print(f"pressure: {pressure}")
+        temperature = modelInput['operating-conditions']['temperature']
+        # print(f"temperature: {temperature}")
 
-    # operating conditions
-    pressure = modelInput['operating-conditions']['pressure']
-    print(f"pressure: {pressure}")
-    temperature = modelInput['operating-conditions']['temperature']
-    print(f"temperature: {temperature}")
+        # feed
+        FeMoFri = modelInput['feed']['mole-fraction']
+        # print(f"FeMoFri: {FeMoFri}")
+        FeFlRa = modelInput['feed']['molar-flowrate']
+        # print(f"FeFlRa: {FeFlRa}")
+        MoFl = modelInput['feed']['molar-flux']
+        # print(f"MoFl: {MoFl}")
+        FeCom = modelInput['feed']['components']
+        # print(f"FeCom: {FeCom}")
 
-    # feed
-    FeMoFri = modelInput['feed']['mole-fraction']
-    print(f"FeMoFri: {FeMoFri}")
-    FeFlRa = modelInput['feed']['molar-flowrate']
-    print(f"FeFlRa: {FeFlRa}")
-    MoFl = modelInput['feed']['molar-flux']
-    print(f"MoFl: {MoFl}")
-    FeCom = modelInput['feed']['components']
-    print(f"FeCom: {FeCom}")
+        # get all component
+        compList = rmtUtil.buildComponentList(FeCom)
 
-    # init class
-    rmtCore = rmtCoreClass(modelType, modelInput)
+        # check component data availability
+        for i in range(len(compList)):
+            if compList[i] not in componentSymbolList:
+                raise Exception("Component database is not up to date!")
+        # checkCompData =
 
-    # init computation
-    resModel = rmtCore.modExe()
+        # init class
+        rmtCore = rmtCoreClass(modelType, modelInput)
 
-    # tac
-    tac = timeit.timeit()
+        # init computation
+        resModel = rmtCore.modExe()
 
-    # computation time [s]
-    comTime = (tac - tic)*1000
+        # tac
+        tac = timeit.timeit()
 
-    # result
-    res = {
-        "resModel": resModel,
-        "comTime": comTime
-    }
-    return res
+        # computation time [s]
+        comTime = (tac - tic)*1000
+
+        # result
+        res = {
+            "resModel": resModel,
+            "comTime": comTime
+        }
+        return res
+    except Exception as e:
+        print(e)
+        raise
 
 
 if __name__ == "__main__":

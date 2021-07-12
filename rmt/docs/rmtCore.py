@@ -25,11 +25,46 @@ class rmtCoreClass(pbRec, cRec, bRec):
     t0 = 0
     tn = rea_L
 
-    # init
+    # global vars
+
     def __init__(self, modelMode, modelInput):
         self.modelMode = modelMode
         self.modelInput = modelInput
 
+        # # pbRec
+        # pbRec.__init__(self, modelInput, internalDataSet,
+        #                reactionListSortedSet)
+
+        # bRec.__init__(self, modelInput, internalDataSet,
+        #               reactionListSortedSet)
+
+    # property list
+    # @property
+    # def internalDataSet(self):
+    #     return self._internalDataSet
+
+    # @internalDataSet.setter
+    # def internalDataSet(self, value):
+    #     self._internalDataSet = value
+
+    def gVarCal(self, compList, reactionList):
+        """
+        init global var 
+        """
+        # init database
+        internalDataRes = self.initComponentData(compList)
+
+        # reaction list sorted
+        initReactionRes = self.initReaction(reactionList)
+        # reactionListSortedRes = initReactionRes['res1']
+        # reactionStochCoeffListRes = initReactionRes['res2']
+        # res
+        return [internalDataRes, initReactionRes]
+
+    def modExe(self):
+        """
+            select modeling script based on model type
+        """
         # component list
         compList = self.modelInput['feed']['components']['shell']
         # reaction list
@@ -37,31 +72,19 @@ class rmtCoreClass(pbRec, cRec, bRec):
         # reaction rate list
         reactionRateList = self.modelInput['reaction-rates']
 
+        # set data
+        # init globals vars
+        gVarRes = self.gVarCal(compList, reactionList)
+        # set res
         # init database
-        internalDataSet = self.initComponentData(compList)
+        _internalDataSet = gVarRes[0]
         # print(internalDataSet)
 
         # reaction list sorted
-        reactionListSortedSet = self.initReaction(reactionList)
+        _reactionListSortedSet = gVarRes[1]['res1']
+        _reactionStochCoeffListSet = gVarRes[1]['res2']
         # print(reactionCoeffSet)
 
-        # reaction rate expression
-        reactionRateExpressionSet = self.initReactionRate(reactionRateList)
-        # test fun
-        # ans1 = reactionRateExpressionSet[0].reactionRateFunSet(T=1, P=2, y=3)
-        # print("ans1: ", ans1)
-
-        # pbRec
-        pbRec.__init__(self, modelInput, internalDataSet,
-                       reactionListSortedSet)
-
-        bRec.__init__(self, modelInput, internalDataSet,
-                      reactionListSortedSet)
-
-    def modExe(self):
-        """
-            select modeling script based on model type
-        """
         # select model type
         modelMode = self.modelMode
         if modelMode == M1:
@@ -71,7 +94,7 @@ class rmtCoreClass(pbRec, cRec, bRec):
         elif modelMode == M3:
             return self.M3Init()
         elif modelMode == M4:
-            return self.M4Init()
+            return self.M4Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -106,15 +129,14 @@ class rmtCoreClass(pbRec, cRec, bRec):
         try:
             # reaction list sorted
             reactionListSorted = rmtUtil.buildReactionCoefficient(reactionDict)
-            # print(reactionListSorted)
+            # print("reactionListSorted: ", reactionListSorted)
             # reaction stoichiometric coefficient vector
             reactionStochCoeff = rmtUtil.buildReactionCoeffVector(
                 reactionListSorted)
-
-            # reaction rate expression list
+            # print("reactionStochCoeff: ", reactionStochCoeff)
 
             # res
-            return reactionListSorted
+            return {"res1": reactionListSorted, "res2": reactionStochCoeff}
         except Exception as e:
             raise
 
@@ -175,13 +197,13 @@ class rmtCoreClass(pbRec, cRec, bRec):
         M3 Model: Batch Reactor
         """
 
-    def M4Init(self):
+    def M4Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
         M4 Model: Plug-flow Reactor
         """
         # init plug-flow reactor
-        pfRecInit = pfRec(self.modelInput, self.internalDataSet,
-                          self.reactionListSortedSet)
+        pfRecInit = pfRec(self.modelInput, internalData,
+                          reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = pfRecInit.runM1()
         # result

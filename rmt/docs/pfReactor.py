@@ -23,14 +23,20 @@ class PlugFlowReactorClass:
     assumptions:
         no dispersion, radial gradient in temperature, velocity, concentration, and reaction rate
         species concentration and temperature vary with position along the reactor length
+    class initialization:
+        model input
+        internal data (thermodynamic database)
+        reaction list sorted (reactant/product of each reaction)
+        reaction stoichiometric coefficient list
     """
     # internal data
     _internalData = []
 
-    def __init__(self, modelInput, internalData, reactionListSorted):
+    def __init__(self, modelInput, internalData, reactionListSorted, reactionStochCoeffList):
         self.modelInput = modelInput
         self.internalData = internalData
         self.reactionListSorted = reactionListSorted
+        self.reactionStochCoeffList = reactionStochCoeffList
 
     @property
     def internalData(cls):
@@ -40,67 +46,6 @@ class PlugFlowReactorClass:
     def internalData(cls, value):
         cls._internalData.clear()
         cls._internalData.extend(value)
-
-    def runM10(self):
-        """
-        M1 modeling case
-        """
-
-        # operating conditions
-        P = self.modelInput['operating-conditions']['pressure']
-        T = self.modelInput['operating-conditions']['temperature']
-
-        # component list
-        compList = self.modelInput['feed']['components']['shell']
-        labelList = compList.copy()
-        labelList.append("Flux")
-
-        # initial values
-        # -> mole fraction
-        MoFri = self.modelInput['feed']['mole-fraction']
-        # -> flux [kmol/m^2.s]
-        MoFl = self.modelInput['feed']['molar-flux']
-        IV = []
-        IV.extend(MoFri)
-        IV.append(MoFl)
-        # print(f"IV: {IV}")
-
-        # time span
-        # t = (0.0, rea_L)
-        t = np.array([0, rea_L])
-        times = np.linspace(t[0], t[1], 20)
-        # tSpan = np.linspace(0, rea_L, 25)
-
-        # ode call
-        sol = solve_ivp(PlugFlowReactorClass.modelEquationM1,
-                        t, IV, method="LSODA", t_eval=times, args=(P, T))
-
-        # ode result
-        successStatus = sol.success
-        dataX = sol.t
-        dataYs = sol.y
-
-        # check
-        if successStatus is True:
-            # plot setting
-            XYList = pltc.plots2DSetXYList(dataX, dataYs)
-            # -> label
-            dataList = pltc.plots2DSetDataList(XYList, labelList)
-            # plot result
-            pltc.plots2D(dataList, "Reactor Length (m)",
-                         "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
-
-        else:
-            XYList = []
-            dataList = []
-
-        # return
-        res = {
-            "XYList": XYList,
-            "dataList": dataList
-        }
-
-        return res
 
     def runM1(self):
         """
@@ -118,6 +63,9 @@ class PlugFlowReactorClass:
         # component list
         compList = self.modelInput['feed']['components']['shell']
 
+        # component no
+        compNo = len(compList)
+
         # graph label setting
         labelList = compList.copy()
         labelList.append("Temperature")
@@ -126,22 +74,39 @@ class PlugFlowReactorClass:
         compNo = len(compList)
         indexTemp = compNo
 
-        # -> mole fraction
-        MoFri = self.modelInput['feed']['mole-fraction']
+        # mole fraction
+        MoFr = np.array(self.modelInput['feed']['mole-fraction'])
+        # flowrate [mol/s]
+        MoFlRa = self.modelInput['feed']['molar-flowrate']
+        # component flowrate [mol/s]
+        MoFlRai = MoFlRa*MoFr
 
         # external heat
         ExHe = self.modelInput['external-heat']
 
+        # reactor spec
+        ReSpec = self.modelInput['reactor']
+        # reactor inner diameter [m]
+        ReInDi = ReSpec['ReInDi']
+        # reactor length [m]
+        ReLe = ReSpec['ReLe']
+        # cross-sectional area [m^2]
+        CrSeAr = CONST.PI_CONST*(ReInDi ** 2)/4
+
+        # var no (Fi,T)
+        varNo = compNo + 1
+
         # initial values
-        IV = []
-        IV.extend(MoFri)
-        IV.append(T)
+        IV = np.zeros(varNo)
+        IV[0:compNo] = MoFlRai
+        IV[compNo] = T
         print(f"IV: {IV}")
-        IVSet = np.array(IV)
 
         # parameters
         # component data
         reactionListSorted = self.reactionListSorted
+        # reaction coefficient
+        reactionStochCoeff = self.reactionStochCoeffList
 
         # standard heat of reaction at 25C [kJ/kmol]
         StHeRe25 = np.array(
@@ -149,14 +114,14 @@ class PlugFlowReactorClass:
 
         # time span
         # t = (0.0, rea_L)
-        t = np.array([0, rea_L])
-        t_span = np.array([0, rea_L])
+        t = np.array([0, ReLe])
+        t_span = np.array([0, ReLe])
         times = np.linspace(t_span[0], t_span[1], 100)
         # tSpan = np.linspace(0, rea_L, 25)
 
         # ode call
-        sol = solve_ivp(PlugFlowReactorClass.modelEquationM2,
-                        t, IVSet, method="LSODA", t_eval=times, args=(P, compList, StHeRe25, reactionListSorted, ExHe))
+        sol = solve_ivp(PlugFlowReactorClass.modelEquationM1,
+                        t, IV, method="LSODA", t_eval=times, args=(P, compList, StHeRe25, reactionListSorted, reactionStochCoeff, ExHe, CrSeAr))
 
         # ode result
         successStatus = sol.success
@@ -203,78 +168,6 @@ class PlugFlowReactorClass:
         }
 
         return res
-
-    def modelEquationM1(t, y, P, T):
-        """
-            M1 model
-            mass balance equations
-            modelParameters:
-                pressure [Pa]
-                temperature [K]
-        """
-        # operating conditions
-        # P = modelParameters['pressure']
-        # T = modelParameters['temperature']
-        # # components
-        # comp = modelParameters['components']
-        # # components no
-        # compNo = len(comp)
-
-        #! loop vars
-        # MoFri = np.copy(y)
-        yi_H2 = y[0]
-        yi_CO2 = y[1]
-        yi_H2O = y[2]
-        yi_CO = y[3]
-        yi_CH3OH = y[4]
-        yi_DME = y[5]
-
-        # molar flux [kmol/m^2.s]
-        MoFl = y[6]
-
-        # mole fraction list
-        MoFri = [yi_H2, yi_CO2, yi_H2O, yi_CO, yi_CH3OH, yi_DME]
-
-        # kinetics
-        Ri = PlugFlowReactorClass.modelReactions(P, T, MoFri)
-        #  H2
-        R_H2 = -(3*Ri[0]-Ri[1])
-        # CO2
-        R_CO2 = -(Ri[0]-Ri[1])
-        # H2O
-        R_H2O = (Ri[0]-Ri[1]+Ri[2])
-        # CO
-        R_CO = -(Ri[1])
-        # CH3OH
-        R_CH3OH = -(2*Ri[2]-Ri[0])
-        # DME
-        R_DME = (Ri[2])
-        # total
-        R_T = -(2*Ri[0])
-
-        # mass balance equation
-        # loop vars
-        A1 = 1/MoFl
-        B1 = 1
-
-        #  H2
-        dxdt_H2 = A1*(R_H2 - y[0]*R_T)
-        #  CO2
-        dxdt_CO2 = A1*(R_CO2 - y[1]*R_T)
-        #  H2O
-        dxdt_H2O = A1*(R_H2O - y[2]*R_T)
-        #  CO
-        dxdt_CO = A1*(R_CO - y[3]*R_T)
-        #  CH3OH
-        dxdt_CH3OH = A1*(R_CH3OH - y[4]*R_T)
-        #  DME
-        dxdt_DME = A1*(R_DME - y[5]*R_T)
-        #  overall
-        dxdt_T = B1*R_T
-        # build diff/dt
-        dxdt = [dxdt_H2, dxdt_CO2, dxdt_H2O,
-                dxdt_CO, dxdt_CH3OH, dxdt_DME, dxdt_T]
-        return dxdt
 
     def modelReactions(P, T, y):
         try:
@@ -349,7 +242,7 @@ class PlugFlowReactorClass:
             print(e)
             raise
 
-    def modelEquationM2(t, y, P, comList, StHeRe25, reactionListSorted, ExHe):
+    def modelEquationM1(t, y, P, comList, StHeRe25, reactionListSorted, reactionStochCoeff, ExHe, CrSeAr):
         """
             M2 model
             mass and energy balance equations
@@ -357,7 +250,9 @@ class PlugFlowReactorClass:
                 pressure [Pa]
                 compList: component list
                 StHeRe25: standard heat of reaction at 25C
-                reactionListSorted: reaction list
+                reactionListSorted: reactant/product and coefficient lists 
+                reactionStochCoeff: reaction stoichiometric coefficient
+                CrSeAr: reactor cross sectional area [m^2]
         """
         # REVIEW
         # t
@@ -367,11 +262,14 @@ class PlugFlowReactorClass:
         compNo = len(comList)
         indexT = compNo
 
-        # mole fraction list
+        # molar flowrate list [mol/m^3]
         MoFlRai = y[0:compNo]
 
         # temperature [K]
         T = y[indexT]
+
+        # total flowrate [mol/m^3]
+        MoFlRa = np.sum(MoFlRai)
 
         # volumetric flowrate [m^3/s]
         VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai)
@@ -389,13 +287,25 @@ class PlugFlowReactorClass:
         # forward activation energy [J/mol]
         E1 = 284.5e3
         # rate constant [1/s]
-        k1 = A1*np.exp(-E1/(R_CONST*T))
+        kFactor = 1e7
+        k1 = A1*np.exp(-E1/(R_CONST*T))*kFactor
         # net reaction rate expression [mol/m^3.s]
-        Ri = k1*CoSpi[0]
+        r0 = k1*CoSpi[0]
+        Ri = [r0]
+
         # component formation rate [mol/m^3.s]
+        ri = np.zeros(compNo)
+        for k in range(compNo):
+            # reset
+            _riLoop = 0
+            for m in range(len(reactionStochCoeff)):
+                for n in range(len(reactionStochCoeff[m])):
+                    if comList[k] == reactionStochCoeff[m][n][0]:
+                        _riLoop += reactionStochCoeff[m][n][1]*Ri[m]
+                ri[k] = _riLoop
 
         # enthalpy
-        # heat capacity at constant pressure of mixture Cp [kJ/kmol.K]
+        # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
         # Cp mean list
         CpMeanList = calMeanHeatCapacityAtConstantPressure(comList, T)
         # print(f"Cp mean list: {CpMeanList}")
@@ -404,39 +314,38 @@ class PlugFlowReactorClass:
             MoFri, CpMeanList)
         # print(f"Cp mean mixture: {CpMeanMixture}")
 
-        # enthalpy change from Tref to T [kJ/kmol]
+        # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
         # enthalpy change
         EnChList = np.array(calEnthalpyChangeOfReaction(reactionListSorted, T))
-        # heat of reaction at T [kJ/kmol]
+        # heat of reaction at T [kJ/kmol] | [J/mol]
         HeReT = np.array(EnChList + StHeRe25)
-        # overall heat of reaction
+        # overall heat of reaction [J/m^3.s]
         OvHeReT = np.dot(Ri, HeReT)
 
-        # external heat
-
-        # FIXME
         # cooling temperature [K]
         Tm = ExHe['MeTe']
         # overall heat transfer coefficient [J/s.m2.K]
         U = ExHe['OvHeTrCo']
-        #  heat transfer area over volume [m2/m3]
+        # heat transfer area over volume [m2/m3]
         a = ExHe['EfHeTrAr']
-        # external heat
-        Qm = U*a*(Tm - T)
+        # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
+        Ua = U*a
+        # external heat [J/m^3.s]
+        Qm = Ua*(Tm - T)
 
         # diff/dt
         dxdt = []
         # loop vars
-        A1 = 1/1
-        B1 = 1
-        C1 = 1/(1*CpMeanMixture)
+        const_F1 = 1/CrSeAr
+        const_T1 = MoFlRa*CpMeanMixture/CrSeAr
 
         # mass balance (molar flowrate) [mol/s]
         for i in range(compNo):
-            dxdt_F = Ri
+            dxdt_F = (1/const_F1)*ri[i]
             dxdt.append(dxdt_F)
 
         # energy balance (temperature) [K]
-        dxdt_T = C1*(-OvHeReT + Qm)
+        dxdt_T = (1/const_T1)*(-OvHeReT + Qm)
+        dxdt.append(dxdt_T)
 
         return dxdt

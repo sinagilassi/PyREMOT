@@ -2,12 +2,13 @@
 
 # import packages/modules
 import numpy as np
+import math
+import json
 from data import *
-from core import constants as CONST, R_CONST
+from core import constants as CONST
 from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
-import json
 
 
 # operating conditions
@@ -95,7 +96,7 @@ reactionRateSet1 = {
 # plug-flow reactor M4
 
 # component list
-compList1 = ["A", "K", "M"]
+compList1 = ["CH4", "C2H4", "H2"]
 
 # reactions
 reactionSet1 = {
@@ -113,29 +114,40 @@ CoSpi0 = np.array([18.8, 0, 0])
 MoFlRai0 = VoFlRa0*CoSpi0
 # total
 MoFlRa0 = np.sum(MoFlRai0)
+MoFlRa0 = 18.8
 # pressure [Pa]
-P0 = 1.61
+P0 = 1e5
 # temperature [K]
-T0 = 1150
+T0 = 700
 
-# forward frequency factor
+# forward frequency factor [1/s]
 A1 = 8.2e14
 # forward activation energy [J/mol]
 E1 = 284.5e3
 # rate constant
-k1 = A1*np.exp(-E1/(R_CONST*T))
+k1 = A1*np.exp(-E1/(CONST.R_CONST*T))
 # reaction rate expression
 reactionRateSet1 = {
-    "R1": lambda P, T, CoSpi: A1*np.exp(-E1/(R_CONST*T))*CoSpi['CH4']
+    "R1": lambda P, T, CoSpi: A1*np.exp(-E1/(CONST.R_CONST*T))*CoSpi['CH4']
 }
+
+# reactor
+# reactor volume [m^3]
+ReVo = 5
+# reactor length [m]
+ReLe = 1
+# reactor inner diameter [m]
+ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
 
 # external heat
 # overall heat transfer coefficient [J/m^2.s.K]
-U = 100
+U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
-a = 4/rea_D
+a = 4/ReInDi
 # medium temperature [K]
-Tm = 1035
+Tm = 800
+# Ua
+Ua = U*a
 #
 externalHeat = {
     "OvHeTrCo": U,
@@ -163,7 +175,11 @@ modelInput = {
     },
     "reactions": reactionSet1,
     "reaction-rates": reactionRateSet1,
-    "external-heat": externalHeat
+    "external-heat": externalHeat,
+    "reactor": {
+        "ReInDi": ReInDi,
+        "ReLe": ReLe
+    }
 }
 
 # run exe
