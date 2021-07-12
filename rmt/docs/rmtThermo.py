@@ -338,5 +338,39 @@ def calConcentrationIG(MoFlRai, VoFlRa):
     return CoSpi
 
 
+def calDensityIG(MW, CoSp):
+    """ 
+    calculate: density of ideal gas (IG) [kg/m^3]
+    args:
+        MW: molecular weight [kg/mol]
+        CoSp: concentration species [mol/m^3]
+    """
+    try:
+        # density
+        den = MW*CoSp
+        return den
+    except Exception as e:
+        pass
+
+
+def calDensityIGFromEOS(P, T, MixMW):
+    """ 
+    calculate: density of ideal gas (IG) [kg/m^3]
+    args:
+        P: pressure [Pa]
+        T: temperature [K]
+        MixMW: mixture molecular weight [kg/mol] 
+    """
+    # try/exception
+    try:
+        # Rg [J/kg.K]
+        Rg = R_CONST/MixMW
+        # density
+        den = P/(Rg*T)
+        return den
+    except Exception as e:
+        pass
+
+
 if __name__ == "__main__":
     main()
