@@ -14,7 +14,8 @@
         "scipy",
         "sgvp",
         "xlabel",
-        "ylabel"
+        "ylabel",
+        "ndarray"
     ],
     "python.pythonPath": "venv\\Scripts\\python.exe",
     "python.analysis.extraPaths": ["rmt"]
