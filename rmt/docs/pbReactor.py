@@ -12,6 +12,7 @@ from data.inputDataReactor import *
 from core import constants as CONST
 from core.utilities import roundNum
 from core.config import REACTION_RATE_ACCURACY
+from test_rmt import GaMiVi
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 
@@ -38,14 +39,14 @@ class PackedBedReactorClass:
         self.reactionListSorted = reactionListSorted
         self.reactionStochCoeffList = reactionStochCoeffList
 
-    @property
-    def internalData(cls):
-        return cls._internalData
+    # @property
+    # def internalData(cls):
+    #     return cls._internalData
 
-    @internalData.setter
-    def internalData(cls, value):
-        cls._internalData.clear()
-        cls._internalData.extend(value)
+    # @internalData.setter
+    # def internalData(cls, value):
+    #     cls._internalData.clear()
+    #     cls._internalData.extend(value)
 
     def runM10(self):
         """
@@ -152,6 +153,9 @@ class PackedBedReactorClass:
         # component flux [mol/m^2.s]
         MoFli = MoFl*MoFri
 
+        # component molecular weight [g/mol]
+        MoWei = rmtUtil.extractCompData(self.internalData, compList, "MW")
+
         # external heat
         ExHe = self.modelInput['external-heat']
 
@@ -163,8 +167,11 @@ class PackedBedReactorClass:
         ReLe = ReSpec['ReLe']
         # cross-sectional area [m^2]
         CrSeAr = CONST.PI_CONST*(ReInDi ** 2)/4
+        # particle diameter [m]
+        PaDi = ReSpec['PaDi']
 
-        # mixture viscosity
+        # gas mixture viscosity [Pa.s]
+        GaMiVi = self.modelInput['feed']['mixture-viscosity']
 
         # var no (Fi,FT,T,P)
         varNo = compNo + 3
@@ -187,6 +194,20 @@ class PackedBedReactorClass:
         StHeRe25 = np.array(
             list(map(calStandardEnthalpyOfReaction, reactionList)))
 
+        # fun parameters
+        FunParam = {
+            "compList": compList,
+            "const": {
+                "CrSeAr": CrSeAr,
+                "MoWei": MoWei,
+                "StHeRe25": StHeRe25,
+                "GaMiVi": GaMiVi
+            },
+            "ReSpec": ReSpec,
+            "ExHe": ExHe
+
+        }
+
         # time span
         # t = (0.0, rea_L)
         t = np.array([0, ReLe])
@@ -195,8 +216,8 @@ class PackedBedReactorClass:
         # tSpan = np.linspace(0, rea_L, 25)
 
         # ode call
-        sol = solve_ivp(PackedBedReactorClass.modelEquationM2,
-                        t, IV, method="LSODA", t_eval=times, args=(P, compList, StHeRe25, reactionListSorted, reactionStochCoeff, ExHe, CrSeAr))
+        sol = solve_ivp(PackedBedReactorClass.modelEquationM1,
+                        t, IV, method="LSODA", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
         # ode result
         successStatus = sol.success
@@ -248,176 +269,62 @@ class PackedBedReactorClass:
 
         return res
 
-    def modelEquationM1(t, y, P, T):
-        """
-            M1 model
-            mass balance equations
-            modelParameters:
-                pressure [Pa]
-                temperature [K]
-        """
-        # operating conditions
-        # P = modelParameters['pressure']
-        # T = modelParameters['temperature']
-        # # components
-        # comp = modelParameters['components']
-        # # components no
-        # compNo = len(comp)
-
-        #! loop vars
-        # MoFri = np.copy(y)
-        yi_H2 = y[0]
-        yi_CO2 = y[1]
-        yi_H2O = y[2]
-        yi_CO = y[3]
-        yi_CH3OH = y[4]
-        yi_DME = y[5]
-
-        # molar flux [kmol/m^2.s]
-        MoFl = y[6]
-
-        # mole fraction list
-        MoFri = [yi_H2, yi_CO2, yi_H2O, yi_CO, yi_CH3OH, yi_DME]
-
-        # kinetics
-        Ri = PackedBedReactorClass.modelReactions(P, T, MoFri)
-        #  H2
-        R_H2 = -(3*Ri[0]-Ri[1])
-        # CO2
-        R_CO2 = -(Ri[0]-Ri[1])
-        # H2O
-        R_H2O = (Ri[0]-Ri[1]+Ri[2])
-        # CO
-        R_CO = -(Ri[1])
-        # CH3OH
-        R_CH3OH = -(2*Ri[2]-Ri[0])
-        # DME
-        R_DME = (Ri[2])
-        # total
-        R_T = -(2*Ri[0])
-
-        # mass balance equation
-        # loop vars
-        A1 = 1/MoFl
-        B1 = 1
-
-        #  H2
-        dxdt_H2 = A1*(R_H2 - y[0]*R_T)
-        #  CO2
-        dxdt_CO2 = A1*(R_CO2 - y[1]*R_T)
-        #  H2O
-        dxdt_H2O = A1*(R_H2O - y[2]*R_T)
-        #  CO
-        dxdt_CO = A1*(R_CO - y[3]*R_T)
-        #  CH3OH
-        dxdt_CH3OH = A1*(R_CH3OH - y[4]*R_T)
-        #  DME
-        dxdt_DME = A1*(R_DME - y[5]*R_T)
-        #  overall
-        dxdt_T = B1*R_T
-        # build diff/dt
-        dxdt = [dxdt_H2, dxdt_CO2, dxdt_H2O,
-                dxdt_CO, dxdt_CH3OH, dxdt_DME, dxdt_T]
-        return dxdt
-
-    def modelReactions(P, T, y):
-        try:
-            # pressure [Pa]
-            # temperature [K]
-            # print("y", y)
-            # parameters
-            RT = CONST.R_CONST*T
-
-            #  kinetic constant
-            # DME production
-            #  [kmol/kgcat.s.bar2]
-            K1 = 35.45*MATH.exp(-1.7069e4/RT)
-            #  [kmol/kgcat.s.bar]
-            K2 = 7.3976*MATH.exp(-2.0436e4/RT)
-            #  [kmol/kgcat.s.bar]
-            K3 = 8.2894e4*MATH.exp(-5.2940e4/RT)
-            # adsorption constant [1/bar]
-            KH2 = 0.249*MATH.exp(3.4394e4/RT)
-            KCO2 = 1.02e-7*MATH.exp(6.74e4/RT)
-            KCO = 7.99e-7*MATH.exp(5.81e4/RT)
-            #  equilibrium constant
-            Ln_KP1 = 4213/T - 5.752 * \
-                MATH.log(T) - 1.707e-3*T + 2.682e-6 * \
-                (MATH.pow(T, 2)) - 7.232e-10*(MATH.pow(T, 3)) + 17.6
-            KP1 = MATH.exp(Ln_KP1)
-            log_KP2 = 2167/T - 0.5194 * \
-                MATH.log10(T) + 1.037e-3*T - 2.331e-7*(MATH.pow(T, 2)) - 1.2777
-            KP2 = MATH.pow(10, log_KP2)
-            Ln_KP3 = 4019/T + 3.707 * \
-                MATH.log(T) - 2.783e-3*T + 3.8e-7 * \
-                (MATH.pow(T, 2)) - 6.56e-4/(MATH.pow(T, 3)) - 26.64
-            KP3 = MATH.exp(Ln_KP3)
-            #  total concentration
-            #  Ct = y(1) + y(2) + y(3) + y(4) + y(5) + y(6);
-            #  mole fraction
-            yi_H2 = y[0]
-            yi_CO2 = y[1]
-            yi_H2O = y[2]
-            yi_CO = y[3]
-            yi_CH3OH = y[4]
-            yi_DME = y[5]
-
-            #  partial pressure of H2 [bar]
-            PH2 = P*(yi_H2)*1e-5
-            #  partial pressure of CO2 [bar]
-            PCO2 = P*(yi_CO2)*1e-5
-            #  partial pressure of H2O [bar]
-            PH2O = P*(yi_H2O)*1e-5
-            #  partial pressure of CO [bar]
-            PCO = P*(yi_CO)*1e-5
-            #  partial pressure of CH3OH [bar]
-            PCH3OH = P*(yi_CH3OH)*1e-5
-            #  partial pressure of CH3OCH3 [bar]
-            PCH3OCH3 = P*(yi_DME)*1e-5
-
-            #  reaction rate expression [kmol/m3.s]
-            ra1 = PCO2*PH2
-            ra2 = 1 + (KCO2*PCO2) + (KCO*PCO) + MATH.sqrt(KH2*PH2)
-            ra3 = (1/KP1)*((PH2O*PCH3OH)/(PCO2*(MATH.pow(PH2, 3))))
-            r1 = K1*(ra1/(MATH.pow(ra2, 3)))*(1-ra3)*bulk_rho
-            ra4 = PH2O - (1/KP2)*((PCO2*PH2)/PCO)
-            r2 = K2*(1/ra2)*ra4*bulk_rho
-            ra5 = (MATH.pow(PCH3OH, 2)/PH2O)-(PCH3OCH3/KP3)
-            r3 = K3*ra5*bulk_rho
-
-            # result
-            # r = roundNum([r1, r2, r3], REACTION_RATE_ACCURACY)
-            r = [r1, r2, r3]
-            return r
-        except Exception as e:
-            print(e)
-            raise
-
-    def modelEquationM2(t, y, P, comList, StHeRe25, reactionListSorted, reactionStochCoeff, ExHe, CrSeAr):
+    def modelEquationM1(t, y, reactionListSorted, reactionStochCoeff, FunParam):
         """
             M1 model
             mass, energy, and momentum balance equations
             modelParameters:
-                pressure [Pa]
-                compList: component list
-                StHeRe25: standard heat of reaction at 25C
                 reactionListSorted: reactant/product and coefficient lists 
                 reactionStochCoeff: reaction stoichiometric coefficient
-                CrSeAr: reactor cross sectional area [m^2]
+                FunParam:
+                    compList: component list
+                    const
+                        CrSeAr: reactor cross sectional area [m^2]
+                        MoWei: component molecular weight [g/mol]
+                        StHeRe25: standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+                        GaMiVi: gas mixture viscosity [Pa.s]
+                    ReSpec: reactor spec
+                    ExHe: exchange heat spec
+                        OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
+                        EfHeTrAr: effective heat transfer area [m^2]
+                        MeTe: medium temperature [K]
+
         """
-        # REVIEW
-        # t
-        # print(f"t: {t}")
+        # fun params
+        # component symbol list
+        comList = FunParam['compList']
+        # const ->
+        const = FunParam['const']
+        # cross-sectional area [m^2]
+        CrSeAr = const['CrSeAr']
+        # component molecular weight [g/mol]
+        MoWei = const['MoWei']
+        # standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+        StHeRe25 = const['StHeRe25']
+        # gas viscosity [Pa.s]
+        GaMiVi = const['GaMiVi']
+        # reactor spec ->
+        ReSpec = FunParam['ReSpec']
+        # particle diameter [m]
+        PaDi = ReSpec['PaDi']
+        # exchange heat spec ->
+        ExHe = FunParam['ExHe']
+
         # components no
-        # y: component mole fraction, molar flux, temperature
+        # y: component molar flowrate, total molar flux, temperature, pressure
         compNo = len(comList)
-        indexT = compNo
+        indexFlux = compNo
+        indexT = indexFlux + 1
+        indexP = indexT + 1
 
         # molar flowrate list [mol/m^3]
         MoFlRai = y[0:compNo]
-
+        # total molar flux [mol/m^2.s]
+        MoFl = y[indexFlux]
         # temperature [K]
         T = y[indexT]
+        # pressure [Pa]
+        P = y[indexP]
 
         # total flowrate [mol/m^3]
         MoFlRa = np.sum(MoFlRai)
@@ -427,9 +334,31 @@ class PackedBedReactorClass:
 
         # concentration species [mol/m^3]
         CoSpi = calConcentrationIG(MoFlRai, VoFlRai)
+        # total concentration [mol/m^3]
+        CoSp = np.sum(CoSpi)
 
         # mole fraction
         MoFri = rmtUtil.moleFractionFromConcentrationSpecies(CoSpi)
+
+        # superficial gas velocity [m/s]
+        SuGaVe = rmtUtil.calSuperficialGasVelocityFromEOS(MoFl, P, T)
+
+        # mixture molecular weight [kg/mol]
+        MiMoWe = rmtUtil.mixtureMolecularWeight(MoFri, MoWei, "kg/mol")
+
+        # gas density [kg/m^3]
+        GaDe = calDensityIG(MiMoWe, CoSp)
+        GaDeEOS = calDensityIGFromEOS(P, T, MiMoWe)
+
+        # bed porosity (bed void fraction)
+        BeVoFr = ReSpec['BeVoFr']
+
+        # ergun equation
+        ergA = 150*GaMiVi*SuGaVe/(PaDi**2)
+        ergB = ((1-BeVoFr)**2)/(BeVoFr**3)
+        ergC = 1.75*GaDe*(SuGaVe**2)/PaDi
+        ergD = (1-BeVoFr)/(BeVoFr**3)
+        RHS_ergun = -1*(ergA*ergB + ergC*ergD)
 
         # kinetics
         # Ri = np.array(PlugFlowReactorClass.modelReactions(P, T, MoFri))
@@ -454,6 +383,9 @@ class PackedBedReactorClass:
                     if comList[k] == reactionStochCoeff[m][n][0]:
                         _riLoop += reactionStochCoeff[m][n][1]*Ri[m]
                 ri[k] = _riLoop
+
+        # overall formation rate [mol/m^3.s]
+        OvR = np.sum(ri)
 
         # enthalpy
         # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
@@ -494,11 +426,16 @@ class PackedBedReactorClass:
         for i in range(compNo):
             dxdt_F = (1/const_F1)*ri[i]
             dxdt.append(dxdt_F)
+        # flux
+        dxdt_Fl = OvR
+        dxdt.append(dxdt_Fl)
 
         # energy balance (temperature) [K]
         dxdt_T = (1/const_T1)*(-OvHeReT + Qm)
         dxdt.append(dxdt_T)
 
-        #
+        # momentum balance (ergun equation)
+        dxdt_P = RHS_ergun
+        dxdt.append(dxdt_P)
 
         return dxdt
