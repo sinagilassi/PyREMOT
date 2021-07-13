@@ -18,7 +18,24 @@ class rmtUtilityClass:
         pass
 
     @staticmethod
-    def mixtureMolecularWeight(MoFri, MWi):
+    def extractCompData(compData, compList, compProperty):
+        """
+        build a list of desired component data
+        args:
+            compData: component database dict list
+            compList: component symbol list
+            compProperty: property name
+        """
+        # try/except
+        try:
+            # prop list
+            propList = [item[compProperty] for item in compData]
+            return propList
+        except Exception as e:
+            raise
+
+    @staticmethod
+    def mixtureMolecularWeight(MoFri, MWi, unit="g/mol"):
         """
         calculate mixture molecular weight [g/mol]
         args:
@@ -45,6 +62,13 @@ class rmtUtilityClass:
                 raise Exception("elements are not equal")
             #
             MixMoWe = np.dot(MoFri0, MWi0)
+
+            # check unit
+            if unit == 'g/mol':
+                MixMoWe
+            elif unit == 'kg/mol':
+                MixMoWe = MixMoWe*1e-3
+
             return MixMoWe
         except Exception as e:
             print(e)
@@ -257,3 +281,20 @@ class rmtUtilityClass:
 
         except Exception as e:
             raise
+
+    @staticmethod
+    def calSuperficialGasVelocityFromEOS(MoFl, P, T):
+        """ 
+        calculate: superficial gas velocity from EOS ideal gas [m/s]
+        args:
+            MoFl: molar flux [mol/m^2.s]
+            P: pressure [Pa]
+            T: temperature [K]
+        """
+        # try/except
+        try:
+            # superficial gas velocity [m/s]
+            SuGaVe = MoFl*T*CONST.R_CONST/P
+            return SuGaVe
+        except Exception as e:
+            pass
