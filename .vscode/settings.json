@@ -1,22 +1,24 @@
 {
-    "cSpell.words": [
-        "LSODA",
-        "Stoch",
-        "Xpoint",
-        "Xpoints",
-        "Ypoints",
-        "coeff",
-        "dfdx",
-        "kgcat",
-        "pltc",
-        "pyplot",
-        "rmt",
-        "scipy",
-        "sgvp",
-        "xlabel",
-        "ylabel",
-        "ndarray"
-    ],
-    "python.pythonPath": "venv\\Scripts\\python.exe",
-    "python.analysis.extraPaths": ["rmt"]
+  "cSpell.words": [
+    "LSODA",
+    "PBPR",
+    "Stoch",
+    "Xpoint",
+    "Xpoints",
+    "Ypoints",
+    "coeff",
+    "dfdx",
+    "ergun",
+    "kgcat",
+    "ndarray",
+    "pltc",
+    "pyplot",
+    "rmt",
+    "scipy",
+    "sgvp",
+    "xlabel",
+    "ylabel"
+  ],
+  "python.pythonPath": "venv\\Scripts\\python.exe",
+  "python.analysis.extraPaths": ["rmt"]
 }

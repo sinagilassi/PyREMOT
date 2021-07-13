@@ -16,7 +16,7 @@ from .rmtThermo import calEnthalpyChangeOfReaction
 from .rmtReaction import rmtReactionClass as rmtRec
 
 
-class rmtCoreClass(pbRec, cRec, bRec):
+class rmtCoreClass():
     """
         script for different modeling modes
     """
@@ -30,10 +30,6 @@ class rmtCoreClass(pbRec, cRec, bRec):
     def __init__(self, modelMode, modelInput):
         self.modelMode = modelMode
         self.modelInput = modelInput
-
-        # # pbRec
-        # pbRec.__init__(self, modelInput, internalDataSet,
-        #                reactionListSortedSet)
 
         # bRec.__init__(self, modelInput, internalDataSet,
         #               reactionListSortedSet)
@@ -88,7 +84,7 @@ class rmtCoreClass(pbRec, cRec, bRec):
         # select model type
         modelMode = self.modelMode
         if modelMode == M1:
-            return self.M1Init()
+            return self.M1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M2:
             return self.M2Init()
         elif modelMode == M3:
@@ -168,16 +164,15 @@ class rmtCoreClass(pbRec, cRec, bRec):
         except Exception as e:
             raise
 
-    def M1Init(self):
+    def M1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-            M1 model
-            more info, check --help M1
+        M1 model: Packed-bed Plug-flow reactor
         """
-        # class init
-        # modelInput = self.modelInput
-
-        # start cal
-        res = self.runM1()
+        # init PBPR
+        pbRecInit = pbRec(self.modelInput, internalData,
+                          reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = pbRecInit.runM1()
         return res
 
     def M2Init(self):
