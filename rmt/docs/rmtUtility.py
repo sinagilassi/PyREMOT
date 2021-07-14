@@ -297,3 +297,48 @@ class rmtUtilityClass:
             return SuGaVe
         except Exception as e:
             pass
+
+    @staticmethod
+    def calEquivalentParticleDiameter(data, type="sphere"):
+        """ 
+        calculate: equivalent particle diameter [m]
+        args: 
+            data: 
+                sphere: 
+                    data['D']: sphere diameter [m]
+        """
+        # try/except
+        try:
+            if type == "sphere":
+                ds = data['R']
+                rs = ds/2
+                # surface area
+                A = 4*CONST.PI_CONST*(rs**2)
+                # volume
+                V = (4/3)*CONST.PI_CONST*(rs**3)
+            elif type == "cylinder":
+                pass
+            # ratio of particle surface area
+            av = A/V
+            # REVIEW
+            # equivalent particle diameter
+            EqPaDi = 6/av
+            return EqPaDi
+        except Exception as e:
+            raise
+
+    @staticmethod
+    def calSpPaSuArToFrFl(PaDe, BeVoFr):
+        """ 
+        calculate: specific particle surface area to the free fluid [m^2 of partiles/m^3 of fluid]
+        args:
+            PaDe: particle diameter [m]
+            BeVoFr: bed void fraction 
+        """
+        # try/exception
+        try:
+            # specific surface area of particle to the free fluid
+            SpPaSuArToFrFl = 3*(1-BeVoFr)/(PaDe/2)
+            return SpPaSuArToFrFl
+        except Exception as e:
+            raise
