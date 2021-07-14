@@ -8,8 +8,9 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/rmt/test_rmt.py",
+            "console": "integratedTerminal",
+            "python": "${command:python.interpreterPath}"
         }
     ]
 }

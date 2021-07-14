@@ -12,7 +12,6 @@ from data.inputDataReactor import *
 from core import constants as CONST
 from core.utilities import roundNum
 from core.config import REACTION_RATE_ACCURACY
-from test_rmt import GaMiVi
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 
@@ -142,23 +141,6 @@ class PackedBedReactorClass:
         indexTemp = indexFlux + 1
         indexPressure = indexTemp + 1
 
-        # mole fraction
-        MoFri = np.array(self.modelInput['feed']['mole-fraction'])
-        # flowrate [mol/s]
-        MoFlRa = self.modelInput['feed']['molar-flowrate']
-        # component flowrate [mol/s]
-        MoFlRai = MoFlRa*MoFri
-        # flux [mol/m^2.s]
-        MoFl = self.modelInput['feed']['molar-flux']
-        # component flux [mol/m^2.s]
-        MoFli = MoFl*MoFri
-
-        # component molecular weight [g/mol]
-        MoWei = rmtUtil.extractCompData(self.internalData, compList, "MW")
-
-        # external heat
-        ExHe = self.modelInput['external-heat']
-
         # reactor spec
         ReSpec = self.modelInput['reactor']
         # reactor inner diameter [m]
@@ -170,6 +152,23 @@ class PackedBedReactorClass:
         # particle diameter [m]
         PaDi = ReSpec['PaDi']
 
+        # mole fraction
+        MoFri = np.array(self.modelInput['feed']['mole-fraction'])
+        # flowrate [mol/s]
+        MoFlRa = self.modelInput['feed']['molar-flowrate']
+        # component flowrate [mol/s]
+        MoFlRai = MoFlRa*MoFri
+        # flux [mol/m^2.s]
+        MoFl = MoFlRa/CrSeAr
+        # component flux [mol/m^2.s]
+        MoFli = MoFl*MoFri
+
+        # component molecular weight [g/mol]
+        MoWei = rmtUtil.extractCompData(self.internalData, "MW")
+
+        # external heat
+        ExHe = self.modelInput['external-heat']
+
         # gas mixture viscosity [Pa.s]
         GaMiVi = self.modelInput['feed']['mixture-viscosity']
 
@@ -179,7 +178,7 @@ class PackedBedReactorClass:
         # initial values
         IV = np.zeros(varNo)
         IV[0:compNo] = MoFlRai
-        IV[indexFlux] = MoFlRa
+        IV[indexFlux] = MoFl
         IV[indexTemp] = T
         IV[indexPressure] = P
         print(f"IV: {IV}")
@@ -224,7 +223,7 @@ class PackedBedReactorClass:
         dataX = sol.t
         # all results
         dataYs = sol.y
-        # flux [mol/m^2.s]
+        # molar flowrate [mol/s]
         dataYs1 = sol.y[0:compNo, :]
         labelListYs1 = labelList[0:compNo]
         # flux
@@ -242,7 +241,7 @@ class PackedBedReactorClass:
             dataList = pltc.plots2DSetDataList(XYList, labelList)
             # datalists
             dataLists = [dataList[0:compNo],
-                         dataList[indexFlux], dataList[indexTemp]]
+                         dataList[indexFlux], dataList[indexTemp], dataList[indexPressure]]
             # subplot result
             pltc.plots2DSub(dataLists, "Reactor Length (m)",
                             "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
@@ -352,6 +351,8 @@ class PackedBedReactorClass:
 
         # bed porosity (bed void fraction)
         BeVoFr = ReSpec['BeVoFr']
+        # bulk density (catalyst bed density)
+        CaBeDe = ReSpec['CaBeDe']
 
         # ergun equation
         ergA = 150*GaMiVi*SuGaVe/(PaDi**2)
@@ -374,6 +375,7 @@ class PackedBedReactorClass:
         Ri = [r0]
 
         # component formation rate [mol/m^3.s]
+        # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
         ri = np.zeros(compNo)
         for k in range(compNo):
             # reset
@@ -382,7 +384,7 @@ class PackedBedReactorClass:
                 for n in range(len(reactionStochCoeff[m])):
                     if comList[k] == reactionStochCoeff[m][n][0]:
                         _riLoop += reactionStochCoeff[m][n][1]*Ri[m]
-                ri[k] = _riLoop
+                ri[k] = _riLoop*CaBeDe
 
         # overall formation rate [mol/m^3.s]
         OvR = np.sum(ri)
@@ -419,8 +421,9 @@ class PackedBedReactorClass:
         # diff/dt
         dxdt = []
         # loop vars
-        const_F1 = 1/CrSeAr
-        const_T1 = MoFlRa*CpMeanMixture/CrSeAr
+        const_F1 = BeVoFr/CrSeAr
+        const_T1 = MoFl*CpMeanMixture
+        const_T2 = MoFlRa*CpMeanMixture/CrSeAr
 
         # mass balance (molar flowrate) [mol/s]
         for i in range(compNo):

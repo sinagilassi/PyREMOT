@@ -138,6 +138,8 @@ ReVo = 5
 ReLe = 1
 # reactor inner diameter [m]
 ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
+# particle dimeter [m]
+PaDi = cat_d
 
 # external heat
 # overall heat transfer coefficient [J/m^2.s.K]
@@ -155,9 +157,12 @@ externalHeat = {
     "MeTe": Tm
 }
 
+# gas mixture viscosity [Pa.s]
+GaMiVi = 1e-5
+
 # model input - feed
 modelInput = {
-    "model": "M4",
+    "model": "M1",
     "operating-conditions": {
         "pressure": P0,
         "temperature": T0,
@@ -167,6 +172,7 @@ modelInput = {
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
         "concentration": CoSpi0,
+        "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList1,
             "tube": [],
@@ -178,7 +184,10 @@ modelInput = {
     "external-heat": externalHeat,
     "reactor": {
         "ReInDi": ReInDi,
-        "ReLe": ReLe
+        "ReLe": ReLe,
+        "PaDi": PaDi,
+        "BeVoFr": bed_por,
+        "CaBeDe": bulk_rho
     }
 }
 

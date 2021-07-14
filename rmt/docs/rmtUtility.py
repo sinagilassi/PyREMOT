@@ -18,12 +18,11 @@ class rmtUtilityClass:
         pass
 
     @staticmethod
-    def extractCompData(compData, compList, compProperty):
+    def extractCompData(compData, compProperty):
         """
         build a list of desired component data
         args:
             compData: component database dict list
-            compList: component symbol list
             compProperty: property name
         """
         # try/except

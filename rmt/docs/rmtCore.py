@@ -110,7 +110,7 @@ class rmtCoreClass():
             for i in compList:
                 _loop1 = [
                     item for item in appData if i == item['symbol']]
-                compData.append(_loop1)
+                compData.append(_loop1[0])
 
             # res
             return compData

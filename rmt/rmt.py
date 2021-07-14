@@ -3,7 +3,6 @@
 
 # import packages/modules
 import timeit
-import docs
 from docs.rmtCore import rmtCoreClass
 from data.componentData import componentSymbolList
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
