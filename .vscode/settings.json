@@ -1,8 +1,10 @@
 {
   "cSpell.words": [
+    "Enskog",
     "LSODA",
     "PBPR",
     "Stoch",
+    "Wilke",
     "Xpoint",
     "Xpoints",
     "Ypoints",
@@ -11,11 +13,13 @@
     "ergun",
     "kgcat",
     "ndarray",
+    "omegaij",
     "pltc",
     "pyplot",
     "rmt",
     "scipy",
     "sgvp",
+    "sigmaij",
     "xlabel",
     "ylabel"
   ],
