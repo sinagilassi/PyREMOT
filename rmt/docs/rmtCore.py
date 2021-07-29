@@ -105,12 +105,24 @@ class rmtCoreClass():
 
             # component data
             compData = []
+            # component data index
+            compDataIndex = []
 
             # init library
             for i in compList:
                 _loop1 = [
-                    item for item in appData if i == item['symbol']]
-                compData.append(_loop1[0])
+                    j for j, item in enumerate(appData) if i in item.values()]
+                compDataIndex.append(_loop1[0])
+
+            for i in compDataIndex:
+                compData.append(appData[i])
+
+            # old version
+            # init library
+            # for i in compList:
+            #     _loop1 = [
+            #         item for item in appData if i == item['symbol']]
+            #     compData.append(_loop1[0])
 
             # res
             return compData

@@ -10,14 +10,14 @@ from core.constants import Tref, R_CONST
 from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
 from core.utilities import roundNum
 from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
-from rmtUtility import rmtUtilityClass as rmtUtil
+from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 
 def main():
     pass
 
 
-def calGasDiffusivity(equation, compList, **params):
+def calGasDiffusivity(equation, compList, params):
     """ 
     calculate gas diffusivity [m2/s]
     args:
@@ -26,12 +26,12 @@ def calGasDiffusivity(equation, compList, **params):
     """
     # choose equation
     if equation == 1:
-        return calGaDiEq1(compList, **params)
+        return calGaDiEq1(compList, params)
     else:
         return -1
 
 
-def calGaDiEq1(compList, **params):
+def calGaDiEq1(compList, params):
     """ 
     calculate based on Chapman-Enskog 
     args:
@@ -64,7 +64,7 @@ def calGaDiEq1(compList, **params):
     # e[i,j]
     eij = np.zeros((compNo, compNo))
     for i in range(compNo):
-        for j in range(compNo):
+        for j in range(i, compNo):
             if i == j:
                 eij[i][j] = 0
             else:
@@ -73,7 +73,7 @@ def calGaDiEq1(compList, **params):
     # sigma[i,j]
     sigmaij = np.zeros((compNo, compNo))
     for i in range(compNo):
-        for j in range(compNo):
+        for j in range(i, compNo):
             if i == j:
                 sigmaij[i][j] = 0
             else:
@@ -82,7 +82,7 @@ def calGaDiEq1(compList, **params):
     # omega[i,j]
     omegaij = np.zeros((compNo, compNo))
     for i in range(compNo):
-        for j in range(compNo):
+        for j in range(i, compNo):
             if i == j:
                 omegaij[i][j] = 0
             else:
@@ -93,7 +93,7 @@ def calGaDiEq1(compList, **params):
     # diffusivity coefficient D[i,j]
     Dij = np.zeros((compNo, compNo))
     for i in range(compNo):
-        for j in range(compNo):
+        for j in range(i, compNo):
             if i == j:
                 Dij[i][j] = 0
             else:
@@ -121,6 +121,20 @@ def calGaDiEq1(compList, **params):
 
     # res
     return Di
+
+
+def calGasViscosity(equation, compList, params):
+    """ 
+    calculate gas viscosity []
+    args:
+        params: changes with equation
+        eq1: Chapman-Enskog
+    """
+    # choose equation
+    if equation == 1:
+        return calGaDiEq1(compList, params)
+    else:
+        return -1
 
 
 if __name__ == "__main__":

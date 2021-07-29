@@ -1,4 +1,5 @@
 # heat of reaction
+import json
 import numpy as np
 from library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
@@ -6,6 +7,9 @@ from library.saveResult import saveResultClass as sRes
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from core.utilities import *
 from docs.rmtThermo import *
+# transport properties
+from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
+from docs.gasTransPor import calGasDiffusivity
 # component data
 from data.componentData import componentDataStore
 
@@ -17,20 +21,26 @@ appData = componentDataStore['payload']
 
 # component data
 compData = []
+# component data index
+compDataIndex = []
 
 # init library
 for i in compList:
     _loop1 = [
-        item for item in appData if i == item['symbol']]
-    compData.append(_loop1[0])
+        j for j, item in enumerate(appData) if i in item.values()]
+    compDataIndex.append(_loop1[0])
+
+for i in compDataIndex:
+    compData.append(appData[i])
 
 # mole fraction
-MoFri = [0.4998, 0.2499, 0.0001, 0.2499, 0.0001, 0.0001]
+MoFri = [0.666466666666667,	0.266586666666667,	0.000100000000000000,
+         0.0666466666666666	, 0.000100000000000000,	0.000100000000000000]
 
 # temperature [K]
-T = 520
+T = 523
 # pressure [Pa]
-P = 5e6
+P = 3500000
 
 # molecular weight [g/mol]
 MWi = rmtUtil.extractCompData(compData, "MW")
@@ -40,7 +50,7 @@ Tci = rmtUtil.extractCompData(compData, "Tc")
 Pci = rmtUtil.extractCompData(compData, "Pc")
 
 # prepare data
-params = {
+paramsData = {
     "MoFri": MoFri,
     "T": T,
     "P": P,
@@ -49,4 +59,12 @@ params = {
     "CrPri": Pci
 }
 
-print("params: ", params)
+# diffusivity coefficient of components in the mixture
+res = calGasDiffusivity(
+    CONST_EQ_GAS_DIFFUSIVITY['Chapman-Enskog'], compList, paramsData)
+# log
+print("Dij: ", res)
+
+# save modeling result
+with open('test3.txt', 'a') as f:
+    f.write(str(res))
