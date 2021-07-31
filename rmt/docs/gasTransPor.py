@@ -9,8 +9,9 @@ import re
 from core.constants import Tref, R_CONST
 from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
 from core.utilities import roundNum
-from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
+from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY, CONST_EQ_GAS_VISCOSITY
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from data.dataGasViscosity import eq1GasViscosityData, eq2GasViscosityData
 
 
 def main():
@@ -130,11 +131,41 @@ def calGasViscosity(equation, compList, params):
         params: changes with equation
         eq1: Chapman-Enskog
     """
-    # choose equation
-    if equation == 1:
-        return calGaDiEq1(compList, params)
-    else:
-        return -1
+    # viscosity list
+    visList = []
+    # component check
+    for i in range(len(compList)):
+        _loopEqName = compList[i]['viscosity']
+        _loopSymbol = compList[i]['symbol']
+        # choose equation
+        if _loopEqName == 1:
+            # eq input
+            _eqParams = rmtUtil.extractSingleCompData(
+                _loopSymbol, eq1GasViscosityData, "viscosity")
+            _loopRes = calGaDiEq1(_eqParams)
+            visList.append(_loopRes)
+        else:
+            return -1
+
+
+def calGasVisEq1(params, T):
+    """ 
+    gas viscosity equation 1 - Pa.s
+    args:
+        params: 
+            equation parameters list [A,B,C,D]
+        T: temperature [K]
+    """
+    # try/except
+    try:
+        A = params[0]
+        B = params[1]
+        C = params[2]
+        D = params[3]
+        _res = A*1e-6*(T**B)/(1+C*(1/T)+D*(T**-2))
+        return _res
+    except Exception as e:
+        raise
 
 
 if __name__ == "__main__":

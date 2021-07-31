@@ -107,7 +107,8 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_CO2
-            }
+            },
+            "viscosity": ["eq1GasViscosity"]
         },
         {
             "symbol": "H2",

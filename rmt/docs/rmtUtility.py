@@ -34,6 +34,28 @@ class rmtUtilityClass:
             raise
 
     @staticmethod
+    def extractSingleCompData(compId, compData, compProperty):
+        """
+        desired component data
+        args:
+            compId: component name, such as CO2, ...
+            compData: component database dict list
+            compProperty: property name
+        """
+        # try/except
+        try:
+            # prop list
+            propList = [item[compProperty]
+                        for item in compData if item['symbol'] == compId]
+            # check
+            if len(propList) == 0:
+                raise
+            else:
+                return propList[0]
+        except Exception as e:
+            raise
+
+    @staticmethod
     def mixtureMolecularWeight(MoFri, MWi, unit="g/mol"):
         """
         calculate mixture molecular weight [g/mol]
