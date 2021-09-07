@@ -41,29 +41,6 @@ T = 523
 # pressure [Pa]
 P = 3500000
 
-# molecular weight [g/mol]
-MWi = rmtUtil.extractCompData(compData, "MW")
-# critical temperature [K]
-Tci = rmtUtil.extractCompData(compData, "Tc")
-# critical pressure [Pa]
-Pci = rmtUtil.extractCompData(compData, "Pc")
 
-# prepare data
-paramsData = {
-    "MoFri": MoFri,
-    "T": T,
-    "P": P,
-    "MWi": MWi,
-    "CrTei": Tci,
-    "CrPri": Pci
-}
-
-# diffusivity coefficient of components in the mixture
-res = calGasDiffusivity(
-    CONST_EQ_GAS_DIFFUSIVITY['Chapman-Enskog'], compList, paramsData)
-# log
-print("Dij: ", res)
-
-# save modeling result
-with open('test3.txt', 'a') as f:
-    f.write(str(res))
+# Cp mean list
+CpMeanList = calMeanHeatCapacityAtConstantPressure(compList, T)

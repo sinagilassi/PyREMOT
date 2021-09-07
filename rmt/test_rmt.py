@@ -119,6 +119,8 @@ MoFlRa0 = 18.8
 P0 = 1e5
 # temperature [K]
 T0 = 700
+# operation period [s]
+opT = 10
 
 # forward frequency factor [1/s]
 A1 = 8.2e14
@@ -162,10 +164,11 @@ GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "M5",
     "operating-conditions": {
         "pressure": P0,
         "temperature": T0,
+        "period": opT
     },
     "feed": {
         "mole-fraction": MoFri0,

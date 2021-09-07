@@ -4,12 +4,13 @@
 # import packages/modules
 from pprint import pprint
 from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2, M3, M4
+from core.setting import modelTypes, M1, M2, M3, M4, M5
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
 from docs.batchReactor import batchReactorClass as bRec
 from docs.pfReactor import PlugFlowReactorClass as pfRec
+from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
 from data.componentData import componentDataStore
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import calEnthalpyChangeOfReaction
@@ -91,6 +92,8 @@ class rmtCoreClass():
             return self.M3Init()
         elif modelMode == M4:
             return self.M4Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == M5:
+            return self.M5Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -214,4 +217,15 @@ class rmtCoreClass():
         # run algorithm
         res = pfRecInit.runM1()
         # result
+        return res
+
+    def M5Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M1 model: Packed-bed Plug-flow reactor (heterogenous)
+        """
+        # init PBPR
+        pbHeterRecInit = pbHeterRec(self.modelInput, internalData,
+                                    reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = pbHeterRecInit.runM1()
         return res

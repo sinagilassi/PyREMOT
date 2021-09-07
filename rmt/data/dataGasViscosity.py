@@ -5,7 +5,7 @@
 # ref: chemical thermodynamics for process simulation
 # Vapor viscosity correlations for selected compounds at low pressures
 # unit: Pa.s
-eq1GasViscosityData = {
+eq1GasViscosityData = [
     {
         "symbol": "CO2",
         "viscosity": [4.719875, 0.373279, 512.686300, -6119.961],
@@ -78,10 +78,10 @@ eq1GasViscosityData = {
             "max": 1000
         }
     },
-}
+]
 
 #
-eq2GasViscosityData = {
+eq2GasViscosityData = [
     {
         "symbol": "DME",
         "viscosity": [2.68e-7, 0.3975, 534],
@@ -91,4 +91,4 @@ eq2GasViscosityData = {
             "max": 1473
         }
     },
-}
+]
