@@ -1,25 +1,24 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Python: Current File",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/rmt/test_rmt.py",
-            "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}"
-        },
-        {
-            "name": "Test",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}\\rmt\\test3.py",
-            "console": "integratedTerminal",
-            "python": "${command:python.interpreterPath}"
-        }
-    ],
-
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\rmt\\test3.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    }
+  ]
 }

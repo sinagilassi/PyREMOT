@@ -4,7 +4,7 @@
 # import packages/modules
 from pprint import pprint
 from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2, M3, M4, M5
+from core.setting import modelTypes, M1, M2, M3, M4, M5, M6
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
@@ -46,7 +46,7 @@ class rmtCoreClass():
 
     def gVarCal(self, compList, reactionList):
         """
-        init global var 
+        init global var
         """
         # init database
         internalDataRes = self.initComponentData(compList)
@@ -94,11 +94,13 @@ class rmtCoreClass():
             return self.M4Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M5:
             return self.M5Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == M6:
+            return self.M6Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
             initialize component data as:
-                heat capacity at constant pressure 
+                heat capacity at constant pressure
                 heat of formation at 25C
         """
         # try/except
@@ -153,7 +155,7 @@ class rmtCoreClass():
 
     def initReactionRate(self, reactionRateDict):
         """
-            initialize reaction rate expr list 
+            initialize reaction rate expr list
         """
         # try/except
         try:
@@ -228,4 +230,15 @@ class rmtCoreClass():
                                     reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = pbHeterRecInit.runM1()
+        return res
+
+    def M6Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M6 model: dynamic Packed-bed Plug-flow reactor (homogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM2()
         return res

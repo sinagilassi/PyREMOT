@@ -12,7 +12,6 @@ from data.inputDataReactor import *
 from core import constants as CONST
 from core.utilities import roundNum
 from core.config import REACTION_RATE_ACCURACY
-from test_rmt import ReLe
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 from solvers.solSetting import solverSetting
@@ -30,6 +29,7 @@ class PackedBedReactorClass:
             mass balance is based on flux
             ergun equation is used for pressure drop
             neglecting gravitational effects, kinetic energy, and viscosity change
+    M2 model: dynamic homogenous modeling
     """
     # internal data
     _internalData = []
@@ -467,14 +467,12 @@ class PackedBedReactorClass:
 
         # graph label setting
         labelList = compList.copy()
-        labelList.append("Total Concentration")
         labelList.append("Temperature")
         labelList.append("Pressure")
 
         # component no
         compNo = len(compList)
-        indexTConcentration = compNo
-        indexTemp = indexTConcentration + 1
+        indexTemp = compNo
         indexPressure = indexTemp + 1
 
         # reactor spec
@@ -512,8 +510,8 @@ class PackedBedReactorClass:
         # dz
         dz = ReLe/zNo
 
-        # var no (Ci,CT,T)
-        varNo = compNo + 2
+        # var no (Ci,T)
+        varNo = compNo + 1
         # total var no along the reactor length
         varNoT = varNo*zNo
 
@@ -525,10 +523,6 @@ class PackedBedReactorClass:
         for i in range(compNo):
             for j in range(zNo):
                 IV2D[i][j] = SpCoi0[i]
-
-        # total concentration
-        for j in range(zNo):
-            IV2D[indexTConcentration][j] = SpCo0[i]
 
         for j in range(zNo):
             IV2D[indexTemp][j] = T
@@ -567,7 +561,8 @@ class PackedBedReactorClass:
             "constBC1": {
                 "VoFlRa0": VoFlRa0,
                 "SpCoi0": SpCoi0,
-                "SpCo0": SpCo0
+                "SpCo0": SpCo0,
+                "P0": P
             }
 
         }
@@ -579,7 +574,7 @@ class PackedBedReactorClass:
         dataPack = []
 
         # time loop
-        for i in len(opTSpan) - 1:
+        for i in range(zNo):
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
             times = np.linspace(t[0], t[1], 10)
@@ -602,16 +597,13 @@ class PackedBedReactorClass:
 
             # component concentration [mol/m^3]
             dataYs1 = sol.y[0:compNo, :]
-            # total concentration
-            dataYs2 = sol.y[indexTConcentration, :]
             # temperature
-            dataYs3 = sol.y[indexTemp, :]
+            dataYs2 = sol.y[indexTemp, :]
 
             # update initial values [IV]
             # at t > 0
             IV[0:compNo, :] = dataYs1
-            IV[indexTConcentration, :] = dataYs2
-            IV[indexTemp, :] = dataYs3
+            IV[indexTemp, :] = dataYs2
 
         # check
         if successStatus is True:
@@ -621,7 +613,7 @@ class PackedBedReactorClass:
             dataList = pltc.plots2DSetDataList(XYList, labelList)
             # datalists
             dataLists = [dataList[0:compNo],
-                         dataList[indexTConcentration], dataList[indexTemp], dataList[indexPressure]]
+                         dataList[indexTemp], dataList[indexPressure]]
             # subplot result
             pltc.plots2DSub(dataLists, "Reactor Length (m)",
                             "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
@@ -676,6 +668,7 @@ class PackedBedReactorClass:
                         VoFlRa0: inlet volumetric flowrate [m^3/s],
                         SpCoi0: species concentration [mol/m^3],
                         SpCo0: total concentration [mol/m^3]
+                        P0: inlet pressure [Pa]
 
         """
         # fun params
@@ -722,6 +715,8 @@ class PackedBedReactorClass:
         SpCoi0 = constBC1['SpCoi0']
         # inlet total concentration [mol/m^3]
         SpCo0 = constBC1['SpCo0']
+        # inlet pressure [Pa]
+        P0 = constBC1['P0']
 
         # calculate
         # molar flowrate [mol/s]
@@ -743,14 +738,16 @@ class PackedBedReactorClass:
         # FIXME
         # pressure [Pa]
         P_z = np.zeros(zNo)
-        P_z[0] = 1
+        P_z[0] = P0
 
         # components no
         # y: component molar flowrate, total molar flux, temperature, pressure
         compNo = len(comList)
-        indexTConcentration = compNo
-        indexT = indexTConcentration + 1
+        indexT = compNo
         indexP = indexT + 1
+
+        # species concentration [mol/m^3]
+        CoSpi = np.zeros(compNo)
 
         # NOTE
         # distribute y[i] value through the reactor length
@@ -758,32 +755,36 @@ class PackedBedReactorClass:
         yLoop = np.reshape(y, (varNo, zNo))
 
         # -> concentration [mol/m^3]
-        SpCoi_z = np.array((compNo, zNo))
+        SpCoi_z = np.zeros((compNo, zNo))
         for i in range(compNo):
-            SpCoi_z[i, :] = yLoop[i, :]
-
-        # total concentration
-        CT_z = np.array((1, zNo))
-        CT_z[1, :] = yLoop[indexTConcentration, :]
+            _SpCoi = yLoop[i, :]
+            SpCoi_z[i, :] = _SpCoi
 
         # temperature [K]
-        T_z = np.array((1, zNo))
-        T_z[1, :] = yLoop[indexT, :]
+        T_z = np.zeros(zNo)
+        T_z = yLoop[indexT, :]
 
-        # species concentration [mol/m^3]
-        CoSpi = []
+        # diff/dt
+        # dxdt = []
+        # matrix
+        dxdtMat = np.zeros((varNo, zNo))
+
+        # reaction rate
+        ri = np.zeros(compNo)
 
         # NOTE
+        # FIXME
         # define ode equations for each finite difference [zNo]
-        for z in range(zNo):
+        for z in range(zNo - 1):
             ## block ##
 
             # concentration species [mol/m^3]
             for i in range(compNo):
-                CoSpi.append(SpCoi_z[i][z])
+                CoSpi[i] = SpCoi_z[i][z]
 
             # total concentration [mol/m^3]
-            CoSp = CT_z[z]
+            CoSp = np.sum(CoSpi)
+
             # temperature [K]
             T = T_z[z]
             # pressure [Pa]
@@ -794,20 +795,20 @@ class PackedBedReactorClass:
             MoFri = np.array(
                 rmtUtil.moleFractionFromConcentrationSpecies(CoSpi))
 
+            # superficial gas velocity [m/s]
+            SuGaVe = SuGaVe0*(CoSp/SpCo0)*(P_z[z]/P_z[0])
+
             # total flowrate [mol/s]
             # [mol/m^3]*[m/s]*[m^2]
-            MoFlRa = MoFl_z[m]
+            MoFlRa = CoSp*SuGaVe*CrSeAr
             # molar flowrate list [mol/m^3]
             MoFlRai = MoFlRa*MoFri
 
             # molar flux [mol/m^2.s]
-            MoFl = MoFlRa/(CrSeAr*BeVoFr)
+            MoFl = MoFlRa/CrSeAr
 
             # volumetric flowrate [m^3/s]
             VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai)
-
-            # superficial gas velocity [m/s]
-            SuGaVe = rmtUtil.calSuperficialGasVelocityFromEOS(MoFl, P, T)
 
             # mixture molecular weight [kg/mol]
             MiMoWe = rmtUtil.mixtureMolecularWeight(MoFri, MoWei, "kg/mol")
@@ -830,22 +831,16 @@ class PackedBedReactorClass:
             P_z[z+1] = dxdt_P*dz + P_z[z]
 
             # NOTE
-            # kinetics
-            # Ri = np.array(PlugFlowReactorClass.modelReactions(P, T, MoFri))
-            # forward frequency factor
-            A1 = 8.2e14
-            # forward activation energy [J/mol]
-            E1 = 284.5e3
-            # rate constant [1/s]
-            kFactor = 1e7
-            k1 = A1*np.exp(-E1/(R_CONST*T))*kFactor
-            # net reaction rate expression [mol/m^3.s]
-            r0 = k1*CoSpi[0]
-            Ri_z[z] = [r0]
+            ## kinetics ##
+            # net reaction rate expression [mol/kgcat.s]
+            r0 = np.array(PackedBedReactorClass.modelReactions(
+                P_z[z], T_z[z], MoFri))
+            # loop
+            Ri_z[z, :] = r0
 
             # component formation rate [mol/m^3.s]
             # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
-            ri = np.zeros(compNo)
+            # ri = np.zeros(compNo)
             for k in range(compNo):
                 # reset
                 _riLoop = 0
@@ -893,7 +888,7 @@ class PackedBedReactorClass:
             # diff/dt
             # dxdt = []
             # matrix
-            dxdtMat = np.zeros((varNo, zNo))
+            # dxdtMat = np.zeros((varNo, zNo))
 
             # loop vars
             const_F1 = 1/BeVoFr
@@ -909,21 +904,94 @@ class PackedBedReactorClass:
                 dxdt_F = const_F1*(-SuGaVe*((Ci_f - Ci_c)/dz) + ri[i])
                 dxdtMat[i][z] = dxdt_F
 
-            # total concentration [mol/m^3]
-            CT_c = SpCoi_z[indexTConcentration][z]
-            CT_f = SpCoi_z[indexTConcentration][z + 1]
-            #
-            dxdt_Fl = -SuGaVe*((CT_f - CT_c)/dz) + OvR
-            dxdtMat[indexTConcentration][z] = dxdt_Fl
-
             # energy balance (temperature) [K]
-            T_c = SpCoi_z[indexT][z]
-            T_f = SpCoi_z[indexT][z + 1]
+            T_c = T_z[z]
+            T_f = T_z[z + 1]
             #
             dxdt_T = const_T2*(-const_T1*((T_f - T_c)/dz) + (-OvHeReT + Qm))
             dxdtMat[indexT][z] = dxdt_T
 
-            # flat
-            dxdt = dxdtMat.flatten().tolist()
+        # flat
+        dxdt = dxdtMat.flatten().tolist()
 
         return dxdt
+
+    def modelReactions(P, T, y):
+        ''' 
+        reaction rate expression
+        args: 
+            P: pressure [Pa]
+            T: temperature [K]
+            y: mole fraction
+        '''
+        try:
+            # pressure [Pa]
+            # temperature [K]
+            # print("y", y)
+            # parameters
+            RT = CONST.R_CONST*T
+
+            #  kinetic constant
+            # DME production
+            #  [kmol/kgcat.s.bar2]
+            K1 = 35.45*MATH.exp(-1.7069e4/RT)
+            #  [kmol/kgcat.s.bar]
+            K2 = 7.3976*MATH.exp(-2.0436e4/RT)
+            #  [kmol/kgcat.s.bar]
+            K3 = 8.2894e4*MATH.exp(-5.2940e4/RT)
+            # adsorption constant [1/bar]
+            KH2 = 0.249*MATH.exp(3.4394e4/RT)
+            KCO2 = 1.02e-7*MATH.exp(6.74e4/RT)
+            KCO = 7.99e-7*MATH.exp(5.81e4/RT)
+            #  equilibrium constant
+            Ln_KP1 = 4213/T - 5.752 * \
+                MATH.log(T) - 1.707e-3*T + 2.682e-6 * \
+                (MATH.pow(T, 2)) - 7.232e-10*(MATH.pow(T, 3)) + 17.6
+            KP1 = MATH.exp(Ln_KP1)
+            log_KP2 = 2167/T - 0.5194 * \
+                MATH.log10(T) + 1.037e-3*T - 2.331e-7*(MATH.pow(T, 2)) - 1.2777
+            KP2 = MATH.pow(10, log_KP2)
+            Ln_KP3 = 4019/T + 3.707 * \
+                MATH.log(T) - 2.783e-3*T + 3.8e-7 * \
+                (MATH.pow(T, 2)) - 6.56e-4/(MATH.pow(T, 3)) - 26.64
+            KP3 = MATH.exp(Ln_KP3)
+            #  total concentration
+            #  Ct = y(1) + y(2) + y(3) + y(4) + y(5) + y(6);
+            #  mole fraction
+            yi_H2 = y[0]
+            yi_CO2 = y[1]
+            yi_H2O = y[2]
+            yi_CO = y[3]
+            yi_CH3OH = y[4]
+            yi_DME = y[5]
+
+            #  partial pressure of H2 [bar]
+            PH2 = P*(yi_H2)*1e-5
+            #  partial pressure of CO2 [bar]
+            PCO2 = P*(yi_CO2)*1e-5
+            #  partial pressure of H2O [bar]
+            PH2O = P*(yi_H2O)*1e-5
+            #  partial pressure of CO [bar]
+            PCO = P*(yi_CO)*1e-5
+            #  partial pressure of CH3OH [bar]
+            PCH3OH = P*(yi_CH3OH)*1e-5
+            #  partial pressure of CH3OCH3 [bar]
+            PCH3OCH3 = P*(yi_DME)*1e-5
+
+            #  reaction rate expression [kmol/m3.s]
+            ra1 = PCO2*PH2
+            ra2 = 1 + (KCO2*PCO2) + (KCO*PCO) + MATH.sqrt(KH2*PH2)
+            ra3 = (1/KP1)*((PH2O*PCH3OH)/(PCO2*(MATH.pow(PH2, 3))))
+            r1 = K1*(ra1/(MATH.pow(ra2, 3)))*(1-ra3)*1000
+            ra4 = PH2O - (1/KP2)*((PCO2*PH2)/PCO)
+            r2 = K2*(1/ra2)*ra4*1000
+            ra5 = (MATH.pow(PCH3OH, 2)/PH2O)-(PCH3OCH3/KP3)
+            r3 = K3*ra5*1000
+
+            # result
+            # r = roundNum([r1, r2, r3], REACTION_RATE_ACCURACY)
+            r = [r1, r2, r3]
+            return r
+        except Exception as e:
+            print(e)
+            raise
