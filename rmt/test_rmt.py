@@ -174,6 +174,7 @@ modelInput = {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
+        "volumetric-flowrate": VoFlRa,
         "concentration": CoSpi0,
         "mixture-viscosity": GaMiVi,
         "components": {

@@ -15,6 +15,7 @@ from core.utilities import roundNum
 from core.config import REACTION_RATE_ACCURACY
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
+from solvers.solSetting import solverSetting
 
 
 class PackedBedHeteroReactorClass:
@@ -109,9 +110,12 @@ class PackedBedHeteroReactorClass:
         GaMiVi = self.modelInput['feed']['mixture-viscosity']
 
         # NOTE
-        # auxillary vars (FT,T,P) - gas phase
-        auxVarGasPhase = 3
+        # auxillary vars (CT,T) - gas phase
+        # total concentration
+        # temperature
+        auxVarGasPhase = 2
         # auxillary vars (T) - solid phase
+        # temperature
         auxVarSolidPhase = 1
 
         # var no (Fi,FT,T,P) - gas phase
@@ -120,21 +124,21 @@ class PackedBedHeteroReactorClass:
         # NOTE
         # set number of dependent variables
         # number of finite difference points along the reactor length
-        NoFDP = 20
+        zNo = solverSetting['S1']['zNo']
         # number of orthogonal collocation points inside the catalyst particle
-        NoOC = 6
+        rNo = solverSetting['S1']['rNo']
         # number of dependent vars in the gas phase (concentration, molar flux, temperature, pressure)
-        NoDepVarGasPhase = (compNo + auxVarGasPhase)*NoFDP
+        NoDepVarGasPhase = (compNo + auxVarGasPhase)*zNo
         # number of dependent vars in the solid phase
-        NoDepVarSolidPhase = (compNo + auxVarSolidPhase)*NoOC*NoFDP
+        NoDepVarSolidPhase = (compNo + auxVarSolidPhase)*rNo*zNo
         # total number of ode eq.
         NoODE = NoDepVarGasPhase + NoDepVarSolidPhase
-        # number of dependent vars in gas and solid phases in one node
-        NoDepVarsGasSolidNode = NoODE/NoFDP
+        # number of dependent vars in gas and solid phases [one node]
+        NoDepVarsGasSolidNode = NoODE/zNo
         # number of dep vars in gas phase [one node]
         NoDepVarsGasNode = (compNo + auxVarGasPhase)
         # number of dependent vars in the solid phase [one node]
-        NoDepVarSolidNode = (compNo + auxVarSolidPhase)*NoOC
+        NoDepVarSolidNode = (compNo + auxVarSolidPhase)*rNo
 
         # NOTE
         # initial values
@@ -165,6 +169,7 @@ class PackedBedHeteroReactorClass:
                 "GaMiVi": GaMiVi,
                 "NoDepVarGasPhase": NoDepVarGasPhase,
                 "NoDepVarSolidPhase": NoDepVarSolidPhase,
+                "NoODE": NoODE,
                 "NoDepVarsGasSolidNode": NoDepVarsGasSolidNode,
                 "NoDepVarsGasNode": NoDepVarsGasNode,
                 "NoDepVarSolidNode": NoDepVarSolidNode
@@ -181,7 +186,7 @@ class PackedBedHeteroReactorClass:
         for i in len(opTSpan) - 1:
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
-            times = np.linspace(t[0], t[1], 10)
+            times = np.linspace(t[0], t[1], 5)
 
             # ode call
             sol = solve_ivp(PackedBedHeteroReactorClass.modelEquationM1,
@@ -298,13 +303,15 @@ class PackedBedHeteroReactorClass:
         P = y[indexP]
 
         # number of nodes in z direction
-        zNoNo = 20
+        zNoNo = solverSetting['S1']['zNo']
         # number of nodes in r direction
-        rNoNo = 6
+        rNoNo = solverSetting['S1']['rNo']
         # number of dependent vars in gas phase (Ci,FT,T,P)
         NoDepVarGasPhaseSet = const['NoDepVarGasPhase']
         # number of dependent vars in solid phase (Ci,Tsi)
         NoDepVarSolidPhaseSet = const['NoDepVarSolidPhase']
+        # total number of ode eq.
+        NoODE = const['NoODE']
         # number of dep vars [one node]
         NoDepVarsGasSolidNodeSet = const['NoDepVarsGasSolidNode']
         # number of dep vars in gas phase [one node]
@@ -312,14 +319,56 @@ class PackedBedHeteroReactorClass:
         # number of dep vars in solid phase [one node]
         NoDepVarSolidNodeSet = const['NoDepVarSolidNode']
 
-        # NOTE
-        for i in range(zNoNo):
-            for k in range(NoDepVarsGasNodeSet):
-                YiGasPhase = i*NoDepVarsGasSolidNodeSet + k
-            for w in range(NoDepVarSolidNodeSet):
-                YiSolidPhase = YiGasPhase + w
+        # number of ode eq [df/dt]
+        # gas phase
+        dfdtMat = []
+        # dz
+        dz = 0.5
+        # dr
+        dr = 0.001
 
-            # total flowrate [mol/m^3]
+        # NOTE
+        # each component is a row
+        for m in range(zNoNo):
+            # set row index
+            iBlockIndex = m*NoDepVarsGasSolidNodeSet
+
+            # NOTE
+            # estimate coefficients and parameters
+            # particle specific surface area [m^2/m^3]
+            PaSpSuAr = 1
+            # interstitial velocity
+            GaInVe = 1
+            # effective diffusivity coefficient [m^2/s]
+            EfDiCoi = 1
+            # mass transfer coefficient [m/s]
+            MaTrCoi = 1
+
+            # interior points [1,2,...,m-1]
+            # gas phase
+            for i in range(compNo):
+                # set dep var index
+                # center
+                yI_c = iBlockIndex + i
+                # forward
+                yI_f = yI_c + iBlockIndex
+                # backward
+                yI_b = yI_c - iBlockIndex
+                # gas concentration at gas-solid interface
+                yI_GaSoIn = yI_c + 1
+                # inward concentration flux [mol/m^2.s]
+                InCoFl = MaTrCoi*(y[yI_GaSoIn] - y[yI_c])*PaSpSuAr
+                # ode
+                dfdtMat[yI_c] = -GaInVe*((y[yI_f] - y[yI_b])/(2*dz)) + \
+                    EfDiCoi*((y[yI_b] - 2*y[yI_c] + y[yI_f])/(dz**2)) + InCoFl
+
+            # update y[i] index
+
+            # solid phase
+            for i in range(compNo):
+                pass
+
+        # total flowrate [mol/m^3]
         MoFlRa = np.sum(MoFlRai)
 
         # volumetric flowrate [m^3/s]
@@ -355,6 +404,7 @@ class PackedBedHeteroReactorClass:
         ergD = (1-BeVoFr)/(BeVoFr**3)
         RHS_ergun = -1*(ergA*ergB + ergC*ergD)
 
+        # NOTE
         # kinetics
         # Ri = np.array(PlugFlowReactorClass.modelReactions(P, T, MoFri))
         # forward frequency factor
