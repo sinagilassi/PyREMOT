@@ -13,7 +13,7 @@ from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 # operating conditions
 # pressure [Pa]
-P = 3.5*1e6
+P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
@@ -83,7 +83,8 @@ ReVo = 5
 # reactor length [m]
 ReLe = 1
 # reactor inner diameter [m]
-ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
+# ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
+ReInDi = 0.0381
 # particle dimeter [m]
 PaDi = cat_d
 
@@ -94,7 +95,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 800
+Tm = 523
 # Ua
 Ua = U*a
 #

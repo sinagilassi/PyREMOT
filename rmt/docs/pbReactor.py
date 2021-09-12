@@ -4,6 +4,7 @@
 # import packages/modules
 import math as MATH
 import numpy as np
+from numpy.lib import math
 from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 # internal
@@ -491,9 +492,9 @@ class PackedBedReactorClass:
         ## inlet values ##
         # inlet volumetric flowrate at T,P [m^3/s]
         VoFlRa0 = self.modelInput['feed']['volumetric-flowrate']
-        # inlet species concentration [mol/m^3]
+        # inlet species concentration [kmol/m^3]
         SpCoi0 = np.array(self.modelInput['feed']['concentration'])
-        # inlet total concentration [mol/m^3]
+        # inlet total concentration [kmol/m^3]
         SpCo0 = np.sum(SpCoi0)
 
         # component molecular weight [g/mol]
@@ -507,7 +508,7 @@ class PackedBedReactorClass:
 
         # finite difference points in the z direction
         zNo = solverSetting['S2']['zNo']
-        # dz
+        # dz [m]
         dz = ReLe/zNo
 
         # var no (Ci,T)
@@ -519,18 +520,24 @@ class PackedBedReactorClass:
         IVMatrixShape = (varNo, zNo)
         IV2D = np.zeros(IVMatrixShape)
         # initialize IV2D
-        # -> concentration
+        # -> concentration [kmol/m^3]
         for i in range(compNo):
             for j in range(zNo):
-                IV2D[i][j] = SpCoi0[i]
+                if j == 0:
+                    IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
+                else:
+                    IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
 
         for j in range(zNo):
-            IV2D[indexTemp][j] = T
+            if j == 0:
+                IV2D[indexTemp][j] = T - 1
+            else:
+                IV2D[indexTemp][j] = T - 1
 
         # flatten IV
         IV = IV2D.flatten()
 
-        print(f"IV: {IV}")
+        # print(f"IV: {IV}")
 
         # parameters
         # component data
@@ -562,7 +569,8 @@ class PackedBedReactorClass:
                 "VoFlRa0": VoFlRa0,
                 "SpCoi0": SpCoi0,
                 "SpCo0": SpCo0,
-                "P0": P
+                "P0": P,
+                "T0": T
             }
 
         }
@@ -581,7 +589,7 @@ class PackedBedReactorClass:
 
             # ode call
             sol = solve_ivp(PackedBedReactorClass.modelEquationM2,
-                            t, IV, method="LSODA", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
+                            t, IV, method="BDF", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
             # ode result
             successStatus = sol.success
@@ -596,9 +604,9 @@ class PackedBedReactorClass:
             })
 
             # component concentration [mol/m^3]
-            dataYs1 = sol.y[0:compNo, :]
+            dataYs1 = dataYs[0:compNo, :][zNo - 1]
             # temperature
-            dataYs2 = sol.y[indexTemp, :]
+            dataYs2 = dataYs[indexTemp, :][zNo - 1]
 
             # update initial values [IV]
             # at t > 0
@@ -658,7 +666,7 @@ class PackedBedReactorClass:
                         varNo: number of variables (Ci, CT, T)
                         varNoT: number of variables in the domain (zNo*varNoT)
                         reactionListNo: reaction list number
-                        dz: 
+                        dz: differential length [m]
                     ReSpec: reactor spec
                     ExHe: exchange heat spec
                         OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
@@ -666,9 +674,10 @@ class PackedBedReactorClass:
                         MeTe: medium temperature [K]
                     constBC1: 
                         VoFlRa0: inlet volumetric flowrate [m^3/s],
-                        SpCoi0: species concentration [mol/m^3],
-                        SpCo0: total concentration [mol/m^3]
+                        SpCoi0: species concentration [kmol/m^3],
+                        SpCo0: total concentration [kmol/m^3]
                         P0: inlet pressure [Pa]
+                        T0: inlet temperature [K]
 
         """
         # fun params
@@ -686,7 +695,7 @@ class PackedBedReactorClass:
         GaMiVi = const['GaMiVi']
         # reaction no
         reactionListNo = const['reactionListNo']
-        # dz
+        # dz [m]
         dz = const['dz']
         # reactor spec ->
         ReSpec = FunParam['ReSpec']
@@ -711,22 +720,26 @@ class PackedBedReactorClass:
         ## inlet values ##
         # inlet volumetric flowrate at T,P [m^3/s]
         VoFlRa0 = constBC1['VoFlRa0']
-        # inlet species concentration [mol/m^3]
+        # inlet species concentration [kmol/m^3]
         SpCoi0 = constBC1['SpCoi0']
-        # inlet total concentration [mol/m^3]
+        # inlet total concentration [kmol/m^3]
         SpCo0 = constBC1['SpCo0']
         # inlet pressure [Pa]
         P0 = constBC1['P0']
+        # inlet temperature [K]
+        T0 = constBC1['T0']
 
         # calculate
         # molar flowrate [mol/s]
         MoFlRa0 = SpCo0*VoFlRa0
         # superficial gas velocity [m/s]
-        SuGaVe0 = VoFlRa0/CrSeAr
+        InGaVe0 = VoFlRa0/(CrSeAr*BeVoFr)
+        # interstitial gas velocity [m/s]
+        SuGaVe0 = InGaVe0*BeVoFr
 
         # superficial gas velocity [m/s]
-        SpCoList_z = np.zeros(zNo)
-        SpCoList_z[0] = SuGaVe0
+        InGaVeList_z = np.zeros(zNo)
+        InGaVeList_z[0] = InGaVe0
 
         # total molar flux [mol/m^2.s]
         MoFl_z = np.zeros(zNo)
@@ -735,9 +748,8 @@ class PackedBedReactorClass:
         # reaction rate
         Ri_z = np.zeros((zNo, reactionListNo))
 
-        # FIXME
         # pressure [Pa]
-        P_z = np.zeros(zNo)
+        P_z = np.zeros(zNo + 1)
         P_z[0] = P0
 
         # components no
@@ -746,8 +758,11 @@ class PackedBedReactorClass:
         indexT = compNo
         indexP = indexT + 1
 
-        # species concentration [mol/m^3]
+        # species concentration [kmol/m^3]
         CoSpi = np.zeros(compNo)
+
+        # reaction rate
+        ri = np.zeros(compNo)
 
         # NOTE
         # distribute y[i] value through the reactor length
@@ -769,20 +784,19 @@ class PackedBedReactorClass:
         # matrix
         dxdtMat = np.zeros((varNo, zNo))
 
-        # reaction rate
-        ri = np.zeros(compNo)
-
         # NOTE
         # FIXME
         # define ode equations for each finite difference [zNo]
-        for z in range(zNo - 1):
+        for z in range(zNo):
             ## block ##
 
-            # concentration species [mol/m^3]
+            # FIXME
+            # concentration species [kmol/m^3]
             for i in range(compNo):
-                CoSpi[i] = SpCoi_z[i][z]
+                _SpCoi_z = SpCoi_z[i][z]
+                CoSpi[i] = max(_SpCoi_z, CONST.EPS_CONST)
 
-            # total concentration [mol/m^3]
+            # total concentration [kmol/m^3]
             CoSp = np.sum(CoSpi)
 
             # temperature [K]
@@ -795,20 +809,24 @@ class PackedBedReactorClass:
             MoFri = np.array(
                 rmtUtil.moleFractionFromConcentrationSpecies(CoSpi))
 
+            # gas velocity based on interstitial velocity [m/s]
+            InGaVe = rmtUtil.calGaVeFromEOS(InGaVe0, SpCo0, CoSp, P0, P)
             # superficial gas velocity [m/s]
-            SuGaVe = SuGaVe0*(CoSp/SpCo0)*(P_z[z]/P_z[0])
+            SuGaVe = InGaVe*BeVoFr
 
-            # total flowrate [mol/s]
-            # [mol/m^3]*[m/s]*[m^2]
+            # total flowrate [kmol/s]
+            # [kmol/m^3]*[m/s]*[m^2]
             MoFlRa = CoSp*SuGaVe*CrSeAr
-            # molar flowrate list [mol/m^3]
+            # molar flowrate list [kmol/s]
             MoFlRai = MoFlRa*MoFri
+            # convert to [mol/s]
+            MoFlRai_Con1 = 1000*MoFlRai
 
-            # molar flux [mol/m^2.s]
+            # molar flux [kmol/m^2.s]
             MoFl = MoFlRa/CrSeAr
 
             # volumetric flowrate [m^3/s]
-            VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai)
+            VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai_Con1)
 
             # mixture molecular weight [kg/mol]
             MiMoWe = rmtUtil.mixtureMolecularWeight(MoFri, MoWei, "kg/mol")
@@ -832,27 +850,31 @@ class PackedBedReactorClass:
 
             # NOTE
             ## kinetics ##
-            # net reaction rate expression [mol/kgcat.s]
+            # net reaction rate expression [kmol/m^3.s]
+            # rf[kmol/kgcat.s]*CaBeDe[kgcat/m^3]
             r0 = np.array(PackedBedReactorClass.modelReactions(
-                P_z[z], T_z[z], MoFri))
+                P_z[z], T_z[z], MoFri, CaBeDe))
             # loop
             Ri_z[z, :] = r0
 
-            # component formation rate [mol/m^3.s]
-            # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
+            # component formation rate [kmol/m^3.s]
             # ri = np.zeros(compNo)
             for k in range(compNo):
                 # reset
                 _riLoop = 0
+                # number of reactions
                 for m in range(len(reactionStochCoeff)):
+                    # number of components in each reaction
                     for n in range(len(reactionStochCoeff[m])):
+                        # check component id
                         if comList[k] == reactionStochCoeff[m][n][0]:
                             _riLoop += reactionStochCoeff[m][n][1]*Ri_z[z][m]
-                    ri[k] = _riLoop*CaBeDe
+                    ri[k] = _riLoop
 
-            # overall formation rate [mol/m^3.s]
+            # overall formation rate [kmol/m^3.s]
             OvR = np.sum(ri)
 
+            # NOTE
             # enthalpy
             # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
             # Cp mean list
@@ -869,8 +891,10 @@ class PackedBedReactorClass:
                 calEnthalpyChangeOfReaction(reactionListSorted, T))
             # heat of reaction at T [kJ/kmol] | [J/mol]
             HeReT = np.array(EnChList + StHeRe25)
-            # overall heat of reaction [J/m^3.s]
-            OvHeReT = np.dot(Ri_z[z], HeReT)
+            # overall heat of reaction [kJ/m^3.s]
+            # exothermic reaction (negative sign)
+            # endothermic sign (positive sign)
+            OvHeReT = np.dot(Ri_z[z, :], HeReT)
 
             # NOTE
             # cooling temperature [K]
@@ -881,8 +905,15 @@ class PackedBedReactorClass:
             a = ExHe['EfHeTrAr']
             # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
             Ua = U*a
-            # external heat [J/m^3.s]
-            Qm = Ua*(Tm - T)
+            # external heat [kJ/m^3.s]
+            if Tm == 0:
+                # adiabatic
+                Qm = 0
+            else:
+                # heat added/removed from the reactor
+                # Tm > T: heat is added (positive sign)
+                # T > Tm: heat removed (negative sign)
+                Qm = (Ua*(Tm - T))*1e-3
 
             # NOTE
             # diff/dt
@@ -895,20 +926,41 @@ class PackedBedReactorClass:
             const_T1 = MoFl*CpMeanMixture
             const_T2 = 1/(CoSp*CpMeanMixture*BeVoFr)
 
+            # NOTE
+
             # concentration [mol/m^3]
             for i in range(compNo):
                 # mass balance (forward difference)
+                # concentration [kmol/m^3]
+                # central
                 Ci_c = SpCoi_z[i][z]
-                Ci_f = SpCoi_z[i][z + 1]
-                #
-                dxdt_F = const_F1*(-SuGaVe*((Ci_f - Ci_c)/dz) + ri[i])
+                # check BC
+                if z == 0:
+                    # BC1
+                    Ci_b = SpCoi0[i]
+                else:
+                    # interior nodes
+                    Ci_b = max(SpCoi_z[i][z - 1], CONST.EPS_CONST)
+                # backward difference
+                dCdz = (Ci_c - Ci_b)/(dz)
+                # mass balance
+                dxdt_F = const_F1*(-SuGaVe*dCdz + ri[i])
                 dxdtMat[i][z] = dxdt_F
 
             # energy balance (temperature) [K]
+            # temp [K]
             T_c = T_z[z]
-            T_f = T_z[z + 1]
-            #
-            dxdt_T = const_T2*(-const_T1*((T_f - T_c)/dz) + (-OvHeReT + Qm))
+            # check BC
+            if z == 0:
+                # BC1
+                T_b = T0
+            else:
+                # interior nodes
+                T_b = T_z[z - 1]
+            # backward difference
+            dTdz = (T_c - T_b)/(dz)
+
+            dxdt_T = const_T2*(-const_T1*dTdz + (-OvHeReT + Qm))
             dxdtMat[indexT][z] = dxdt_T
 
         # flat
@@ -916,9 +968,9 @@ class PackedBedReactorClass:
 
         return dxdt
 
-    def modelReactions(P, T, y):
+    def modelReactions(P, T, y, CaBeDe):
         ''' 
-        reaction rate expression
+        reaction rate expression list [kmol/m3.s]
         args: 
             P: pressure [Pa]
             T: temperature [K]
@@ -982,11 +1034,11 @@ class PackedBedReactorClass:
             ra1 = PCO2*PH2
             ra2 = 1 + (KCO2*PCO2) + (KCO*PCO) + MATH.sqrt(KH2*PH2)
             ra3 = (1/KP1)*((PH2O*PCH3OH)/(PCO2*(MATH.pow(PH2, 3))))
-            r1 = K1*(ra1/(MATH.pow(ra2, 3)))*(1-ra3)*1000
+            r1 = K1*(ra1/(MATH.pow(ra2, 3)))*(1-ra3)*CaBeDe
             ra4 = PH2O - (1/KP2)*((PCO2*PH2)/PCO)
-            r2 = K2*(1/ra2)*ra4*1000
+            r2 = K2*(1/ra2)*ra4*CaBeDe
             ra5 = (MATH.pow(PCH3OH, 2)/PH2O)-(PCH3OCH3/KP3)
-            r3 = K3*ra5*1000
+            r3 = K3*ra5*CaBeDe
 
             # result
             # r = roundNum([r1, r2, r3], REACTION_RATE_ACCURACY)

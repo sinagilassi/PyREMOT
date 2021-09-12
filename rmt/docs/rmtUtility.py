@@ -364,3 +364,22 @@ class rmtUtilityClass:
             return SpPaSuArToFrFl
         except Exception as e:
             raise
+
+    @staticmethod
+    def calGaVeFromEOS(GaVef, Ctotf, Ctot, Pf, P):
+        '''
+        calculate: gas velocity change due to mole change and pressure drop
+        args:
+            GaVef: inlet feed velocity [m/s]
+            Ctotf: inlet feed total concentration [mol/m^3]
+            Ctot: total concentration [mol/m^3]
+            Pf: inlet feed pressure [Pa]
+            P: pressure [Pa]
+        '''
+        # try/exception
+        try:
+            # gas velocity [m/s]
+            GaVe = GaVef*(Ctot/Ctotf)*(Pf/P)
+            return GaVe
+        except Exception as e:
+            raise

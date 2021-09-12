@@ -9,7 +9,7 @@ appConfig = {
     "calculation": {
         "roundAccuracy": 3,
         "roundAccuracyMole": 4,
-        "roundAccuracyConcentration": 4,
+        "roundAccuracyConcentration": 7,
         "roundAccuracyReaction": 5
     }
 }

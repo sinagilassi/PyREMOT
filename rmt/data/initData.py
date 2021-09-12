@@ -17,9 +17,9 @@ def setFeedMoleFraction(H2COxRatio, CO2COxRatio):
     # CO2/CO ratio
     # CO2COxRatio = 0.8
     # mole fraction
-    y0_H2O = 0.0001
-    y0_CH3OH = 0.0001
-    y0_DME = 0.0001
+    y0_H2O = 0.00001
+    y0_CH3OH = 0.00001
+    y0_DME = 0.00001
     # total molar fraction
     tmf0 = 1 - (y0_H2O + y0_CH3OH + y0_DME)
     # COx
@@ -33,8 +33,8 @@ def setFeedMoleFraction(H2COxRatio, CO2COxRatio):
     # CO2/CO2+CO ratio
     CO2CO2CORatio = y0_CO2/(y0_CO2+y0_CO)
     # res
-    feedMoFri = np.array(roundNum(
-        [y0_H2, y0_CO2, y0_H2O, y0_CO, y0_CH3OH, y0_DME], MOLE_FRACTION_ACCURACY))
+    feedMoFri = np.array([y0_H2, y0_CO2, y0_H2O, y0_CO,
+                         y0_CH3OH, y0_DME], dtype=np.float32)
     # res
     return feedMoFri
 
