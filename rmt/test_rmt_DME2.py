@@ -1,4 +1,11 @@
-# test
+# TEST
+# STATIC MODELING
+# ----------------
+
+# REVIEW
+# check unit
+# flowrate [mol/s]
+# rate formation [mol/m^3.s]
 
 # import packages/modules
 import numpy as np
@@ -28,8 +35,8 @@ feedMoFr = setFeedMoleFraction(H2COxRatio, CO2COxRatio)
 # print(f"feed mole fraction: {feedMoFr}")
 
 # mole fraction
-y0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
-              feedMoFr[3], feedMoFr[4], feedMoFr[5]])
+MoFri0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
+                   feedMoFr[3], feedMoFr[4], feedMoFr[5]])
 # print(f"component mole fraction: {y0}")
 
 # concentration [kmol/m3]
@@ -54,10 +61,10 @@ rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
 VoFlRa = InGaVe*rea_CSA
 #  flowrate at STP [m3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
-#  molar flowrate @ ideal gas[kmol/s]
-Ft0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)/1000
-#  initial concentration[kmol/m3]
-Ct0 = Ft0/VoFlRa
+#  molar flowrate @ ideal gas [mol/s]
+MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
+#  initial concentration[mol/m3]
+Ct0 = MoFlRa0/VoFlRa
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -114,15 +121,15 @@ GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M6",
+    "model": "M1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT
     },
     "feed": {
-        "mole-fraction": 0,
-        "molar-flowrate": 0,
+        "mole-fraction": MoFri0,
+        "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,

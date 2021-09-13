@@ -11,7 +11,7 @@ from scipy.integrate import solve_ivp
 from core.errors import errGeneralClass as errGeneral
 from data.inputDataReactor import *
 from core import constants as CONST
-from core.utilities import roundNum
+from core.utilities import roundNum, selectFromListByIndex
 from core.config import REACTION_RATE_ACCURACY
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
@@ -245,8 +245,10 @@ class PackedBedReactorClass:
             # datalists
             dataLists = [dataList[0:compNo],
                          dataList[indexFlux], dataList[indexTemp], dataList[indexPressure]]
+            # select datalist
+            _dataListsSelected = selectFromListByIndex([0, -2], dataLists)
             # subplot result
-            pltc.plots2DSub(dataLists, "Reactor Length (m)",
+            pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
                             "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
 
             # plot result
@@ -364,18 +366,23 @@ class PackedBedReactorClass:
         ergD = (1-BeVoFr)/(BeVoFr**3)
         RHS_ergun = -1*(ergA*ergB + ergC*ergD)
 
+        # NOTE
         # kinetics
-        # Ri = np.array(PlugFlowReactorClass.modelReactions(P, T, MoFri))
+        # component formation rate [mol/m^3.s]
+        # conversion
+        # FIXME
+        Ri = 1000*np.array(PackedBedReactorClass.modelReactions(
+            P, T, MoFri, CaBeDe))
         # forward frequency factor
-        A1 = 8.2e14
-        # forward activation energy [J/mol]
-        E1 = 284.5e3
-        # rate constant [1/s]
-        kFactor = 1e7
-        k1 = A1*np.exp(-E1/(R_CONST*T))*kFactor
-        # net reaction rate expression [mol/m^3.s]
-        r0 = k1*CoSpi[0]
-        Ri = [r0]
+        # A1 = 8.2e14
+        # # forward activation energy [J/mol]
+        # E1 = 284.5e3
+        # # rate constant [1/s]
+        # kFactor = 1e7
+        # k1 = A1*np.exp(-E1/(R_CONST*T))*kFactor
+        # # net reaction rate expression [mol/m^3.s]
+        # r0 = k1*CoSpi[0]
+        # Ri = [r0]
 
         # component formation rate [mol/m^3.s]
         # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
@@ -387,7 +394,7 @@ class PackedBedReactorClass:
                 for n in range(len(reactionStochCoeff[m])):
                     if comList[k] == reactionStochCoeff[m][n][0]:
                         _riLoop += reactionStochCoeff[m][n][1]*Ri[m]
-                ri[k] = _riLoop*CaBeDe
+                ri[k] = _riLoop
 
         # overall formation rate [mol/m^3.s]
         OvR = np.sum(ri)
@@ -455,6 +462,7 @@ class PackedBedReactorClass:
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
         T = self.modelInput['operating-conditions']['temperature']
+        # operation time [s]
         opT = self.modelInput['operating-conditions']['period']
 
         # reaction list
@@ -469,7 +477,7 @@ class PackedBedReactorClass:
         # graph label setting
         labelList = compList.copy()
         labelList.append("Temperature")
-        labelList.append("Pressure")
+        # labelList.append("Pressure")
 
         # component no
         compNo = len(compList)
@@ -508,11 +516,17 @@ class PackedBedReactorClass:
 
         # finite difference points in the z direction
         zNo = solverSetting['S2']['zNo']
-        # dz [m]
-        dz = ReLe/zNo
+        # length list
+        dataXs = np.linspace(0, ReLe, zNo)
+        # element size - dz [m]
+        dz = ReLe/(zNo-1)
 
         # var no (Ci,T)
         varNo = compNo + 1
+        # concentration var no
+        varNoCon = compNo*zNo
+        # temperature var no
+        varNoTemp = 1*zNo
         # total var no along the reactor length
         varNoT = varNo*zNo
 
@@ -523,16 +537,18 @@ class PackedBedReactorClass:
         # -> concentration [kmol/m^3]
         for i in range(compNo):
             for j in range(zNo):
-                if j == 0:
-                    IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
-                else:
-                    IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
+                IV2D[i][j] = SpCoi0[i]
+                # if j == 0:
+                #     IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
+                # else:
+                #     IV2D[i][j] = SpCoi0[i] - (1/100)*SpCoi0[i]
 
         for j in range(zNo):
-            if j == 0:
-                IV2D[indexTemp][j] = T - 1
-            else:
-                IV2D[indexTemp][j] = T - 1
+            IV2D[indexTemp][j] = T
+            # if j == 0:
+            #     IV2D[indexTemp][j] = T - 1
+            # else:
+            #     IV2D[indexTemp][j] = T - 1
 
         # flatten IV
         IV = IV2D.flatten()
@@ -576,13 +592,19 @@ class PackedBedReactorClass:
         }
 
         # time span
-        opTSpan = np.linspace(0, opT, zNo)
+        tNo = solverSetting['S2']['tNo']
+        opTSpan = np.linspace(0, opT, tNo + 1)
 
         # result
         dataPack = []
 
+        # build data list
+        # over time
+        dataPacktime = np.zeros((varNo, tNo, zNo))
+        #
+
         # time loop
-        for i in range(zNo):
+        for i in range(tNo):
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
             times = np.linspace(t[0], t[1], 10)
@@ -593,52 +615,86 @@ class PackedBedReactorClass:
 
             # ode result
             successStatus = sol.success
-            dataX = sol.t
+            # check
+            if successStatus is False:
+                raise
+
+            # time interval
+            dataTime = sol.t
             # all results
             dataYs = sol.y
+
+            # component concentration [mol/m^3]
+            dataYs1 = dataYs[0:varNoCon, -1]
+            # 2d matrix
+            dataYs1_Reshaped = np.reshape(dataYs1, (compNo, zNo))
+            # temperature - 2d matrix
+            dataYs2 = np.array([dataYs[varNoCon:varNoT, -1]])
+
+            # combine
+            _dataYs = np.concatenate((dataYs1_Reshaped, dataYs2), axis=0)
+
             # save data
             dataPack.append({
                 "successStatus": successStatus,
-                "dataX": dataX,
-                "dataYs": dataYs
+                "dataTime": dataTime[-1],
+                "dataYCons": dataYs1_Reshaped,
+                "dataYTemp": dataYs2,
+                "dataYs": _dataYs
             })
 
-            # component concentration [mol/m^3]
-            dataYs1 = dataYs[0:compNo, :][zNo - 1]
-            # temperature
-            dataYs2 = dataYs[indexTemp, :][zNo - 1]
+            for m in range(varNo):
+                # var list
+                dataPacktime[m][i, :] = dataPack[i]['dataYs'][m, :]
 
             # update initial values [IV]
-            # at t > 0
-            IV[0:compNo, :] = dataYs1
-            IV[indexTemp, :] = dataYs2
+            IV = dataYs[:, -1]
 
-        # check
-        if successStatus is True:
+        # build data list
+        # for i in range(tNo):
+        #     # var list
+        #     _dataYs = dataPack[i]['dataYs']
+        #     # plot setting: build (x,y) series
+        #     XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
+        #     # -> add label
+        #     dataList = pltc.plots2DSetDataList(XYList, labelList)
+        #     # datalists
+        #     dataLists = [dataList[0:compNo],
+        #                  dataList[indexTemp]]
+        #     if i == tNo+1:
+        #         # subplot result
+        #         pltc.plots2DSub(dataLists, "Reactor Length (m)",
+        #                         "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+
+        # display result within time span
+        _dataListsLoop = []
+        _labelNameTime = []
+
+        for i in range(varNo):
+            # var list
+            _dataPacktime = dataPacktime[i]
             # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataX, dataYs)
+            XYList = pltc.plots2DSetXYList(dataXs, _dataPacktime)
             # -> add label
-            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # build label
+            for t in range(tNo):
+                _name = labelList[i] + " at t=" + str(opTSpan[t+1])
+
+                _labelNameTime.append(_name)
+
+            dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
             # datalists
-            dataLists = [dataList[0:compNo],
-                         dataList[indexTemp], dataList[indexPressure]]
-            # subplot result
-            pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                            "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+            _dataListsLoop.append(dataList[0:tNo])
+            # reset
+            _labelNameTime = []
 
-            # plot result
-            # pltc.plots2D(dataList[0:compNo], "Reactor Length (m)",
-            #              "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+        # select items
+        indices = [0, 2, -1]
+        selected_elements = [_dataListsLoop[index] for index in indices]
 
-            # pltc.plots2D(dataList[indexFlux], "Reactor Length (m)",
-            #              "Flux (kmol/m^2.s)", "1D Plug-Flow Reactor")
-
-            # pltc.plots2D(dataList[indexTemp], "Reactor Length (m)",
-            #              "Temperature (K)", "1D Plug-Flow Reactor")
-
-        else:
-            XYList = []
-            dataList = []
+        # subplot result
+        pltc.plots2DSub(selected_elements, "Reactor Length (m)",
+                        "Concentration (mol/m^3)", "Dynamic Modeling of 1D Plug-Flow Reactor")
 
         # return
         res = {
@@ -705,6 +761,10 @@ class PackedBedReactorClass:
         BeVoFr = ReSpec['BeVoFr']
         # bulk density (catalyst bed density)
         CaBeDe = ReSpec['CaBeDe']
+        # catalyst density [kgcat/m^3 of particle]
+        CaDe = ReSpec['CaDe']
+        # catalyst heat capacity at constant pressure [kJ/kg.K]
+        CaSpHeCa = ReSpec['CaSpHeCa']
 
         # exchange heat spec ->
         ExHe = FunParam['ExHe']
@@ -763,6 +823,7 @@ class PackedBedReactorClass:
 
         # reaction rate
         ri = np.zeros(compNo)
+        ri0 = np.zeros(compNo)
 
         # NOTE
         # distribute y[i] value through the reactor length
@@ -844,7 +905,7 @@ class PackedBedReactorClass:
             RHS_ergun = -1*(ergA*ergB + ergC*ergD)
 
             # momentum balance (ergun equation)
-            dxdt_P = -1*RHS_ergun
+            dxdt_P = RHS_ergun
             # dxdt.append(dxdt_P)
             P_z[z+1] = dxdt_P*dz + P_z[z]
 
@@ -857,6 +918,29 @@ class PackedBedReactorClass:
             # loop
             Ri_z[z, :] = r0
 
+            # FIXME
+            #  H2
+            # R_H2 = -(3*r0[0]-r0[1])
+            # ri0[0] = R_H2
+            # # CO2
+            # R_CO2 = -(r0[0]-r0[1])
+            # ri0[1] = R_CO2
+            # # H2O
+            # R_H2O = (r0[0]-r0[1]+r0[2])
+            # ri0[2] = R_H2O
+            # # CO
+            # R_CO = -(r0[1])
+            # ri0[3] = R_CO
+            # # CH3OH
+            # R_CH3OH = -(2*r0[2]-r0[0])
+            # ri0[4] = R_CH3OH
+            # # DME
+            # R_DME = (r0[2])
+            # ri0[5] = R_DME
+            # # total
+            # R_T = -(2*r0[0])
+
+            # REVIEW
             # component formation rate [kmol/m^3.s]
             # ri = np.zeros(compNo)
             for k in range(compNo):
@@ -924,7 +1008,7 @@ class PackedBedReactorClass:
             # loop vars
             const_F1 = 1/BeVoFr
             const_T1 = MoFl*CpMeanMixture
-            const_T2 = 1/(CoSp*CpMeanMixture*BeVoFr)
+            const_T2 = 1/(CoSp*CpMeanMixture*BeVoFr + (1-BeVoFr)*CaDe*CaSpHeCa)
 
             # NOTE
 
@@ -975,6 +1059,9 @@ class PackedBedReactorClass:
             P: pressure [Pa]
             T: temperature [K]
             y: mole fraction
+            CaBeDe: catalyst bed density [kgcat/m^3 bed]
+        output: 
+            r: reaction rate at T,P [kmol/m^3.s]
         '''
         try:
             # pressure [Pa]

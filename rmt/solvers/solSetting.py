@@ -18,6 +18,7 @@ solverSetting = {
         "rNo": 5
     },
     "S2": {
+        "tNo": 5,
         "zNo": 20
     }
 }

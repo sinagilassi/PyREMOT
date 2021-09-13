@@ -5,10 +5,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Current File",
+      "name": "Dynamic Modeling",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/rmt/test_rmt_DME.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Static Modeling",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME2.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },

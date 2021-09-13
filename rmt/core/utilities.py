@@ -20,3 +20,15 @@ def removeDuplicatesList(value):
     """
     print(value)
     return list(dict.fromkeys(value))
+
+
+def selectFromListByIndex(indices, refList):
+    '''
+    extract selected element from a list
+    args:
+        indices: list of index
+        refList: 1D array
+    '''
+    # select items
+    selected_elements = [refList[index] for index in indices]
+    return selected_elements

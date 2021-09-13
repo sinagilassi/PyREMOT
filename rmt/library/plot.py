@@ -92,7 +92,15 @@ class plotClass:
     @staticmethod
     def plots2DSetDataList(XYList, labelList):
         """
-            build array of dict X,Y,leg
+        build array of dict X,Y,leg
+        args:
+            XYList: (x,y) points
+            labelList: name of component
+        outlet:
+            dataList:
+                "x": points
+                "y": points
+                "leg": legend
         """
         dataList = []
         # line no
@@ -138,6 +146,7 @@ class plotClass:
 
                 for j in lineNo:
                     axis[i].plot(lineXs[j], lineYs[j], label=lineLegend[j])
+                    axis[i].legend()
             else:
                 lineXs = dataList[i]['x']
                 lineYs = dataList[i]['y']
@@ -147,14 +156,15 @@ class plotClass:
                     lineLegend = "line"
 
                 axis[i].plot(lineXs, lineYs, label=lineLegend)
+                axis[i].legend()
 
         # title
         if len(title) > 0:
             plt.title(title)
 
         # labels
-        # plt.xlabel(xLabel)
-        # plt.ylabel(yLabel)
+        plt.xlabel(xLabel)
+        plt.ylabel(yLabel)
         # # legend
         # plt.legend()
 

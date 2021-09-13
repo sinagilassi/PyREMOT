@@ -97,10 +97,11 @@ class rmtUtilityClass:
     @staticmethod
     def volumetricFlowrateSTP(VoFlRa, P, T):
         """
-            calculate volumetric flowrate at STP conditions
+        calculate volumetric flowrate at STP conditions
+        args:
             VoFlRa []
-            P [Pa]
-            T [K]
+            P: pressure [Pa]
+            T: temperature [K]
             VoFlRaSTP []
         """
         VoFlRaSTP = VoFlRa*(P/CONST.Pstp)*(CONST.Tstp/T)
@@ -109,7 +110,8 @@ class rmtUtilityClass:
     @staticmethod
     def VoFlRaSTPToMoFl(VoFlRaSTP):
         """
-            convert volumetric flowrate [stp] to molar flowrate [ideal gas]
+        convert volumetric flowrate [stp] to molar flowrate [ideal gas]
+        args:
             VoFlRaSTP [m^3/s]
             MoFlRaIG [mol/s]
         """
@@ -371,8 +373,8 @@ class rmtUtilityClass:
         calculate: gas velocity change due to mole change and pressure drop
         args:
             GaVef: inlet feed velocity [m/s]
-            Ctotf: inlet feed total concentration [mol/m^3]
-            Ctot: total concentration [mol/m^3]
+            Ctotf: inlet feed total concentration [kmol/m^3]
+            Ctot: total concentration [kmol/m^3]
             Pf: inlet feed pressure [Pa]
             P: pressure [Pa]
         '''

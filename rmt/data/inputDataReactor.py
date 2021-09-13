@@ -34,7 +34,9 @@ rea_solid = 1 - bed_por
 # catalyst bulk density - mass of catalyst per reactor volume [kg/m^3]
 bulk_rho = cat_rho*rea_solid
 # thermal conductivity of catalyst [J/K.m.s]
-therCop = 1
+therCop = 0.22
+# catalyst specific heat capacity [J/kg.K]
+cat_Cp = 960
 
 # ! membrane
 # membrane tube diameter [m2]
