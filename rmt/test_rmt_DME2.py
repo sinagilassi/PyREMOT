@@ -156,8 +156,20 @@ modelInput = {
 
 # run exe
 res = rmtExe(modelInput)
-print(f"modeling result: {res}")
+# print(f"modeling result: {res}")
 
 # save modeling result
-# with open('modelingRes.json', 'w') as f:
+# with open('res.json', 'w') as f:
 #     json.dump(res, f)
+
+# steady-state results
+# concentration
+# total concentration
+ssModelingData = res['resModel']['dataYs']
+
+
+# save modeling result
+np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
+
+# c = np.loadtxt('ssModeling.txt', dtype=np.float64)
+# print("c: ", c, " c Shape: ", c.shape)

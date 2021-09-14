@@ -19,7 +19,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 50
+opT = 40
 
 # set feed mole fraction
 # H2/COx ratio

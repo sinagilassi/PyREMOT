@@ -119,8 +119,8 @@ class PackedBedReactorClass:
     def runM1(self):
         """
         M1 modeling case
+        steady-state modeling 
         """
-
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
         T = self.modelInput['operating-conditions']['temperature']
@@ -210,11 +210,14 @@ class PackedBedReactorClass:
 
         }
 
+        # save data
+        timesNo = solverSetting['S2']['timesNo']
+
         # time span
         # t = (0.0, rea_L)
         t = np.array([0, ReLe])
         t_span = np.array([0, ReLe])
-        times = np.linspace(t_span[0], t_span[1], 100)
+        times = np.linspace(t_span[0], t_span[1], timesNo)
         # tSpan = np.linspace(0, rea_L, 25)
 
         # ode call
@@ -246,6 +249,9 @@ class PackedBedReactorClass:
         # build matrix
         _dataYs = np.concatenate(
             (dataYs1_MoFri, [dataYs2], [dataYs3], [dataYs4]), axis=0)
+        # steady-state results [mole fraction, temperature]
+        _ssdataYs = np.concatenate(
+            (dataYs1_MoFri, [dataYs3]), axis=0)
 
         # check
         if successStatus is True:
@@ -273,11 +279,13 @@ class PackedBedReactorClass:
             #              "Temperature (K)", "1D Plug-Flow Reactor")
 
         else:
+            _dataYs = []
             XYList = []
             dataList = []
 
         # return
         res = {
+            "dataYs": _ssdataYs,
             "XYList": XYList,
             "dataList": dataList
         }
@@ -606,6 +614,9 @@ class PackedBedReactorClass:
         tNo = solverSetting['S2']['tNo']
         opTSpan = np.linspace(0, opT, tNo + 1)
 
+        # save data
+        timesNo = solverSetting['S2']['timesNo']
+
         # result
         dataPack = []
 
@@ -618,7 +629,7 @@ class PackedBedReactorClass:
         for i in range(tNo):
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
-            times = np.linspace(t[0], t[1], 10)
+            times = np.linspace(t[0], t[1], timesNo)
 
             # ode call
             sol = solve_ivp(PackedBedReactorClass.modelEquationM2,
@@ -664,6 +675,19 @@ class PackedBedReactorClass:
 
             # update initial values [IV]
             IV = dataYs[:, -1]
+
+        # NOTE
+        # steady-state result
+        ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
+        # ssdataXs = np.linspace(0, ReLe, zNo)
+        ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
+        ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
+        # datalists
+        ssdataLists = [ssdataList[0:compNo],
+                       ssdataList[indexTemp]]
+        # subplot result
+        pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
+                        "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
 
         # REVIEW
         # display result at specific time

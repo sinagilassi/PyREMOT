@@ -9,7 +9,10 @@
 # heterogenous model
 
 # S2
-# homogenous model for plug-flow reactors
+# homogenous dynamic model for plug-flow reactors
+
+# S3
+# homogenous steady-state model for plug-flow reactors
 
 
 solverSetting = {
@@ -19,6 +22,11 @@ solverSetting = {
     },
     "S2": {
         "tNo": 5,
-        "zNo": 20
+        "zNo": 10,
+        "timesNo": 10
+    },
+    "S3": {
+        "zNo": 10,
+        "timesNo": 10
     }
 }
