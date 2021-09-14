@@ -121,7 +121,7 @@ GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "M7",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -165,7 +165,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-ssModelingData = res['resModel']['dataYs']
+# ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -174,7 +174,7 @@ ssModelingData = res['resModel']['dataYs']
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-np.save('ssModeling.npy', ssModelingData)
+# np.save('ssModeling.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)

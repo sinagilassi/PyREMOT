@@ -4,7 +4,7 @@
 # import packages/modules
 from pprint import pprint
 from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2, M3, M4, M5, M6
+from core.setting import modelTypes, M1, M2, M3, M4, M5, M6, M7
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
@@ -96,6 +96,8 @@ class rmtCoreClass():
             return self.M5Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M6:
             return self.M6Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == M7:
+            return self.M7Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -241,4 +243,15 @@ class rmtCoreClass():
                        reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runM2()
+        return res
+
+    def M7Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M6 model: dynamic Packed-bed Plug-flow reactor (homogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM3()
         return res

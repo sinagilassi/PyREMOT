@@ -19,7 +19,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 40
+opT = 200
 
 # set feed mole fraction
 # H2/COx ratio
@@ -83,10 +83,10 @@ reactionRateSet = {
 # reactor volume [m^3]
 ReVo = 5
 # reactor length [m]
-ReLe = 0.5
+ReLe = rea_L
 # reactor inner diameter [m]
 # ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
-ReInDi = 0.0381
+ReInDi = rea_D
 # particle dimeter [m]
 PaDi = cat_d
 # particle density [kg/m^3]

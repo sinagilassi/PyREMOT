@@ -115,7 +115,7 @@ class plotClass:
         return dataList
 
     @staticmethod
-    def plots2DSub(dataList, xLabel, yLabel, title=""):
+    def plots2DSub(dataList, xLabel, yLabel, title="", dataListPoint=[]):
         """
         dataList:
             data[i]:
@@ -132,6 +132,7 @@ class plotClass:
         """
         # plot no
         plotNo = len(dataList)
+        # total number of
         # set subplot
         figure, axis = plt.subplots(plotNo)
         # load data
@@ -157,6 +158,34 @@ class plotClass:
 
                 axis[i].plot(lineXs, lineYs, label=lineLegend)
                 axis[i].legend()
+
+        # points
+        # dataListPoint
+        if len(dataListPoint) > 0:
+            # plot no
+            plotNoPoint = len(dataListPoint)
+            # set color
+            # colors = np.random.rand(plotNoPoint)
+            for i in range(plotNoPoint):
+                # check data type
+                if isinstance(dataListPoint[i], List):
+                    lineNoPoint = range(len(dataListPoint[i]))
+                    lineXsPoint = [item['x'] for item in dataListPoint[i]]
+                    lineYsPoint = [item['y'] for item in dataListPoint[i]]
+                    # lineLegendPoint = [item['leg'] if 'leg' in item.keys()
+                    #                    else "line" for item in dataListPoint[i]]
+
+                    for j in lineNoPoint:
+                        axis[i].scatter(
+                            lineXsPoint[j], lineYsPoint[j], alpha=0.5)
+                else:
+                    lineXsPoint = dataListPoint[i]['x']
+                    lineYsPoint = dataListPoint[i]['y']
+                    # if 'leg' in dataListPoint[i].keys():
+                    #     lineLegend = dataList[i]['leg']
+                    # else:
+                    #     lineLegend = "line
+                    axis[i].scatter(lineXsPoint, lineYsPoint, alpha=0.5)
 
         # title
         if len(title) > 0:

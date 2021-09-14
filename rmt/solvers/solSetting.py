@@ -10,9 +10,12 @@
 
 # S2
 # homogenous dynamic model for plug-flow reactors
+# timesNo: in each loop (time)
 
 # S3
 # homogenous steady-state model for plug-flow reactors
+# NOTE
+# timeNo = zNo of S2 for comparison
 
 
 solverSetting = {
@@ -21,12 +24,11 @@ solverSetting = {
         "rNo": 5
     },
     "S2": {
-        "tNo": 5,
-        "zNo": 10,
-        "timesNo": 10
+        "tNo": 50,
+        "zNo": 25,
+        "timesNo": 5
     },
     "S3": {
-        "zNo": 10,
-        "timesNo": 10
+        "timesNo": 25
     }
 }

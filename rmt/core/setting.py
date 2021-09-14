@@ -33,6 +33,11 @@ modelTypes = {
         "des":
             "dynamic plug-flow homogenous reactor"
     },
+    "M7": {
+        "id": "M7",
+        "des":
+            "steady-state plug-flow homogenous reactor [concentration base]"
+    },
 }
 
 M1 = modelTypes['M1']['id']
@@ -41,3 +46,4 @@ M3 = modelTypes['M3']['id']
 M4 = modelTypes['M4']['id']
 M5 = modelTypes['M5']['id']
 M6 = modelTypes['M6']['id']
+M7 = modelTypes['M7']['id']

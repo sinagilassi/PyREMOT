@@ -21,6 +21,14 @@
       "python": "${command:python.interpreterPath}"
     },
     {
+      "name": "Static Modeling [M3]",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME3.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
       "name": "Test",
       "type": "python",
       "request": "launch",

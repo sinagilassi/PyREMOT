@@ -12,7 +12,7 @@ reaW_D = 0.0025
 # reactor wall thickness [m]
 reaWall_D = 0.01
 # bed height [m]
-rea_L = 1
+rea_L = 0.25
 # bed porosity - voidage of the fixed bed
 bed_por = 0.39
 # reactor wall thermal conductivity [J/K.m.s]
