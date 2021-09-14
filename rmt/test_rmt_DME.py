@@ -1,4 +1,6 @@
-# test
+# TEST
+# DYNAMIC MODELING
+# ----------------
 
 # import packages/modules
 import numpy as np
@@ -17,7 +19,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 20
+opT = 50
 
 # set feed mole fraction
 # H2/COx ratio
@@ -56,7 +58,7 @@ VoFlRa = InGaVe*rea_CSA
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 #  molar flowrate @ ideal gas[kmol/s]
 Ft0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)/1000
-#  initial concentration[kmol/m3]
+#  initial concentration[kmol/m^3]
 Ct0 = Ft0/VoFlRa
 
 # component all

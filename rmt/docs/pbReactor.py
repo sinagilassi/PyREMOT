@@ -229,17 +229,28 @@ class PackedBedReactorClass:
         # molar flowrate [mol/s]
         dataYs1 = sol.y[0:compNo, :]
         labelListYs1 = labelList[0:compNo]
+        # REVIEW
+        # convert molar flowrate to mole fraction
+        dataYs1_Ftot = np.sum(dataYs1, axis=0)
+        dataYs1_MoFri = dataYs1/dataYs1_Ftot
         # flux
         dataYs2 = sol.y[indexFlux, :]
         labelListYs2 = labelList[indexFlux]
         # temperature
         dataYs3 = sol.y[indexTemp, :]
         labelListYs3 = labelList[indexTemp]
+        # pressure
+        dataYs4 = sol.y[indexPressure, :]
+
+        # FIXME
+        # build matrix
+        _dataYs = np.concatenate(
+            (dataYs1_MoFri, [dataYs2], [dataYs3], [dataYs4]), axis=0)
 
         # check
         if successStatus is True:
             # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataX, dataYs)
+            XYList = pltc.plots2DSetXYList(dataX, _dataYs)
             # -> add label
             dataList = pltc.plots2DSetDataList(XYList, labelList)
             # datalists
@@ -628,11 +639,15 @@ class PackedBedReactorClass:
             dataYs1 = dataYs[0:varNoCon, -1]
             # 2d matrix
             dataYs1_Reshaped = np.reshape(dataYs1, (compNo, zNo))
+            # REVIEW
+            # convert concentration to mole fraction
+            dataYs1_Ctot = np.sum(dataYs1_Reshaped, axis=0)
+            dataYs1_MoFri = dataYs1_Reshaped/dataYs1_Ctot
             # temperature - 2d matrix
             dataYs2 = np.array([dataYs[varNoCon:varNoT, -1]])
 
             # combine
-            _dataYs = np.concatenate((dataYs1_Reshaped, dataYs2), axis=0)
+            _dataYs = np.concatenate((dataYs1_MoFri, dataYs2), axis=0)
 
             # save data
             dataPack.append({
@@ -650,22 +665,24 @@ class PackedBedReactorClass:
             # update initial values [IV]
             IV = dataYs[:, -1]
 
-        # build data list
-        # for i in range(tNo):
-        #     # var list
-        #     _dataYs = dataPack[i]['dataYs']
-        #     # plot setting: build (x,y) series
-        #     XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
-        #     # -> add label
-        #     dataList = pltc.plots2DSetDataList(XYList, labelList)
-        #     # datalists
-        #     dataLists = [dataList[0:compNo],
-        #                  dataList[indexTemp]]
-        #     if i == tNo+1:
-        #         # subplot result
-        #         pltc.plots2DSub(dataLists, "Reactor Length (m)",
-        #                         "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+        # REVIEW
+        # display result at specific time
+        for i in range(tNo):
+            # var list
+            _dataYs = dataPack[i]['dataYs']
+            # plot setting: build (x,y) series
+            XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
+            # -> add label
+            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # datalists
+            dataLists = [dataList[0:compNo],
+                         dataList[indexTemp]]
+            if i == tNo-1:
+                # subplot result
+                pltc.plots2DSub(dataLists, "Reactor Length (m)",
+                                "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
 
+        # REVIEW
         # display result within time span
         _dataListsLoop = []
         _labelNameTime = []
@@ -689,11 +706,13 @@ class PackedBedReactorClass:
             _labelNameTime = []
 
         # select items
-        indices = [0, 2, -1]
-        selected_elements = [_dataListsLoop[index] for index in indices]
+        # indices = [0, 2, -1]
+        # selected_elements = [_dataListsLoop[index] for index in indices]
+        # select datalist
+        _dataListsSelected = selectFromListByIndex([1, -1], _dataListsLoop)
 
         # subplot result
-        pltc.plots2DSub(selected_elements, "Reactor Length (m)",
+        pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
                         "Concentration (mol/m^3)", "Dynamic Modeling of 1D Plug-Flow Reactor")
 
         # return
@@ -790,7 +809,7 @@ class PackedBedReactorClass:
         T0 = constBC1['T0']
 
         # calculate
-        # molar flowrate [mol/s]
+        # molar flowrate [kmol/s]
         MoFlRa0 = SpCo0*VoFlRa0
         # superficial gas velocity [m/s]
         InGaVe0 = VoFlRa0/(CrSeAr*BeVoFr)
@@ -801,7 +820,7 @@ class PackedBedReactorClass:
         InGaVeList_z = np.zeros(zNo)
         InGaVeList_z[0] = InGaVe0
 
-        # total molar flux [mol/m^2.s]
+        # total molar flux [kmol/m^2.s]
         MoFl_z = np.zeros(zNo)
         MoFl_z[0] = MoFlRa0
 
