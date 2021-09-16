@@ -123,7 +123,7 @@ GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M8",
+    "model": "M9",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -135,7 +135,7 @@ modelInput = {
         "molar-flux": 0,
         "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
-        "concentration": 1000*ct0,
+        "concentration": ct0,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,

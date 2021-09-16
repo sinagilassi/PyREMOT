@@ -3,7 +3,7 @@
 
 # import packages/modules
 from data.inputDataReactor import *
-from core.setting import M1, M2, M3, M4, M5, M6, M7, M8
+from core.setting import M1, M2, M3, M4, M5, M6, M7, M8, M9
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
@@ -98,6 +98,8 @@ class rmtCoreClass():
             return self.M7Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M8:
             return self.M8Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == M9:
+            return self.M9Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -247,7 +249,7 @@ class rmtCoreClass():
 
     def M7Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M6 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        M7 model: steady-state Packed-bed Plug-flow reactor (homogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -258,11 +260,22 @@ class rmtCoreClass():
 
     def M8Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M6 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        M8 model: steady-state Packed-bed Plug-flow reactor (homogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
                        reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runM4()
+        return res
+
+    def M9Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M8 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM5()
         return res

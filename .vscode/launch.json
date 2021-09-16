@@ -37,6 +37,14 @@
       "python": "${command:python.interpreterPath}"
     },
     {
+      "name": "Dynamic Modeling [M5]",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME5.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
       "name": "Test",
       "type": "python",
       "request": "launch",

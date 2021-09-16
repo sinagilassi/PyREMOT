@@ -65,6 +65,8 @@ VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
 #  initial concentration[mol/m3]
 Ct0 = MoFlRa0/VoFlRa
+# molar flux
+MoFl0 = MoFlRa0/(rea_CSA)
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
