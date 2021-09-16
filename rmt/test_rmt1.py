@@ -137,7 +137,7 @@ reactionRateSet1 = {
 # reactor volume [m^3]
 ReVo = 5
 # reactor length [m]
-ReLe = 1
+ReLe = rea_L
 # reactor inner diameter [m]
 ReInDi = math.sqrt(ReVo/(ReLe*CONST.PI_CONST))
 # particle dimeter [m]
@@ -183,8 +183,8 @@ modelInput = {
             "medium": []
         }
     },
-    "reactions": reactionSet1,
-    "reaction-rates": reactionRateSet1,
+    "reactions": reactionSet,
+    "reaction-rates": reactionRateSet,
     "external-heat": externalHeat,
     "reactor": {
         "ReInDi": ReInDi,

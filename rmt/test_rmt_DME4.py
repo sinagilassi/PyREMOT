@@ -57,14 +57,16 @@ Fl0 = ct0T*SuGaVe
 
 #  cross section of reactor x porosity [m2]
 rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
-#  flowrate @ P & T [m^3/s]
+#  flowrate @ P & T [m3/s]
 VoFlRa = InGaVe*rea_CSA
-#  flowrate at STP [m^3/s]
+#  flowrate at STP [m3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 #  molar flowrate @ ideal gas [mol/s]
 MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
 #  initial concentration[mol/m3]
 Ct0 = MoFlRa0/VoFlRa
+# initial density [kg/m^3]
+# GaDe = Ct0
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -121,7 +123,7 @@ GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "M8",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -131,8 +133,9 @@ modelInput = {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
+        "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0,
+        "concentration": 1000*ct0,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
@@ -165,7 +168,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-ssModelingData = res['resModel']['dataYs']
+# ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -174,7 +177,7 @@ ssModelingData = res['resModel']['dataYs']
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-np.save('ResM1.npy', ssModelingData)
+# np.save('ssModeling.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)

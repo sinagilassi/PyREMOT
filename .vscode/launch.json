@@ -5,18 +5,18 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Dynamic Modeling",
+      "name": "Static Modeling [M1]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/rmt/test_rmt_DME.py",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME2.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
     {
-      "name": "Static Modeling",
+      "name": "Dynamic Modeling [M2]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/rmt/test_rmt_DME2.py",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -25,6 +25,14 @@
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/rmt/test_rmt_DME3.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Static Modeling [M4]",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_DME4.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },

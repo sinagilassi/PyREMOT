@@ -19,7 +19,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 200
+opT = 300
 
 # set feed mole fraction
 # H2/COx ratio
@@ -151,7 +151,7 @@ modelInput = {
 
 # run exe
 res = rmtExe(modelInput)
-print(f"modeling result: {res}")
+# print(f"modeling result: {res}")
 
 # save modeling result
 # with open('modelingRes.json', 'w') as f:

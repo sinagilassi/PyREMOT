@@ -276,6 +276,20 @@ class rmtUtilityClass:
         except Exception as e:
             raise
 
+    @ staticmethod
+    def moleFractionFromSpeciesMolarFlowRate(MoFlRai):
+        """
+        calculate: mole fraction
+        args:
+            MoFlRai: species molar flowrate [mol/s]
+        """
+        # try/except
+        try:
+            MoFri = MoFlRai/np.sum(MoFlRai)
+            return MoFri
+        except Exception as e:
+            raise
+
     @staticmethod
     def buildComponentList(componentDataDict):
         """ 

@@ -8,6 +8,9 @@
 # rate formation [mol/m^3.s]
 
 # import packages/modules
+import time
+# import resource
+#
 import numpy as np
 import math
 import json
@@ -17,6 +20,10 @@ from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
+# NOTE
+# running time
+# time_start = time.perf_counter()
+# insert code here ...
 
 # operating conditions
 # pressure [Pa]
@@ -132,7 +139,7 @@ modelInput = {
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0,
+        "concentration": 1000*ct0,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
@@ -165,7 +172,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-# ssModelingData = res['resModel']['dataYs']
+ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -174,7 +181,12 @@ res = rmtExe(modelInput)
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-# np.save('ssModeling.npy', ssModelingData)
+np.save('ResM3.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)
+
+
+# time_elapsed = (time.perf_counter() - time_start)
+# memMb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0/1024.0
+# print("%5.1f secs %5.1f MByte" % (time_elapsed, memMb))

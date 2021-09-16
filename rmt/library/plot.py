@@ -199,3 +199,6 @@ class plotClass:
 
         # display
         plt.show()
+
+    # @staticmethod
+    # def plot2DSubRun(dataX, dataYs, labelList)
