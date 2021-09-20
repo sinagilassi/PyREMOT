@@ -277,6 +277,25 @@ class rmtUtilityClass:
             raise
 
     @ staticmethod
+    def moleFractionFromConcentrationSpeciesMat(CoSpi):
+        """
+        calculate: mole fraction from matrix
+            mat[rNO, compNo]
+        args:
+            CoSpi: concentration species [mol/m^3] | [kmol/m^3]
+        """
+        # try/except
+        try:
+            # size
+            _shape = np.shape(CoSpi)
+            _SpCoT = np.sum(CoSpi, axis=1)
+            _SpCoT_Reshape = _SpCoT.reshape((_shape[0], 1))
+            MoFri = CoSpi/_SpCoT_Reshape
+            return MoFri
+        except Exception as e:
+            raise
+
+    @ staticmethod
     def moleFractionFromSpeciesMolarFlowRate(MoFlRai):
         """
         calculate: mole fraction

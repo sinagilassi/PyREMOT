@@ -48,6 +48,11 @@ modelTypes = {
         "des":
             "dynamic plug-flow homogenous reactor [concentration base]"
     },
+    "M10": {
+        "id": "M10",
+        "des":
+            "dynamic plug-flow heterogenous reactor [concentration base]"
+    },
 }
 
 M1 = modelTypes['M1']['id']

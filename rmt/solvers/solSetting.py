@@ -17,6 +17,8 @@
 # NOTE
 # timeNo = zNo of S2 for comparison
 
+# S4
+
 
 solverSetting = {
     "S1": {
@@ -26,6 +28,7 @@ solverSetting = {
     "S2": {
         "tNo": 25,
         "zNo": 25,
+        "rNo": 3,
         "timesNo": 5
     },
     "S3": {

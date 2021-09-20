@@ -3,7 +3,7 @@
 
 # import packages/modules
 from data.inputDataReactor import *
-from core.setting import M1, M2, M3, M4, M5, M6, M7, M8, M9
+from core.setting import modelTypes, M1, M2, M3, M4, M5, M6, M7, M8, M9
 # from docs.pbReactor import runM1
 from docs.cReactor import conventionalReactorClass as cRec
 from docs.pbReactor import PackedBedReactorClass as pbRec
@@ -12,7 +12,6 @@ from docs.pfReactor import PlugFlowReactorClass as pfRec
 from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
 from data.componentData import componentDataStore
 from .rmtUtility import rmtUtilityClass as rmtUtil
-from .rmtReaction import rmtReactionClass as rmtRec
 
 
 class rmtCoreClass():
@@ -100,6 +99,8 @@ class rmtCoreClass():
             return self.M8Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M9:
             return self.M9Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['M10']['id']:
+            return self.M10Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -184,6 +185,9 @@ class rmtCoreClass():
             return reactionRateExprList
         except Exception as e:
             raise
+
+# NOTE
+# main algorithms
 
     def M1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
@@ -278,4 +282,15 @@ class rmtCoreClass():
                        reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runM5()
+        return res
+
+    def M10Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M10 model: dynamic Packed-bed Plug-flow reactor (heterogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM6()
         return res
