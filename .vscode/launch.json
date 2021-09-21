@@ -56,7 +56,7 @@
       "name": "Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}\\rmt\\test3.py",
+      "program": "${workspaceFolder}\\rmt\\solvers\\solOrCo.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     }

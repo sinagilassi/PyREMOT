@@ -10,3 +10,10 @@ CONST_EQ_GAS_DIFFUSIVITY = {
 CONST_EQ_GAS_VISCOSITY = {
     "eq1GasViscosity": 1
 }
+
+# sherwood number
+CONST_EQ_Sh = {
+    "Frossling": 1,
+    "Rosner": 2,
+    "Garner-and-Keey": 3
+}

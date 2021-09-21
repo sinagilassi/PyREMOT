@@ -79,12 +79,12 @@ def calMeanHeatCapacityAtConstantPressure(comList, T2, T1=Tref):
 
 def calMixtureHeatCapacityAtConstantPressure(MoFri, HeCaCoPri):
     """
-        cal: heat capacity at constant pressure of mixture 
-        unit: [kJ/kmol.K] 
+    cal: heat capacity at constant pressure of mixture 
+    unit: [kJ/kmol.K] 
 
-        args:
-            MoFri: mole fraction of components 
-            HeCaCoPri: heat capacity at constant pressure of components [kJ/kmol.K]
+    args:
+        MoFri: mole fraction of components 
+        HeCaCoPri: heat capacity at constant pressure of components [kJ/kmol.K]
     """
     # try/except
     try:
@@ -258,12 +258,10 @@ def calGasHourlySpaceVelocity(VoFlRa, ReVo):
 
 def calEnthalpyChangeOfReaction(reactionListSorted, T):
     """
-        cal: standard enthalpy of reaction at 25C
-        unit: [kJ/kmol]
-
-        args:
-            reactionListSorted: reaction expression dict
-            T: temperature [K]
+    cal: standard enthalpy of reaction at 25C [kJ/kmol]
+    args:
+        reactionListSorted: reaction expression dict
+        T: temperature [K]
     """
     # try/except
     try:

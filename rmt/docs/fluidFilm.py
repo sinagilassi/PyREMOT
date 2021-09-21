@@ -4,6 +4,7 @@
 # import packages/modules
 from math import sqrt
 import numpy as np
+from core.eqConstants import CONST_EQ_Sh
 
 
 def main():
@@ -24,16 +25,22 @@ def calNuNoEq1(Pr, Re):
         raise
 
 
-def calShNoEq1(Sc, Re):
+def calShNoEq1(Sc, Re, Method=1):
     """ 
     gas-solid Sherwood number
+        convective mass transfer coefficient / diffusive mass transfer coefficient
     args:
         Sc: Schmidt number
         Re: Reynolds number
     """
     # try/except
     try:
-        return 2 + 1.1*(Sc**(1/3))*(Re**(0.6))
+        if Method == CONST_EQ_Sh['Frossling']:
+            return 2 + 1.1*(Sc**(1/3))*(Re**(0.6))
+        elif Method == CONST_EQ_Sh['Rosner']:
+            return (Sc**0.4)*(0.4*(Re**0.5) + 0.2*(Re*(2/3)))
+        elif Method == CONST_EQ_Sh['Garner-and-Keey']:
+            return 0.94*(Re**0.5)*(Sc**(1/3))
     except Exception as e:
         raise
 
@@ -97,7 +104,9 @@ def calMassTransferCoefficientEq1(Sh, GaDiCoi, CaPaDi):
     """
     # try/except
     try:
-        return (Sh/CaPaDi)*GaDiCoi
+        # characteristic length [m]
+        ChLe = CaPaDi/2
+        return (Sh*GaDiCoi)/ChLe
     except Exception as e:
         raise
 
@@ -105,6 +114,7 @@ def calMassTransferCoefficientEq1(Sh, GaDiCoi, CaPaDi):
 def calHeatTransferCoefficientEq1(Nu, GaThCo, CaPaDi):
     """ 
     calculate heat transfer coefficient [J/m^2.s.K]
+        **note: for spherical particles
     args:
         Nu: Nusselt number
         GaThCo: GaThCo: gas thermal conductivity [J/m.s.K]

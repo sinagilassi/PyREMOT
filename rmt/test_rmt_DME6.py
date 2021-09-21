@@ -100,6 +100,10 @@ PaDi = cat_d
 CaDe = cat_rho
 # particle specific heat capacity [kJ/kg.K]
 CaSpHeCa = cat_Cp/1000
+# catalyst porosity
+CaPo = cat_por
+# catalyst thermal conductivity [J/K.m.s]
+CaThCo = therCop
 
 # NOTE
 # external heat
@@ -153,7 +157,9 @@ modelInput = {
         "BeVoFr": bed_por,
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
-        "CaSpHeCa": CaSpHeCa
+        "CaSpHeCa": CaSpHeCa,
+        "CaPo": CaPo,
+        "CaThCo": CaThCo
     }
 }
 

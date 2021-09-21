@@ -26,7 +26,7 @@ cat_d = 0.002
 # catalyst particle density [kg/m^3]
 cat_rho = 1982
 # catalyst porosity
-cat_por = 0.45
+cat_por = 0.87
 # catalyst tortuosity
 cat_tor = 2
 # fraction of solids
