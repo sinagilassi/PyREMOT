@@ -30,15 +30,18 @@ class OrCoCatParticle:
             # define R matrix
             Y_BC2 = np.zeros(_shape)
 
-            for k in range(self.odeNo):
-                # from 0 to N
-                _Ay = np.dot(A[:-1, :-1], yj[:-1])
+            # concentration
+            for k in range(self.odeNo - 1):
+                # constant y[0 to N]*A[N+1,r]
+                _Ay = np.dot(A[-1, :-1], yj[:-1])
                 _AySum = np.sum(_Ay)
-                # N+1
-                _AyBC2 = A[]
+                _alpha = -1*(_AySum + beta[k]*Cb[k])
+                # y[N+1] constant
+                _AyBC2 = A[self.N, self.N] - beta[k]
 
                 for i in range(self.N):
                     for j in range(self.N):
+                        pass
 
         except Exception as e:
             raise
