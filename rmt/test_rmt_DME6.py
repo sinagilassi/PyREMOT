@@ -102,6 +102,8 @@ CaDe = cat_rho
 CaSpHeCa = cat_Cp/1000
 # catalyst porosity
 CaPo = cat_por
+# catalyst tortuosity
+CaTo = cat_tor
 # catalyst thermal conductivity [J/K.m.s]
 CaThCo = therCop
 
@@ -159,6 +161,7 @@ modelInput = {
         "CaDe": CaDe,
         "CaSpHeCa": CaSpHeCa,
         "CaPo": CaPo,
+        "CaTo": CaTo,
         "CaThCo": CaThCo
     }
 }

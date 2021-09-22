@@ -7,42 +7,54 @@
 import numpy as np
 
 
-class OrCoCatParticle:
-    def __init__(self, Xc, Q, A, B, odeNo, N):
+class OrCoCatParticleClass:
+    def __init__(self, Xc, N, Q, A, B, odeNo):
+        '''
+        args:
+            Xc: list of collocation points
+            N: number of collocation points
+            Q: OC Q matrix
+            A: OC A matrix
+            B: OC B matrix 
+            odeNo: number of ode equations
+        '''
         self.Xc = Xc
+        self.N = N
         self.Q = Q
         self.A = A
         self.B = B
         self.odeNo = odeNo
-        self.N = N
 
-    def CalCatGas(self, A, yj, Cb, Tb, beta, betaT):
+    def CalUpdateYnSolidGasInterface(self, yj, Cb, beta):
         '''
         calculate concentration and temperature at the catalyst surface
             args:
+                yj: var matrix (species concentration or temperature at oc points)
                 Cb: list of species concentration in the gas phase [kmol/m^3]
-                Tb: temperature in the gas phase [K]
+                beta: beta/betaT (for each component)
         '''
         # try/except
         try:
-            # residual matrix shape
-            _shape = (self.odeNo, 1)
-            # define R matrix
-            Y_BC2 = np.zeros(_shape)
+            # y solid-gas interface matrix shape
+            _shape = (self.N, 1)
+            # define C matrix
+            yj_updated = np.zeros(_shape)
+            # flip
+            yj_flip = np.flip(yj).reshape(_shape)
 
             # concentration
-            for k in range(self.odeNo - 1):
-                # constant y[0 to N]*A[N+1,r]
-                _Ay = np.dot(A[-1, :-1], yj[:-1])
-                _AySum = np.sum(_Ay)
-                _alpha = -1*(_AySum + beta[k]*Cb[k])
-                # y[N+1] constant
-                _AyBC2 = A[self.N, self.N] - beta[k]
+            # constant y[0 to N]*A[N+1,r]
+            _Ay = np.dot(self.A[-1, :-1], yj_flip[:-1])
+            _alpha = _Ay + beta*Cb
+            # y[N+1] constant
+            _gamma = beta - self.A[-1, -1]
+            # updated concentration
+            yn = _alpha/_gamma
+            # update yj
+            yj_flip[-1][0] = yn
 
-                for i in range(self.N):
-                    for j in range(self.N):
-                        pass
-
+            # res
+            return yj_flip
         except Exception as e:
             raise
 
@@ -50,41 +62,27 @@ class OrCoCatParticle:
     # first point is not BC1
     # last point is BC2
 
-    def fR(self, i, j, Aij, Bij, N, k, beta, betaT):
+    def fR(self, i, j, Aij, Bij, N, contCT):
         ''' 
-        concentration equations:
-            for BC2, add beta*C[bulk] by ff function
-            reaction term is needed (all points)
-        temperature:
-            for BC2, add betaT*T[bulk]
-            enthalpy of reaction is required (all points)
+        calculate element of R matrix
+            args:
+                contCT: 
+                    concentration: effective diffusivity coefficient
+                    temperature: effective thermal conductivity
         '''
-        # interior points [0,1,...,N-1]
-        if k < self.odeNo - 1:
-            # concentration eq.
-            # BC2: N
-            if i < N - 1:
-                F = Bij + (2/self.Xc[i])*Aij
-            # last node (BC2)
-            else:
-                if j == N - 1:
-                    F = Aij - beta[k]
-                else:
-                    F = Aij
-        else:
-            # temperature eq.
-            # BC2: N
-            if i < N - 1:
-                F = Bij + (2/self.Xc[i])*Aij
-            # last node (BC2)
-            else:
-                if j == N - 1:
-                    F = Aij - betaT
-                else:
-                    F = Aij
+        if i < N:
+            F = contCT*Bij + contCT*(2/self.Xc[i])*Aij
+
         return F
 
-    def buildLhsMatrix(self, beta, betaT):
+    def buildLhsMatrix(self, contCT):
+        '''
+        build Lhs (R) matrix
+        args: 
+            contCT: 
+                concentration: effective diffusivity coefficient of component
+                temperature: effective thermal conductivity 
+        '''
         # Residual Formulation
         # ---------------------
         # linear parts (RHS)
@@ -100,81 +98,89 @@ class OrCoCatParticle:
 
         try:
             # residual matrix shape
-            residualMatrixShape = (self.odeNo*self.N, self.odeNo*self.N)
+            residualMatrixShape = (self.N, self.N)
             # define R matrix
             R = np.zeros(residualMatrixShape)
 
-            for k in range(self.odeNo):
-                # new row and column
-                ij = k*self.N
-                for i in range(self.N):
-                    for j in range(self.N):
-                        R[ij+i][ij+j] = self.fR(i, j, self.A[i]
-                                                [j], self.B[i][j], self.N, k,  beta, betaT)
-
+            for i in range(self.N):
+                for j in range(self.N):
+                    R[i][j] = self.fR(i, j, self.A[i][j],
+                                      self.B[i][j], self.N, contCT)
+            # res
+            return R
         except Exception as e:
             raise
 
-    def ff(self, i, A, B,  N, k, beta, betaT, Cb, Tb):
+    def ff(self, i, N, contCT):
         ''' 
-        N: number of dependent variables
+        calculate element of f matrix
+        args:
+            contCT: 
+                concentration: reaction term
+                temperature: overall enthalpy of reaction
         '''
-        if k < self.odeNo - 1:
-            # concentration eq.
-            if i < N-1:
-                F = 0
-            else:
-                F = beta[k]*Cb
-        else:
-            # temperature eq.
-            if i < N-1:
-                F = 0
-            else:
-                F = betaT*Tb
+        if i < N:
+            F = contCT
+
         return F
 
-    def buildRhsMatrix(self, beta, betaT, Cb, Tb):
+    def buildRhsMatrix(self, contCT):
         '''
-        LHS of equation consisting nonlinear/linear term such as reaction
+        RHS of equation consisting nonlinear/linear term such as reaction
         args:
-            beta list: var term [Rp*h/Di]
-            betaT: var term [-1*Rp*hfs/therCoMixEff]
+            contCT
+                concentration: list of reaction term
+                temperature: list of overall enthalpy of reaction
         '''
         try:
             # f matrix - constant values matrix
             # rhs
-            rhsMatrixShape = self.odeNo*self.N
+            rhsMatrixShape = (self.N, 1)
             # define f matrix
             f = np.zeros(rhsMatrixShape)
-            for k in range(self.odeNo):
-                # new row and column
-                ij = k*self.N
-                for i in range(self.N):
-                    f[i] = self.ff(i, self.A, self.B, self.N, k)
+
+            for i in range(self.N):
+                f[i, 1] = self.ff(i, self.N, contCT[i])
+
+            # res
+            return f
         except Exception as e:
             raise
 
-    def buildOrCoMatrix(self, compNo, zNo, rNo, beta, betaT, Cb, Tb):
+    def buildOrCoMatrix(self, yj, const1, const2):
         '''
         build main matrix used for df/dt
         args: 
-            compNo, number of components
-            zNo: number of finite difference points
-            rNo: number of orthogonal collocation points
-
+            yj: var list at each OC point - shape: (rNo,1)
+            const1:
+                concentration: effective diffusivity coefficient
+                temperature: effective thermal conductivity
+            const2: 
+                concentration: reaction term
+                temperature: overall enthalpy of reaction
         '''
         try:
+            # # yj y[n], y[n-1], ..., y[0]
+            # # yj reshape
+            # yj_Reshape = yj.reshape((self.N, 1))
+            # # yj flip
+            # yj_flip = np.flipud(yj_Reshape)
             # R matrix
-            RMatrix = self.buildLhsMatrix(beta, betaT)
+            RMatrix = self.buildLhsMatrix(const1)
             # f matrix
-            fMatrix = self.buildRhsMatrix(beta, betaT, Cb, Tb)
-            # df/dt val
-            dfdtValMatrix = np.zeros((compNo, rNo, zNo))
+            fMatrix = self.buildRhsMatrix(const2)
 
-            for c in range(compNo):
-                for i in range(zNo):
-                    for j in range(rNo):
-                        pass
+            # [R][Y]=[RY]
+            RYMatrix = np.matmul(RMatrix, yj)
+
+            # sum of R and F
+            RYFMatrix = RYMatrix + fMatrix
+
+            # should be flip C[n], C[n-1], ..., C[0]
+            RYFMatrix_flip = np.flipud(RYFMatrix)
+
+            # res
+            return RYFMatrix_flip
 
         except Exception as e:
             raise

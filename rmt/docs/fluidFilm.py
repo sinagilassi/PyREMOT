@@ -65,15 +65,15 @@ def calPrNoEq1(GaHeCaCoPr, GaVi, GaThCo, GaMoWe):
     """ 
     calculate Prandtl number
     args:
-        GaHeCaCoPr: heat capacity at constant pressure [J/mol.K]
+        GaHeCaCoPr: heat capacity at constant pressure [J/mol.K] 
         GaThCo: gas thermal conductivity [J/m.s.K]
         GaVi: gas viscosity [Pa.s] | [kg/m.s]
-        GaMoWe: gas molecular weight [g/mol]
+        GaMoWe: gas molecular weight [kg/mol]
     """
     # try/except
     try:
         # Cp conversion into [J/kg.K]
-        GaHeCaCoPr1 = (GaHeCaCoPr/GaMoWe)*1000
+        GaHeCaCoPr1 = (GaHeCaCoPr/GaMoWe)
         return GaHeCaCoPr1*GaVi/GaThCo
     except Exception as e:
         raise
