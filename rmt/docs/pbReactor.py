@@ -3057,8 +3057,10 @@ class PackedBedReactorClass:
         indexV = indexP + 1
 
         # calculate
+        # particle radius
+        PaRa = PaDi/2
         # specific surface area exposed to the free fluid [m^2/m^3]
-        SpSuAr = (3/(PaDi/2))*(1 - BeVoFr)
+        SpSuAr = (3/PaRa)*(1 - BeVoFr)
 
         # molar flowrate [kmol/s]
         MoFlRa0 = SpCo0*VoFlRa0
@@ -3135,6 +3137,9 @@ class PackedBedReactorClass:
         CosSpi_r = np.zeros(CosSpiMatShape)
         # total concentration in the solid phase [kmol/m^3]
         CosSp_r = np.zeros(rNo)
+
+        # flux
+        MoFli_z = np.zeros(compNo)
 
         # NOTE
         # temperature [K]
@@ -3277,7 +3282,8 @@ class PackedBedReactorClass:
             # mixture thermal conductivity - solid phase [J/s.m.K]
             SoThCoMix = 0.125
             # effective thermal conductivity - gas phase [J/s.m.K]
-            GaThCoEff = BeVoFr*GaThCoMix + (1 - BeVoFr)*CaThCo
+            # GaThCoEff = BeVoFr*GaThCoMix + (1 - BeVoFr)*CaThCo
+            GaThCoEff = BeVoFr*GaThCoMix
             # effective thermal conductivity - solid phase [J/s.m.K]
             SoThCoEff = CaPo*SoThCoMix + (1 - CaPo)*CaThCo
 
@@ -3411,6 +3417,22 @@ class PackedBedReactorClass:
                 Qm = (Ua*(Tm - T))*1e-3
 
             # NOTE
+            # mass transfer between
+            for i in range(compNo):
+                ### gas phase ###
+                # mass balance (forward difference)
+                # concentration [kmol/m^3]
+                # central
+                Ci_c = SpCoi_z[i][z]
+                # concentration in the catalyst surface [kmol/m^3]
+                # CosSpi_cat
+                # inward flux [kmol/m^2.s]
+                MoFli_z[i] = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
+
+            # total mass transfer between gas and solid phases [kmol/m^3]
+            ToMaTrBeGaSo_z = np.sum(MoFli_z)*SpSuAr
+
+            # NOTE
             # velocity from global concentration
             # check BC
             if z == 0:
@@ -3424,7 +3446,7 @@ class PackedBedReactorClass:
             # CoSp x 1000
             # OvR x 1000
             dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
-                                      ((1/T)*dxdt_P - (P/T**2)*dxdt_v_T) + OvR*1000)
+                                      ((1/T)*dxdt_P - (P/T**2)*dxdt_v_T) + ToMaTrBeGaSo_z*1000)
             # velocity [forward value] is updated
             # backward value of temp is taken
             # dT/dt will update the old value
@@ -3450,10 +3472,10 @@ class PackedBedReactorClass:
 
             # REVIEW
             # gas-solid interface BC
-            # concentration
-            beta = MaTrCo/SoDiiEff
+            # concentration [m/s]*[m^2/s]=[1/m]
+            betaC = PaRa*(MaTrCo/SoDiiEff)
             # temperature
-            betaT = -1*(HeTrCo/SoThCoEff)
+            betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
 
             # universal index [j,i]
             UISet = z*(rNo + 1)
@@ -3472,18 +3494,39 @@ class PackedBedReactorClass:
                 # check BC
                 if z == 0:
                     # BC1
-                    Ci_b = SpCoi0[i]
+                    constC_BC1 = GaDii[i]*BeVoFr/v_z[z]
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_b = (1/(constC_BC1 + dz)) * \
+                        (SpCoi0[i]*dz + constC_BC1*(Ci_f))
+                elif z == zNo - 1:
+                    # BC2
+                    # forward difference
+                    Ci_f = 0
+                    # previous node
+                    Ci_b = max(SpCoi_z[i][z - 1], CONST.EPS_CONST)
                 else:
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
                     # interior nodes
                     Ci_b = max(SpCoi_z[i][z - 1], CONST.EPS_CONST)
+
+                # cal differentiate
                 # backward difference
                 dCdz = (Ci_c - Ci_b)/dz
+                # central difference for dispersion
+                d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
+                # dispersion term [kmol/m^3.s]
+                _dispersionFluxC = GaDii[i]*BeVoFr*d2Cdz2
                 # concentration in the catalyst surface [kmol/m^3]
                 # CosSpi_cat
                 # inward flux [kmol/m^2.s]
-                InFlC = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
+                # MoFli_z[i] = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
                 # mass balance
-                dxdt_F = const_F1*(-v_z[z]*dCdz - Ci_c*dxdt_v + InFlC*SpSuAr)
+                # convective, dispersion, inward flux
+                dxdt_F = const_F1 * \
+                    (-v_z[z]*dCdz - Ci_c*dxdt_v +
+                     _dispersionFluxC + MoFli_z[i]*SpSuAr)
                 dxdtMat[i][UISet][z] = dxdt_F
 
                 ### solid phase ###
@@ -3501,7 +3544,7 @@ class PackedBedReactorClass:
                 # updated concentration gas-solid interface
                 # shape(rNo,1)
                 _Cs_r_Updated = OrCoCatParticleClassSet.CalUpdateYnSolidGasInterface(
-                    _Cs_r, Ci_c, beta[i][z])
+                    _Cs_r, Ci_c, betaC[i])
 
                 # dC/dt list
                 dCsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
@@ -3511,6 +3554,7 @@ class PackedBedReactorClass:
                     # update
                     dxdtMat[i][UISetSolid + r][z] = const_Cs1*dCsdti[r]
 
+            # NOTE
             # energy balance (temperature) [K]
             # temp [K]
             # T_c = T_z[z]
@@ -3518,19 +3562,39 @@ class PackedBedReactorClass:
             # check BC
             if z == 0:
                 # BC1
-                T_b = T0
+                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
+                # next node
+                T_f = T_z[z+1]
+                # previous node
+                T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+            elif z == zNo - 1:
+                # BC2
+                # previous node
+                T_b = T_z[z - 1]
+                # next node
+                T_f = 0
             else:
                 # interior nodes
                 T_b = T_z[z - 1]
+                # next node
+                T_f = T_z[z+1]
+
+            # cal differentiate
             # backward difference
             dTdz = (T_c - T_b)/dz
-
+            # central difference
+            d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
+            # dispersion flux [kJ/m^3.s]
+            _dispersionFluxT = (GaThCoEff*d2Tdz2)*1e-3
             # temperature in the catalyst surface [K]
             # Ts_cat
-            # inward flux [kJ/m^2.s]
+            # outward flux [kJ/m^2.s]
             InFlT = HeTrCo*(_Ts_r[0] - T_c)*1e-3
-
-            dxdt_T = const_T2*(-const_T1*dTdz + (InFlT*SpSuAr + Qm))
+            # total heat transfer between gas and solid [kJ/m^3.s]
+            ToHeTrBeGaSo_z = InFlT*SpSuAr
+            # convective flux, diffusive flux, enthalpy of reaction, cooling heat
+            dxdt_T = const_T2 * \
+                (-const_T1*dTdz + _dispersionFluxT + (ToHeTrBeGaSo_z + Qm))
             dxdtMat[indexT][UISet][z] = dxdt_T
 
             ### solid phase ###
