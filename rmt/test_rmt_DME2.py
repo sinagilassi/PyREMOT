@@ -102,6 +102,8 @@ PaDi = cat_d
 CaDe = cat_rho
 # particle specific heat capacity [kJ/kg.K]
 CaSpHeCa = cat_Cp/1000
+# catalyst bed dencity  [kg/m^3]
+CaBeDe = bulk_rho
 
 # NOTE
 # external heat
@@ -127,74 +129,73 @@ GaMiVi = 1e-5
 # reaction rates
 # initial values
 varis0 = {
-    # parameters
-    "RT":  "CONST.R_CONST*T",
+    # loopVars
+    # T,P,NoFri
+    #  mole fraction
+    "CaBeDe": CaBeDe,
+    # vars key/value
+    "RT": lambda x: x['R_CONST']*['T'],
     #  kinetic constant
     # DME production
     #  [kmol/kgcat.s.bar2]
-    "K1":  "35.45*math.exp(-1.7069e4/rDict['VARS']['RT'])",
+    "K1": lambda x: 35.45*math.exp(-1.7069e4/x['RT']),
     #  [kmol/kgcat.s.bar]
-    "K2":  "7.3976*math.exp(-2.0436e4/rDict['VARS']['RT'])",
+    "K2": lambda x: 7.3976*math.exp(-2.0436e4/x['RT']),
     #  [kmol/kgcat.s.bar]
-    "K3":  "8.2894e4*math.exp(-5.2940e4/rDict['VARS']['RT'])",
+    "K3": lambda x: 8.2894e4*math.exp(-5.2940e4/x['RT']),
     # adsorption constant [1/bar]
-    "KH2":  "0.249*math.exp(3.4394e4/rDict['VARS']['RT'])",
-    "KCO2":  "1.02e-7*math.exp(6.74e4/rDict['VARS']['RT'])",
-    "KCO":  "7.99e-7*math.exp(5.81e4/rDict['VARS']['RT'])",
+    "KH2": lambda x: 0.249*math.exp(3.4394e4/x['RT']),
+    "KCO2": lambda x: 1.02e-7*math.exp(6.74e4/x['RT']),
+    "KCO": lambda x: 7.99e-7*math.exp(5.81e4/x['RT']),
     #  equilibrium constant
-    "Ln_KP1":  "4213/T - 5.752 * \
-        math.log(T) - 1.707e-3*T + 2.682e-6 * \
-        (math.pow(T, 2)) - 7.232e-10*(math.pow(T, 3)) + 17.6",
-    "KP1":  "math.exp(rDict['VARS']['Ln_KP1'])",
-    "log_KP2":  "2167/T - 0.5194 * \
-        math.log10(T) + 1.037e-3*T - 2.331e-7*(math.pow(T, 2)) - 1.2777",
-    "KP2":  "math.pow(10, rDict['VARS']['log_KP2'])",
-    "Ln_KP3":  "4019/T + 3.707 * \
-        math.log(T) - 2.783e-3*T + 3.8e-7 * \
-        (math.pow(T, 2)) - 6.56e-4/(math.pow(T, 3)) - 26.64",
-    "KP3":  "math.exp(rDict['VARS']['Ln_KP3'])",
+    "Ln_KP1": lambda x: 4213/T - 5.752 * \
+    math.log(T) - 1.707e-3*T + 2.682e-6 * \
+    (math.pow(T, 2)) - 7.232e-10*(math.pow(T, 3)) + 17.6,
+    "KP1": lambda x: math.exp(x['Ln_KP1']),
+    "log_KP2": lambda x: 2167/T - 0.5194 * \
+    math.log10(T) + 1.037e-3*T - 2.331e-7*(math.pow(T, 2)) - 1.2777,
+    "KP2": lambda x: math.pow(10, x['log_KP2']),
+    "Ln_KP3": lambda x: 4019/T + 3.707 * \
+    math.log(T) - 2.783e-3*T + 3.8e-7 * \
+    (math.pow(T, 2)) - 6.56e-4/(math.pow(T, 3)) - 26.64,
+    "KP3": lambda x: math.exp(x['Ln_KP3']),
+    #  mole fraction
+    "yi_H2": lambda x: x['MoFri'][0],
+    "yi_CO2": lambda x: x['MoFri'][1],
+    "yi_H2O": lambda x: x['MoFri'][2],
+    "yi_CO": lambda x: x['MoFri'][3],
+    "yi_CH3OH": lambda x: x['MoFri'][4],
+    "yi_DME": lambda x: x['MoFri'][5],
     # partial pressure
     #  partial pressure of H2 [bar]
-    "PH2":  "P*(rDict['PARAMS']['yi_H2'])*1e-5",
+    "PH2": lambda x: x['P']*(x['yi_H2'])*1e-5,
     #  partial pressure of CO2 [bar]
-    "PCO2":  "P*(rDict['PARAMS']['yi_CO2'])*1e-5",
+    "PCO2": lambda x: x['P']*(x['yi_CO2'])*1e-5,
     #  partial pressure of H2O [bar]
-    "PH2O":  "P*(rDict['PARAMS']['yi_H2O'])*1e-5",
+    "PH2O": lambda x: x['P']*(x['yi_H2O'])*1e-5,
     #  partial pressure of CO [bar]
-    "PCO":  "P*(rDict['PARAMS']['yi_CO'])*1e-5",
+    "PCO": lambda x: x['P']*(x['yi_CO'])*1e-5,
     #  partial pressure of CH3OH [bar]
-    "PCH3OH":  "P*(rDict['PARAMS']['yi_CH3OH'])*1e-5",
+    "PCH3OH": lambda x: x['P']*(x['yi_CH3OH'])*1e-5,
     #  partial pressure of CH3OCH3 [bar]
-    "PCH3OCH3":  "P*(rDict['PARAMS']['yi_DME'])*1e-5",
+    "PCH3OCH3": lambda x: x['P']*(x['yi_DME'])*1e-5,
     # reaction rates
-    "ra1":  "rDict['VARS']['PCO2']*rDict['VARS']['PH2']",
-    "ra2":  "1 + (rDict['VARS']['KCO2']*rDict['VARS']['PCO2']) + (rDict['VARS']['KCO']*rDict['VARS']['PCO']) + math.sqrt(rDict['VARS']['KH2']*rDict['VARS']['PH2'])",
-    "ra3":  "(1/rDict['VARS']['KP1'])*((rDict['VARS']['PH2O']*rDict['VARS']['PCH3OH'])/(rDict['VARS']['PCO2']*(math.pow(rDict['VARS']['PH2'], 3))))",
-    "ra4":  "rDict['VARS']['PH2O'] - (1/rDict['VARS']['KP2'])*((rDict['VARS']['PCO2']*rDict['VARS']['PH2'])/rDict['VARS']['PCO'])",
-    "ra5":  "(math.pow(rDict['VARS']['PCH3OH'], 2)/rDict['VARS']['PH2O'])-(rDict['VARS']['PCH3OCH3']/rDict['VARS']['KP3'])",
-}
-
-# parameter dict
-params0 = {
-    #  mole fraction
-    "yi_H2": MoFri0[0],
-    "yi_CO2": MoFri0[1],
-    "yi_H2O": MoFri0[2],
-    "yi_CO": MoFri0[3],
-    "yi_CH3OH": MoFri0[4],
-    "yi_DME": MoFri0[5]
+    "ra1": lambda x: x['PCO2']*x['PH2'],
+    "ra2": lambda x: 1 + (x['KCO2']*x['PCO2']) + (x['KCO']*x['PCO']) + math.sqrt(x['KH2']*x['PH2']),
+    "ra3": lambda x: (1/x['KP1'])*((x['PH2O']*x['PCH3OH'])/(x['PCO2']*(math.pow(x['PH2'], 3)))),
+    "ra4": lambda x: x['PH2O'] - (1/x['KP2'])*((x['PCO2']*x['PH2'])/x['PCO']),
+    "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
 # reaction rates
 rates0 = {
-    "r1":  "rDict['VARS']['K1']*(rDict['VARS']['ra1']/(math.pow(rDict['VARS']['ra2'], 3)))*(1-rDict['VARS']['ra3'])*CaBeDe",
-    "r2":  "rDict['VARS']['K2']*(1/rDict['VARS']['ra2'])*rDict['VARS']['ra4']*CaBeDe",
-    "r3":  "rDict['VARS']['K3']*rDict['VARS']['ra5']*CaBeDe"
+    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*CaBeDe,
+    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*CaBeDe,
+    "r3": lambda x: x['K3']*x['ra5']*CaBeDe
 }
 
 # reaction rate
 reactionRateSet = {
-    "PARAMS": params0,
     "VARS": varis0,
     "RATES": rates0
 }

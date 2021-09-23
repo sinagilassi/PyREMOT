@@ -2,51 +2,53 @@
 # -------------------------
 
 # import packages/modules
+import types
 import math
 from core import constants as CONST
 
 
-def reactionRateExe(loopVars, params, varis, rates):
+def reactionRateExe(loopVars, varDict, rateDict):
     """
-    reaction rate expression
+    execute reaction rate expressions
+    args:
+        loopVars: main variables as: T, P, and MoFri
+        varDict: defined variables by users
+            _dict = {"key1": fun1, "key2": fun2, ...}
+        rateDict: defined variables by users
+            _dict = {"r1": fun1, "r2": fun2, ...}
     """
     # loop parameters
-    T, P, MoFri0, CaBeDe = loopVars
+    T, P, MoFri = loopVars
 
-    # reaction rate
-    rDict = {
-        "PARAMS": params,
-        "VARS": varis,
-        "RATES": rates,
+    # loop dict
+    loopDict = {
+        "R_CONST": CONST.R_CONST,
+        "T": T,
+        "P": P,
+        "MoFri": MoFri
     }
 
+    # create _dict
+    _varDict = {**loopDict, **varDict}
+
     # function calculate variables
-    varsDict = {}
-    for i, j in rDict['VARS'].items():
-        # exe var
-        _loopValue = eval(j)
-        # add to dic
-        varsDict[i] = _loopValue
-    # update value
-    rDict.update({'VAL': varsDict})
+    exeDict = {}
 
-    # variables
-    # reactionVARS = rDict['VARS']
-    # calculated variables
-    # calculatedVARS = exeVars(T, P, MoFri)
+    for i in _varDict:
+        # check function/scaler
+        if isinstance(_varDict[i], types.FunctionType):
+            _loop = _varDict[i](exeDict)
+        else:
+            _loop = _varDict[i]
+        # add to the dict exec
+        exeDict[i] = _loop
 
-    # # update rDict
-    # rDict.update({"VARS": calculatedVARS})
+    # reaction rate list
+    RiList = []
 
-    # calculate reaction rate expressions
-    # reactionRates = rDict['RATES']
-    # Ri value
-    reactionRateValues = []
-    # loop
-    for x, y in rDict['RATES'].items():
-        _loop = eval(y)
-        # add
-        reactionRateValues.append(_loop)
+    for j in rateDict:
+        _loop = rateDict[j](exeDict)
+        RiList.append(_loop)
 
     # return
-    return reactionRateValues
+    return RiList

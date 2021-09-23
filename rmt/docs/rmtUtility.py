@@ -89,6 +89,8 @@ class rmtUtilityClass:
                 MixMoWe
             elif unit == 'kg/mol':
                 MixMoWe = MixMoWe*1e-3
+            elif unit == 'kg/kmol':
+                MixMoWe = MixMoWe
 
             return MixMoWe
         except Exception as e:
