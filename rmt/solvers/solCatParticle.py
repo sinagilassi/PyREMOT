@@ -25,16 +25,18 @@ class OrCoCatParticleClass:
         self.B = B
         self.odeNo = odeNo
 
-    def CalUpdateYnSolidGasInterface(self, yj, Cb, beta):
+    def CalUpdateYnSolidGasInterface(self, yj, CTb, beta):
         '''
         calculate concentration and temperature at the catalyst surface
             args:
                 yj: var matrix (species concentration or temperature at oc points)
-                Cb: list of species concentration in the gas phase [kmol/m^3]
+                CTb: list of species concentration in the gas phase [kmol/m^3]
                 beta: beta/betaT (for each component)
         '''
         # try/except
         try:
+            # yj
+            # y[n], y[n-1], ..., y[0]
             # y solid-gas interface matrix shape
             _shape = (self.N, 1)
             # define C matrix
@@ -44,8 +46,10 @@ class OrCoCatParticleClass:
 
             # concentration
             # constant y[0 to N]*A[N+1,r]
-            _Ay = np.dot(self.A[-1, :-1], yj_flip[:-1])
-            _alpha = _Ay + beta*Cb
+            _Ay_Selected = self.A[-1, :-1]
+            _yj_Selected = yj_flip[:-1]
+            _Ay = np.dot(_Ay_Selected, _yj_Selected)
+            _alpha = np.sum(_Ay) + beta*CTb
             # y[N+1] constant
             _gamma = beta - self.A[-1, -1]
             # updated concentration
@@ -140,7 +144,7 @@ class OrCoCatParticleClass:
             f = np.zeros(rhsMatrixShape)
 
             for i in range(self.N):
-                f[i, 1] = self.ff(i, self.N, contCT[i])
+                f[i, 0] = self.ff(i, self.N, contCT[i])
 
             # res
             return f
@@ -160,7 +164,8 @@ class OrCoCatParticleClass:
                 temperature: overall enthalpy of reaction
         '''
         try:
-            # # yj y[n], y[n-1], ..., y[0]
+            # # yj
+            # y[0], y[1], ..., y[n]
             # # yj reshape
             # yj_Reshape = yj.reshape((self.N, 1))
             # # yj flip

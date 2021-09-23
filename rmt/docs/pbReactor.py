@@ -2706,7 +2706,7 @@ class PackedBedReactorClass:
                         IV2D[m][j][i] = SpCoi0[m]
                     else:
                         # solid phase
-                        IV2D[m][j][i] = 1e-6
+                        IV2D[m][j][i] = SpCoi0[m]
 
         # temperature
         for i in range(varNoColumns):
@@ -2800,8 +2800,9 @@ class PackedBedReactorClass:
             times = np.linspace(t[0], t[1], timesNo)
 
             # ode call
+            # method [1]: LSODA, [2]: BDF
             sol = solve_ivp(PackedBedReactorClass.modelEquationM6,
-                            t, IV, method="BDF", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
+                            t, IV, method="LSODA", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
             # ode result
             successStatus = sol.success
@@ -3435,18 +3436,38 @@ class PackedBedReactorClass:
             # NOTE
             # velocity from global concentration
             # check BC
+            # if z == 0:
+            #     # BC1
+            #     T_b = T0
+            # else:
+            #     # interior nodes
+            #     T_b = T_z[z - 1]
+
+            # check BC
             if z == 0:
                 # BC1
-                T_b = T0
+                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
+                # next node
+                T_f = T_z[z+1]
+                # previous node
+                T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+            elif z == zNo - 1:
+                # BC2
+                # previous node
+                T_b = T_z[z - 1]
+                # next node
+                T_f = 0
             else:
                 # interior nodes
-                T_b = T_z[z - 1]
+                T_b = T_z[z-1]
+                # next node
+                T_f = T_z[z+1]
 
             dxdt_v_T = (T_z[z] - T_b)/dz
             # CoSp x 1000
             # OvR x 1000
             dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
-                                      ((1/T)*dxdt_P - (P/T**2)*dxdt_v_T) + ToMaTrBeGaSo_z*1000)
+                                      ((1/T)*dxdt_P - (P/T**2)*dxdt_v_T) - ToMaTrBeGaSo_z*1000)
             # velocity [forward value] is updated
             # backward value of temp is taken
             # dT/dt will update the old value
@@ -3464,7 +3485,7 @@ class PackedBedReactorClass:
             const_T2 = 1/GaCpMeanMixEff
 
             # catalyst
-            const_Cs1 = 1/CaPo
+            const_Cs1 = 1/(CaPo*(PaRa**2))
             const_Ts1 = 1/SoCpMeanMixEff
 
             # bulk temperature [K]
@@ -3478,9 +3499,7 @@ class PackedBedReactorClass:
             betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
 
             # universal index [j,i]
-            UISet = z*(rNo + 1)
-            # solid phase
-            UISetSolid = UISet + 1
+            # UISet = z*(rNo + 1)
 
             # NOTE
             # concentration [mol/m^3]
@@ -3526,8 +3545,8 @@ class PackedBedReactorClass:
                 # convective, dispersion, inward flux
                 dxdt_F = const_F1 * \
                     (-v_z[z]*dCdz - Ci_c*dxdt_v +
-                     _dispersionFluxC + MoFli_z[i]*SpSuAr)
-                dxdtMat[i][UISet][z] = dxdt_F
+                     _dispersionFluxC - MoFli_z[i]*SpSuAr)
+                dxdtMat[i][0][z] = dxdt_F
 
                 ### solid phase ###
                 # bulk concentration [kmol/m^3]
@@ -3537,9 +3556,6 @@ class PackedBedReactorClass:
                 # species concentration at different points of particle radius [rNo]
                 # [Cs[3], Cs[2], Cs[1], Cs[0]]
                 _Cs_r = CosSpi_r[:, i].flatten()
-                # temperature at different points of particle radius [rNo]
-                # Ts[3], Ts[2], Ts[1], Ts[0]
-                _Ts_r = Ts_r.flatten()
 
                 # updated concentration gas-solid interface
                 # shape(rNo,1)
@@ -3548,21 +3564,25 @@ class PackedBedReactorClass:
 
                 # dC/dt list
                 dCsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
-                    _Cs_r_Updated, SoDiiEff[i], ri_r[:, i])
+                    _Cs_r_Updated, SoDiiEff[i], (PaRa**2)*ri_r[:, i])
 
                 for r in range(rNo):
                     # update
-                    dxdtMat[i][UISetSolid + r][z] = const_Cs1*dCsdti[r]
+                    dxdtMat[i][r+1][z] = const_Cs1*dCsdti[r]
 
             # NOTE
             # energy balance (temperature) [K]
             # temp [K]
             # T_c = T_z[z]
 
+            # temperature at different points of particle radius [rNo]
+            # Ts[3], Ts[2], Ts[1], Ts[0]
+            _Ts_r = Ts_r.flatten()
+
             # check BC
             if z == 0:
                 # BC1
-                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
+                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix*1000)
                 # next node
                 T_f = T_z[z+1]
                 # previous node
@@ -3594,21 +3614,28 @@ class PackedBedReactorClass:
             ToHeTrBeGaSo_z = InFlT*SpSuAr
             # convective flux, diffusive flux, enthalpy of reaction, cooling heat
             dxdt_T = const_T2 * \
-                (-const_T1*dTdz + _dispersionFluxT + (ToHeTrBeGaSo_z + Qm))
-            dxdtMat[indexT][UISet][z] = dxdt_T
+                (-const_T1*dTdz + _dispersionFluxT + ToHeTrBeGaSo_z + Qm)
+            dxdtMat[indexT][0][z] = dxdt_T
 
             ### solid phase ###
+            # _Ts_r
+            # T[n], T[n-1], ..., T[0]
             # updated temperature gas--solid interface
             _Ts_r_Updated = OrCoCatParticleClassSet.CalUpdateYnSolidGasInterface(
                 _Ts_r, T_c, betaT)
 
             # dC/dt list
+            # convert
+            # [J/s.m.K] => [kJ/s.m.K]
+            SoThCoEff_Conv = SoThCoEff/1000
+            # OvHeReT [kJ/m^3.s]
+            OvHeReT_Conv = -1*OvHeReT
             dTsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
-                _Ts_r_Updated, SoThCoEff, OvHeReT)
+                _Ts_r_Updated, SoThCoEff_Conv, (PaRa**2)*OvHeReT_Conv)
 
             for r in range(rNo):
                 # update
-                dxdtMat[indexT][UISetSolid + r][z] = const_Ts1*dTsdti[r]
+                dxdtMat[indexT][r+1][z] = const_Ts1*dTsdti[r]
 
         # flat
         dxdt = dxdtMat.flatten().tolist()
@@ -3617,6 +3644,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 
