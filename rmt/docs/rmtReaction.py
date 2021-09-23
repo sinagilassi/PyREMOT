@@ -29,6 +29,7 @@ def reactionRateExe(loopVars, varDict, rateDict):
     }
 
     # create _dict
+    _varDict = {}
     _varDict = {**loopDict, **varDict}
 
     # function calculate variables

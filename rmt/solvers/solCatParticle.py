@@ -166,10 +166,6 @@ class OrCoCatParticleClass:
         try:
             # # yj
             # y[0], y[1], ..., y[n]
-            # # yj reshape
-            # yj_Reshape = yj.reshape((self.N, 1))
-            # # yj flip
-            # yj_flip = np.flipud(yj_Reshape)
             # R matrix
             RMatrix = self.buildLhsMatrix(const1)
             # f matrix

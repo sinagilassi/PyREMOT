@@ -414,8 +414,8 @@ class PackedBedReactorClass:
         # component formation rate [mol/m^3.s]
         # conversion
         # FIXME
-        Ri = 1000*np.array(PackedBedReactorClass.modelReactions(
-            P, T, MoFri, CaBeDe))
+        # Ri2 = 1000*np.array(PackedBedReactorClass.modelReactions(
+        #     P, T, MoFri, CaBeDe))
 
         # loop
         loopVars0 = (T, P, MoFri)
@@ -424,7 +424,9 @@ class PackedBedReactorClass:
         varisSet = reactionRateExpr['VARS']
         ratesSet = reactionRateExpr['RATES']
 
-        Ri_expr = reactionRateExe(loopVars0, varisSet, ratesSet)
+        # component formation rate [mol/m^3.s]
+        RiLoop = 1000*np.array(reactionRateExe(loopVars0, varisSet, ratesSet))
+        Ri = np.copy(RiLoop)
 
         # component formation rate [mol/m^3.s]
         # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
@@ -3637,6 +3639,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

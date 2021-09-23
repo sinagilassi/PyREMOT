@@ -134,7 +134,7 @@ varis0 = {
     #  mole fraction
     "CaBeDe": CaBeDe,
     # vars key/value
-    "RT": lambda x: x['R_CONST']*['T'],
+    "RT": lambda x: x['R_CONST']*x['T'],
     #  kinetic constant
     # DME production
     #  [kmol/kgcat.s.bar2]
@@ -148,16 +148,17 @@ varis0 = {
     "KCO2": lambda x: 1.02e-7*math.exp(6.74e4/x['RT']),
     "KCO": lambda x: 7.99e-7*math.exp(5.81e4/x['RT']),
     #  equilibrium constant
-    "Ln_KP1": lambda x: 4213/T - 5.752 * \
-    math.log(T) - 1.707e-3*T + 2.682e-6 * \
-    (math.pow(T, 2)) - 7.232e-10*(math.pow(T, 3)) + 17.6,
+    "Ln_KP1": lambda x: 4213/x['T'] - 5.752 * \
+    math.log(x['T']) - 1.707e-3*x['T'] + 2.682e-6 * \
+    (math.pow(x['T'], 2)) - 7.232e-10*(math.pow(x['T'], 3)) + 17.6,
     "KP1": lambda x: math.exp(x['Ln_KP1']),
-    "log_KP2": lambda x: 2167/T - 0.5194 * \
-    math.log10(T) + 1.037e-3*T - 2.331e-7*(math.pow(T, 2)) - 1.2777,
+    "log_KP2": lambda x: 2167/x['T'] - 0.5194 * \
+    math.log10(x['T']) + 1.037e-3*x['T'] - 2.331e-7 * \
+    (math.pow(x['T'], 2)) - 1.2777,
     "KP2": lambda x: math.pow(10, x['log_KP2']),
-    "Ln_KP3": lambda x: 4019/T + 3.707 * \
-    math.log(T) - 2.783e-3*T + 3.8e-7 * \
-    (math.pow(T, 2)) - 6.56e-4/(math.pow(T, 3)) - 26.64,
+    "Ln_KP3": lambda x: 4019/x['T'] + 3.707 * \
+    math.log(x['T']) - 2.783e-3*x['T'] + 3.8e-7 * \
+    (math.pow(x['T'], 2)) - 6.56e-4/(math.pow(x['T'], 3)) - 26.64,
     "KP3": lambda x: math.exp(x['Ln_KP3']),
     #  mole fraction
     "yi_H2": lambda x: x['MoFri'][0],
