@@ -2797,7 +2797,7 @@ class PackedBedReactorClass:
             # ode call
             # method [1]: LSODA, [2]: BDF
             sol = solve_ivp(PackedBedReactorClass.modelEquationM6,
-                            t, IV, method="LSODA", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
+                            t, IV, method="BDF", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
             # ode result
             successStatus = sol.success
@@ -3347,8 +3347,8 @@ class PackedBedReactorClass:
             # Cp mixture
             GaCpMeanMix = calMixtureHeatCapacityAtConstantPressure(
                 MoFri, GaCpMeanList)
-            # effective heat capacity - gas phase [kJ/m^3.K]
-            GaCpMeanMixEff = CoSp*GaCpMeanMix*BeVoFr
+            # effective heat capacity - gas phase [kJ/kmol.K] | [J/mol.K]
+            GaCpMeanMixEff = GaCpMeanMix*BeVoFr
 
             # FIXME
             # effective heat capacity - solid phase [kJ/m^3.K]
@@ -3476,12 +3476,13 @@ class PackedBedReactorClass:
 
             # loop vars
             const_F1 = 1/BeVoFr
-            const_T1 = MoFl*GaCpMeanMix
-            const_T2 = 1/GaCpMeanMixEff
+            const_T1 = MoFl*GaCpMeanMix  # [kmol/m^2.s][kJ/kmol.K]=[kJ/m^2.s.K]
+            # [kmol/m^3][kJ/kmol.K]=[kJ/m^3.K]
+            const_T2 = 1/(CoSp*GaCpMeanMixEff)
 
             # catalyst
             const_Cs1 = 1/(CaPo*(PaRa**2))
-            const_Ts1 = 1/SoCpMeanMixEff
+            const_Ts1 = 1/(SoCpMeanMixEff*(PaRa**2))
 
             # bulk temperature [K]
             T_c = T_z[z]

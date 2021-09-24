@@ -47,7 +47,7 @@ class OrCoCatParticleClass:
             # concentration
             # constant y[0 to N]*A[N+1,r]
             _Ay_Selected = self.A[-1, :-1]
-            _yj_Selected = yj_flip[:-1]
+            _yj_Selected = yj_flip[:-1, 0]
             _Ay = np.dot(_Ay_Selected, _yj_Selected)
             _alpha = np.sum(_Ay) + beta*CTb
             # y[N+1] constant

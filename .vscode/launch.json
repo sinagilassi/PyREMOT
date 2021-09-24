@@ -13,6 +13,14 @@
       "python": "${command:python.interpreterPath}"
     },
     {
+      "name": "Static Modeling CH4 [M1]",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_C2.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
       "name": "Dynamic Modeling [M2]",
       "type": "python",
       "request": "launch",

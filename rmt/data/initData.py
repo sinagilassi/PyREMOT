@@ -41,7 +41,8 @@ def setFeedMoleFraction(H2COxRatio, CO2COxRatio):
 
 def calConcentration(MoFri, P, T):
     """
-        calculate concentration [kmol/m^3]
+    calculate concentration [kmol/m^3]
+    args:
         MoFri: mole fraction
         P: pressure [Pa]
         T: temperature [K]
