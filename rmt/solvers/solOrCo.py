@@ -17,19 +17,19 @@ class OrCoClass:
     # -------------------------
     # x1,x2,x3,x4
     # x1 = 0
-    x1 = 0.28523
-    x2 = 0.76505
-    x3 = 1
+    # x1 = 0.28523
+    # x2 = 0.76505
+    # x3 = 1
 
     # 6 points [spherical shape]
     # x1 = 0
-    # x1 = 0.215353
-    # x2 = 0.420638
-    # x3 = 0.606253
-    # x4 = 0.763519
-    # x5 = 0.885082
-    # x6 = 0.965245
-    # x7 = 1
+    x1 = 0.215353
+    x2 = 0.420638
+    x3 = 0.606253
+    x4 = 0.763519
+    x5 = 0.885082
+    x6 = 0.965245
+    x7 = 1
 
     # initial boundary condition
     X0 = 0
@@ -37,9 +37,9 @@ class OrCoClass:
     Xn = 1
 
     # collocation points
-    Xc = np.array([x1, x2, x3])
+    # Xc = np.array([x1, x2, x3])
     # 6 points
-    # Xc = np.array([x1, x2, x3, x4, x5, x6, x7])
+    Xc = np.array([x1, x2, x3, x4, x5, x6, x7])
     # 5 points
     # Xc = np.array([x1, x2, x3, x4, x5, x6])
 

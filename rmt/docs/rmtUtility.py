@@ -420,3 +420,34 @@ class rmtUtilityClass:
             return GaVe
         except Exception as e:
             raise
+
+    @staticmethod
+    def calHeatExchangeBetweenReactorMedium(Tm, T, U, a, unit="J/m^3.s"):
+        '''
+        calculate: heat exchange between reactor and sourrounding 
+            cooling for exothermic reactions
+            warming for endothermic reaction
+        args:
+            Tm: medium temperature [K]
+            T: fluid temperature [K]
+            U: overall heat transfer coefficient between fluid, reactor wall, sourounding [J/m^2.s.K]
+            a: effective heat transfer area per unit of reactor volume [m^2/m^3]
+        '''
+        # try/exception
+        try:
+            if Tm == 0:
+                # adiabatic
+                Qm = 0
+            else:
+                # heat added/removed from the reactor
+                # Tm > T: heat is added (positive sign)
+                # T > Tm: heat removed (negative sign)
+                Qm = U*a*(Tm - T)
+
+            # check unit
+            if unit == 'kJ/m^3.s' and Qm != 0:
+                Qm = Qm*1e-3
+
+            return Qm
+        except Exception as e:
+            raise

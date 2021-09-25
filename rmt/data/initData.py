@@ -39,25 +39,31 @@ def setFeedMoleFraction(H2COxRatio, CO2COxRatio):
     return feedMoFri
 
 
-def calConcentration(MoFri, P, T):
+def calConcentration(MoFri, P, T, unit="kmol/m^3"):
     """
-    calculate concentration [kmol/m^3]
+    calculate concentration [kmol/m^3] | [mol/m^3]
     args:
         MoFri: mole fraction
         P: pressure [Pa]
         T: temperature [K]
+    output:
+        Ci: component concentration [kmol/m^3] | [mol/m^3]
     """
     # component no
     componentNo = len(MoFri)
 
     # concentraion
-    Ci = []
+    Ci = np.zeros(componentNo)
 
     for i in range(componentNo):
         CiLoop = (P/(CONST.R_CONST*T))*MoFri[i]/1000
-        Ci.append(CiLoop)
-    # convert
-    res = np.array(roundNum(Ci, CONCENTRATION_ACCURACY))
+        Ci[i] = CiLoop
+    # unit checking
+    if unit == 'mol/m^3':
+        Ci = 1e3*Ci
+
+    # accuracy set
+    res = roundNum(Ci, CONCENTRATION_ACCURACY)
     # res
     return res
 

@@ -80,13 +80,6 @@ reactionSet = {
     "R3": "2CH3OH <=> DME + H2O",
 }
 
-reactionRateSet = {
-    "R1": "T+ P + y + 1",
-    "R2": "T+ P + y + 2",
-    "R3": "T+ P + y + 3",
-}
-
-
 # NOTE
 # reactor
 # reactor volume [m^3]
@@ -190,9 +183,9 @@ varis0 = {
 
 # reaction rates
 rates0 = {
-    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*CaBeDe,
-    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*CaBeDe,
-    "r3": lambda x: x['K3']*x['ra5']*CaBeDe
+    "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
+    "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
+    "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
 }
 
 # reaction rate
@@ -235,6 +228,9 @@ modelInput = {
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
         "CaSpHeCa": CaSpHeCa
+    },
+    "solver-config": {
+        "ivp": "default"
     }
 }
 

@@ -20,9 +20,9 @@ from docs.rmtUtility import rmtUtilityClass as rmtUtil
 # NOTE
 ### operating conditions ###
 # pressure [Pa]
-P = 1*1e5
+P = 3*1e5
 # temperature [K]
-T = 600
+T = 973
 # operation period [s]
 opT = 10
 
@@ -34,13 +34,12 @@ compList = ["CH4", "C2H4", "H2"]
 # reactions
 # ignore: "R2": "CH4 <=> C + 2H2",
 reactionSet = {
-    "R1": "2CH4 + C2H4 <=> 2H2",
+    "R1": "2CH4 <=> C2H4 + 2H2",
 }
 
 # set feed mole fraction
-MoFr_H2 = 0.001
-MoFr_C2H4 = 0.001
-MoFr_C = 0.001
+MoFr_H2 = 0.05
+MoFr_C2H4 = 0.05
 MoFr_CH4 = 1 - (MoFr_H2 + MoFr_C2H4)
 
 # inlet fixed bed superficial gas velocity [m/s]
@@ -63,7 +62,7 @@ rea_dia = 0.007
 # reactor radius [m]
 rea_rad = rea_dia/2
 # reactor length [m]
-rea_len = 0.011
+rea_len = 1  # 0.011
 # reactor cross sectional area [m^2]
 rea_Ac = CONST.PI_CONST*(rea_rad**2)
 # reactor volume [m^3]
@@ -105,7 +104,7 @@ CaBeDe = bulk_rho
 # mole fraction
 MoFri0 = np.array([MoFr_CH4, MoFr_C2H4, MoFr_H2])
 # concentration [kmol/m3]
-ct0 = calConcentration(MoFri0, P, T)
+ct0 = calConcentration(MoFri0, P, T, 'kmol/m^3')
 # total concentration [kmol/m3]
 ct0T = calTotalConcentration(ct0)
 
@@ -137,7 +136,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 700
+Tm = T
 # Ua
 Ua = U*a
 #
@@ -153,33 +152,50 @@ GaMiVi = 1e-5
 # NOTE
 # reaction rates
 # initial values
+# varis0 = {
+#     # loopVars
+#     # T,P,NoFri,SpCoi
+#     # other vars
+#     "bulk_rho1": bulk_rho1,  # [kg/m^3]
+#     "krTref": 2.44e-5,  # [variable]
+#     "EA": 18.96*1000,  # [J/mol]
+#     "KxTref": 0.87,		# [1/bar]
+#     "dH": 87.39*1000,  # [J/mol]
+#     "Tref":	973.15,  # [K]
+#     "RTref": lambda x: x['R_CONST']*x['Tref'],  # [J/mol]
+#     "tetaEj": lambda x: x['EA']/x['RTref'],
+#     "tetakj": lambda x: math.log(x['krTref']),
+#     "kj": lambda x: math.exp(x['tetakj'])*math.exp(x['tetaEj']*(1 - (x['Tref']/x['T']))),
+#     "tetaKi": lambda x: math.log(x['KxTref']),
+#     "tetaHi": lambda x: x['dH']/x['RTref'],
+#     "Ki": lambda x: math.exp(x['tetaKi'])*math.exp(x['tetaHi']*(1 - (x['Tref']/x['T']))),
+#     "y_CH4": lambda x: x['MoFri'][0]*x['P']*1e-5,  # [bar]
+#     "rA": lambda x: math.sqrt(x['Ki']*x['y_CH4']),
+#     "rB": lambda x:	1 + x['rA'],
+#     "rC": lambda x:	x['kj']*x['rA']/(x['rB']**2)
+# }
+
+# reaction rates
+# rates0 = {
+#     # [mol/m^3.s]
+#     "r1": lambda x: (x['kj']*x['rA']/(x['rB']**2))*x['bulk_rho1']/60
+# }
+
+# initial values
 varis0 = {
     # loopVars
-    # T,P,NoFri
+    # T,P,NoFri,SpCoi
     # other vars
-    "bulk_rho1": bulk_rho1,  # [kg/m^3]
-    "krTref": 2.44e-5,  # [variable]
-    "EA": 18.96*1000,  # [J/mol]
-    "KxTref": 0.87,		# [1/bar]
-    "dH": 87.39*1000,  # [J/mol]
-    "Tref":	973.15,  # [K]
-    "RTref": lambda x: x['R_CONST']*x['Tref'],  # [J/mol]
-    "tetaEj": lambda x: x['EA']/x['RTref'],
-    "tetakj": lambda x: math.log(x['krTref']),
-    "kj": lambda x: math.exp(x['tetakj'])*math.exp(x['tetaEj']*(1 - (x['Tref']/x['T']))),
-    "tetaKi": lambda x: math.log(x['KxTref']),
-    "tetaHi": lambda x: x['dH']/x['RTref'],
-    "Ki": lambda x: math.exp(x['tetaKi'])*math.exp(x['tetaHi']*(1 - (x['Tref']/x['T']))),
-    "y_CH4": lambda x: x['MoFri'][0]*x['P']*1e-5,  # [bar]
-    "rA": lambda x: math.sqrt(x['Ki']*x['y_CH4']),
-    "rB": lambda x:	1 + x['rA'],
-    "rC": lambda x:	x['kj']*x['rA']/(x['rB']**2)
+    # [m^3/(mol*s)]
+    "k0": 0.0072,
+    "y_CH4": lambda x: x['MoFri'][0],
+    "C_CH4": lambda x: x['SpCoi'][0]
 }
 
 # reaction rates
 rates0 = {
     # [mol/m^3.s]
-    "r1": lambda x: (x['kj']*x['rA']/(x['rB']**2))*x['bulk_rho1']/60
+    "r1": lambda x: x['k0']*(x['C_CH4']**2)
 }
 
 # reaction rate
@@ -221,6 +237,9 @@ modelInput = {
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
         "CaSpHeCa": CaSpHeCa
+    },
+    "solver-config": {
+        "ivp": "Radau"
     }
 }
 

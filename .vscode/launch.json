@@ -61,6 +61,14 @@
       "python": "${command:python.interpreterPath}"
     },
     {
+      "name": "Dynamic Modeling CH4 [M6]",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_C6.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
       "name": "Test",
       "type": "python",
       "request": "launch",
