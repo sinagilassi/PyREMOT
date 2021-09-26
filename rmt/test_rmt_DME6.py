@@ -109,7 +109,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 523
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -130,6 +130,8 @@ varis0 = {
     # T,P,NoFri
     #  mole fraction
     "CaDe": CaDe,
+    # catalyst porosity
+    "CaPo": CaPo,
     # vars key/value
     "RT": lambda x: x['R_CONST']*x['T'],
     #  kinetic constant
@@ -200,7 +202,7 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "M10",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

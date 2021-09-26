@@ -101,6 +101,8 @@ class rmtCoreClass():
             return self.M9Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['M10']['id']:
             return self.M10Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['M11']['id']:
+            return self.M11Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -293,4 +295,15 @@ class rmtCoreClass():
                        reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runM6()
+        return res
+
+    def M11Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M11 model: dynamic Packed-bed Plug-flow reactor (heterogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM7()
         return res
