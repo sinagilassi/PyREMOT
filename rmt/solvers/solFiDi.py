@@ -5,18 +5,20 @@
 import numpy as np
 
 
-def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params):
+def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params, mode="default"):
     '''
     build concentration residual matrix [R]
     args:
         compNo: component no
         DoLe: domain length [m]
         rNo: number of finite difference points
-        **args: 
+        yi: y variables
+        params: 
             DiCoi: diffusivity coefficient of components [m^2/s]
             MaTrCoi: mass transfer coefficient [m/s]
             Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
             SpCoiBulk: species concentration of component in the bulk phase [kmol/m^3] | [mol/m^3]
+            CaPo: catalyst porosity
     '''
     # try/except
     try:
@@ -67,8 +69,12 @@ def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params):
 
         # flip
         A_Flip = np.flip(A)
+
+        # check
+        A_Res = A_Flip if mode == "default" else A
+
         # res
-        return A_Flip
+        return A_Res
     except Exception as e:
         raise
 
@@ -143,7 +149,7 @@ def FiDiBuildCiMatrix(compNo, DoLe, rNo, yi, params):
         raise
 
 
-def FiDiBuildTMatrix(compNo, DoLe, rNo, yi, params):
+def FiDiBuildTMatrix(compNo, DoLe, rNo, yi, params, mode="default"):
     '''
     build temperature residual matrix [R]
     args:
@@ -185,11 +191,6 @@ def FiDiBuildTMatrix(compNo, DoLe, rNo, yi, params):
         # element of yj
         Ti = yi
 
-        # FIXME
-        for t in range(len(Ti)):
-            if Ti[t] < 500:
-                stopme = 0
-
         # constant
         const1 = (CaThCo/(dr**2))
 
@@ -216,54 +217,94 @@ def FiDiBuildTMatrix(compNo, DoLe, rNo, yi, params):
 
         # flip
         A_Flip = np.flip(A)
+
+        # check
+        A_Res = A_Flip if mode == "default" else A
+
         # res
-        return A_Flip
+        return A_Res
     except Exception as e:
         raise
 
 
-def FiDiSetRMatrixBC1(i, j, dr, rp, yj, **argsVal):
+def FiDiSetMatrix(compNo, DoLe, rNo, yj, params):
     '''
     BC1 
     args:
-        i: main index
-        j: varied index
-        dr: differential length [m]
-        rp: particle radius [m]
-        yj: variable 
+        compNo: component no
+        DoLe: domain length [m]
+        rNo: number of finite difference points
         **argsVal
-            concentration: 
-                diffusivity coefficient [m^2/s]
-                Ri: formation rate [mol/m^3.s] | [kmol/m^3.s]
+            DiCoi: diffusivity coefficient of components [m^2/s]
+            MaTrCoi: mass transfer coefficient [m/s]
+            Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
+            SpCoiBulk: species concentration of component in the bulk phase [kmol/m^3] | [mol/m^3]
+            CaPo: catalyst porosity
     '''
-    # concentration
-    # for c in range(compNo):
-    #     for i in range(Ni):
+    try:
+        # number of finite differene points
+        # rNo
+        # number of elements
+        NoEl_FiDi = rNo - 1
+        # number of total nodes
+        N = rNo*compNo
+        # dr size [m]
+        dr = 1/NoEl_FiDi
+        # formula
+        rp = DoLe
 
-    #         # bc1
-    #         if i == 0:
-    #             for j in range(Ni):
-    #                 A[c][i][j] = 1
-    #         elif i > 0 and i < Ni-2:
-    #             A[c][i][j] = 1
-    #         elif i == Ni-1:
-    #             A[c][i][j] = 1
+        # NOTE
+        ### matrix structure ##
+        # LHS matrix
+        AMatShape = (rNo, rNo)
+        A = np.zeros(AMatShape)
+        # RHS matrix
+        fMatShape = (rNo, 1)
+        f = np.zeros(fMatShape)
+        # share matrix
+        sMatShape = (rNo, 1)
+        s = np.zeros(sMatShape)
 
-    # diffusivity coefficient [m^2/s]
-    DiCoi = argsVal['DiCoi']
-    # formation rate [mol/m^3.s] | [kmol/m^3.s]
-    Ri = argsVal['Ri']
-    # dr distance
-    ri = i*dr
-    # constant
-    const1 = (DiCoi/dr**2)
-    const2 = 2*DiCoi/(ri*2*dr)
+        # params
+        DiCoi, MaTrCoi, Ri, SpCoiBulk, CaPo = params
 
-    if j == i-1:
-        a = const1*yj[i-1] - const2*yj[i-1]
-    elif j == i:
-        a = const1*(-2)*yj[i]
-    elif j == i+1:
-        a = const1*yj[i+1] + const2*yj[i+1]
-    else:
-        a = 0
+        for i in range(rNo):
+            # dr distance
+            ri = 1 if i == 0 else i*dr
+            # constant
+            alpha = (DiCoi/(dr**2))
+            beta = 2*DiCoi/(ri*2*dr)
+
+            # reaction term
+            _Ri = (1 - CaPo)*Ri[i]*(rp**2)
+
+            if i == 0:
+                # BC1
+                A[i, i] = -3*alpha*2
+                A[i, i+1] = 3*alpha*2
+                f[i] = 1*_Ri
+                s[i] = 0
+            elif i > 0 and i < rNo-1:
+                # interrior points
+                A[i, i-1] = alpha - beta
+                A[i, i] = -2*alpha
+                A[i, i+1] = alpha + beta
+                f[i] = 1*_Ri
+                s[i] = 0
+            elif i == rNo-1:
+                # BC2
+                # const
+                alphaStar = (2*dr*rp*MaTrCoi)/DiCoi
+                # ghost point y[N+1]
+                A[i, i-1] = 2*alpha
+                A[i, i] = -2*alpha + alphaStar*(alpha + beta)
+                f[i] = 1*_Ri
+                s[i] = -alphaStar*(alpha + beta)
+
+        # res
+        res = A*yj + f + s
+
+        # return
+        return res
+    except Exception as e:
+        raise

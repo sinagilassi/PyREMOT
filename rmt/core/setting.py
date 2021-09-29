@@ -51,13 +51,26 @@ modelTypes = {
     "M10": {
         "id": "M10",
         "des":
-            "dynamic plug-flow heterogenous reactor [concentration base]"
+            "dynamic plug-flow heterogenous reactor [concentration base]",
+        "numerical": "ocm"
     },
     "M11": {
         "id": "M11",
         "des":
             "dynamic plug-flow heterogenous reactor [concentration base]",
         "numerical": "fdm"
+    },
+    "M12": {
+        "id": "M12",
+        "des":
+            "steady-state plug-flow heterogenous reactor [concentration base]",
+        "numerical": "fdm"
+    },
+    "T1": {
+        "id": "T1",
+        "des":
+            "dynamic model of catalyst diffusion-reaction",
+        "numerical": ""
     },
 }
 

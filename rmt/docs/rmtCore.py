@@ -11,6 +11,7 @@ from docs.batchReactor import batchReactorClass as bRec
 from docs.pfReactor import PlugFlowReactorClass as pfRec
 from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
 from data.componentData import componentDataStore
+from examples.particleModels import ParticleModelClass as pMod
 from .rmtUtility import rmtUtilityClass as rmtUtil
 
 
@@ -103,6 +104,8 @@ class rmtCoreClass():
             return self.M10Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['M11']['id']:
             return self.M11Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['T1']['id']:
+            return self.T1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -306,4 +309,17 @@ class rmtCoreClass():
                        reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runM7()
+        return res
+
+# NOTE
+# test models
+    def T1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        T1 model: dynamic model of catalyst diffusion-reaction
+        """
+        # init reactor
+        reInit = pMod(self.modelInput, internalData,
+                      reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runT1()
         return res

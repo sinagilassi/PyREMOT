@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 2
+opT = 10
 
 # set feed mole fraction
 # H2/COx ratio
@@ -200,14 +200,9 @@ reactionRateSet = {
     "RATES": rates0
 }
 
-# NOTE
-# model ids
-# M11
-# T1
-
 # model input - feed
 modelInput = {
-    "model": "T1",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -243,7 +238,7 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "Radau"
+        "ivp": "default"
     }
 }
 

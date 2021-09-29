@@ -8,7 +8,7 @@ import math
 R_CONST = 8.314472
 
 # epsilon
-EPS_CONST = 1e-20
+EPS_CONST = 1e-10
 
 # pi
 PI_CONST = math.pi
