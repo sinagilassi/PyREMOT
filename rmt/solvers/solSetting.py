@@ -27,8 +27,8 @@ solverSetting = {
     },
     "S2": {
         "tNo": 50,
-        "zNo": 4,
-        "rNo": 4,
+        "zNo": 15,
+        "rNo": 5,
         "timesNo": 5
     },
     "S3": {

@@ -8,13 +8,14 @@ from numpy.lib import math
 from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
+from scipy.optimize import fsolve
+from scipy import optimize
 # internal
 from core.errors import errGeneralClass as errGeneral
 from data.inputDataReactor import *
 from core import constants as CONST
 from core.utilities import roundNum, selectFromListByIndex
 from core.config import REACTION_RATE_ACCURACY
-from test_rmt_DME6 import ReLe
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 from .rmtReaction import reactionRateExe, componentFormationRate
@@ -4719,7 +4720,8 @@ class PackedBedReactorClass:
             # backward value of temp is taken
             # dT/dt will update the old value
             # FIXME
-            v_z[z+1] = dxdt_v*dz + v_z[z]
+            # v_z[z+1] = dxdt_v*dz + v_z[z]
+            v_z[z+1] = v
 
             # NOTE
             # diff/dt
@@ -4838,7 +4840,9 @@ class PackedBedReactorClass:
                 # next node
                 T_f = T_z[z+1]
                 # previous node
-                T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+                T_b0 = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+                T_b00 = (dz/constT_BC1)*(T0 - T_c) + T_f
+                T_b = (dz/constT_BC1)*T0 + (-(dz/constT_BC1) + 1)*T_c
             elif z == zNo - 1:
                 # BC2
                 # previous node
@@ -4982,8 +4986,15 @@ class PackedBedReactorClass:
         # external heat
         ExHe = self.modelInput['external-heat']
 
+        # diffusivity coefficient - gas phase [m^2/s]
+        GaDii0 = self.modelInput['feed']['diffusivity']
         # gas mixture viscosity [Pa.s]
-        GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        GaViMix0 = self.modelInput['feed']['mixture-viscosity']
+
+        # thermal conductivity - gas phase [J/s.m.K]
+        GaThCoi0 = self.modelInput['feed']['thermal-conductivity']
+        # mixture thermal conductivity - gas phase [J/s.m.K]
+        GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
 
         # finite difference points in the z direction
         zNo = solverSetting['S2']['zNo']
@@ -4993,6 +5004,27 @@ class PackedBedReactorClass:
         dz = ReLe/(zNo-1)
         # orthogonal collocation points in the r direction
         rNo = solverSetting['S2']['rNo']
+
+        ### calculation ###
+        # mole fraction in the gas phase
+        MoFri0 = np.array(rmtUtil.moleFractionFromConcentrationSpecies(SpCoi0))
+
+        # mixture molecular weight [kg/mol]
+        MiMoWe0 = rmtUtil.mixtureMolecularWeight(MoFri0, MoWei, "kg/mol")
+
+        # gas density [kg/m^3]
+        GaDe0 = calDensityIG(MiMoWe0, SpCo0*1000)
+
+        # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+        # Cp mean list
+        GaCpMeanList0 = calMeanHeatCapacityAtConstantPressure(compList, T)
+        # Cp mixture
+        GaCpMeanMix0 = calMixtureHeatCapacityAtConstantPressure(
+            MoFri0, GaCpMeanList0)
+
+        # thermal diffusivity in the gas phase [m^2/s]
+        GaThDi = calThermalDiffusivity(
+            GaThCoMix0, GaDe0, GaCpMeanMix0, MiMoWe0)
 
         # var no (Ci,T)
         varNo = compNo + 1
@@ -5035,10 +5067,10 @@ class PackedBedReactorClass:
                     # separate phase
                     if j == 0:
                         # gas phase
-                        IV2D[m][j][i] = SpCoi0[m]
+                        IV2D[m][j][i] = SpCoi0[m] + i*j*1e-3
                     else:
                         # solid phase
-                        IV2D[m][j][i] = SpCoi0[m]
+                        IV2D[m][j][i] = SpCoi0[m] + i*j*1e-3
 
         # temperature
         for i in range(varNoColumns):
@@ -5046,10 +5078,10 @@ class PackedBedReactorClass:
                 # separate phase
                 if j == 0:
                     # gas phase
-                    IV2D[noLayer - 1][j][i] = T
+                    IV2D[noLayer - 1][j][i] = T + i*j
                 else:
                     # solid phase
-                    IV2D[noLayer - 1][j][i] = T
+                    IV2D[noLayer - 1][j][i] = T + i*j
 
         # flatten IV
         IV = IV2D.flatten()
@@ -5069,6 +5101,52 @@ class PackedBedReactorClass:
         # REVIEW
         # solver setting
 
+        # NOTE
+        ### dimensionless analysis ###
+        # concentration [kmol/m^3]
+        Cif = np.copy(SpCoi0)
+        # total concentration
+        Cf = SpCo0
+        # temperature [K]
+        Tf = T
+        # superficial velocity [m/s]
+        vf = SuGaVe0
+        # length [m]
+        zf = ReLe
+        # diffusivity [m^2/s]
+        Dif = np.copy(GaDii0)
+        # heat capacity at constant pressure [J/mol.K] | [kJ/kmol.K]
+        Cpif = np.copy(GaCpMeanList0)
+        # mixture heat capacity [J/mol.K] | [kJ/kmol.K]
+        Cpf = GaCpMeanMix0
+
+        # gas phase
+        # mass convective term [kmol/m^3.s]
+        GaMaCoTe0 = (vf/zf)*Cif
+        # mass diffusive term  [kmol/m^3.s]
+        GaMaDiTe0 = (1/zf**2)*(Cif*Dif)
+        # heat convective term [kJ/m^3.s]
+        GaHeCoTe0 = Cf*vf*Tf*Cpf/zf
+        # heat diffusive term
+        GaHeDiTe0 = Tf*GaThCoMix0/zf**2
+
+        ### dimensionless numbers ###
+        # Re Number
+        ReNu0 = calReNoEq1(GaDe0, SuGaVe0, PaDi, GaViMix0)
+        # Sc Number
+        ScNu0 = calScNoEq1(GaDe0, GaViMix0, GaDii0)
+        # Sh Number (choose method)
+        ShNu0 = calShNoEq1(ScNu0, ReNu0, CONST_EQ_Sh['Frossling'])
+        # Prandtl Number
+        PrNu0 = calPrNoEq1(GaCpMeanMix0, GaViMix0, GaThCoMix0, MiMoWe0)
+
+        # Strouhal number
+        StNu = 1
+        # Peclet number - mass transfer
+        PeNuMa0 = (vf*zf)/Dif
+        # Peclet number - heat transfer
+        PeNuHe0 = ReNu0*PrNu0
+
         # fun parameters
         FunParam = {
             "compList": compList,
@@ -5076,7 +5154,7 @@ class PackedBedReactorClass:
                 "CrSeAr": CrSeAr,
                 "MoWei": MoWei,
                 "StHeRe25": StHeRe25,
-                "GaMiVi": GaMiVi,
+                "GaMiVi": GaViMix0,
                 "varNo": varNo,
                 "varNoT": varNoT,
                 "reactionListNo": reactionListNo,
@@ -5104,8 +5182,24 @@ class PackedBedReactorClass:
             "solverSetting": {
 
             },
-            "reactionRateExpr": reactionRateExpr
-
+            "reactionRateExpr": reactionRateExpr,
+            "dimensionless-analysis": {
+                "Cif": Cif,
+                "vf": vf,
+                "zf": zf,
+                "Dif": Dif,
+                "Cpif": Cpif,
+                "GaMaCoTe0": GaMaCoTe0,
+                "GaMaDiTe0": GaMaDiTe0,
+                "GaHeCoTe0": GaHeCoTe0,
+                "GaHeDiTe0": GaHeDiTe0,
+                "ReNu0": ReNu0,
+                "ScNu0": ScNu0,
+                "ShNu0": ShNu0,
+                "PrNu0": PrNu0,
+                "PeNuMa0": PeNuMa0,
+                "PeNuHe0": PeNuHe0
+            }
         }
 
         # time span
@@ -5123,94 +5217,72 @@ class PackedBedReactorClass:
         dataPacktime = np.zeros((varNo, tNo, zNo))
         #
 
-        # solver selection
-        # BDF, Radau, LSODA
-        solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
+        # NOTE
+        ### solve a system of nonlinear ode ###
+        sol = optimize.fsolve(PackedBedReactorClass.modelEquationM8, IV, args=(
+            reactionListSorted, reactionStochCoeff, FunParam))
 
-        # time loop
-        for i in range(tNo):
-            # set time span
-            t = np.array([opTSpan[i], opTSpan[i+1]])
-            times = np.linspace(t[0], t[1], timesNo)
+        # ode result
+        successStatus = sol.success
+        # check
+        if successStatus is False:
+            raise
 
-            # ode call
-            # method [1]: LSODA, [2]: BDF, [3]: Radau
-            # options
-            solverOptions = {
-                "atol": 1e-7
-            }
+        # time interval
+        dataTime = sol.t
+        # all results
+        # components, temperature layers
+        dataYs = sol.y
 
-            sol = solve_ivp(PackedBedReactorClass.modelEquationM8,
-                            t, IV, method=solverIVP, t_eval=times,  args=(reactionListSorted, reactionStochCoeff, FunParam))
+        # std format
+        dataYs_Reshaped = np.reshape(
+            dataYs[:, -1], (noLayer, varNoRows, varNoColumns))
 
-            # ode result
-            successStatus = sol.success
-            # check
-            if successStatus is False:
-                raise
+        # component concentration [kmol/m^3]
+        # Ci and Cs
+        # dataYs1 = dataYs[0:varNoCon, -1]
+        # 3d matrix
+        # dataYs1_Reshaped = np.reshape(
+        #     dataYs1, (compNo, varNoRows, varNoColumns))
 
-            # time interval
-            dataTime = sol.t
-            # all results
-            # components, temperature layers
-            dataYs = sol.y
+        dataYs1_Reshaped = dataYs_Reshaped[:-1]
 
-            # std format
-            dataYs_Reshaped = np.reshape(
-                dataYs[:, -1], (noLayer, varNoRows, varNoColumns))
+        # gas phase
+        dataYs1GasPhase = dataYs1_Reshaped[:, 0, :]
+        # solid phase
+        dataYs1SolidPhase = dataYs1_Reshaped[:, 1:, :]
 
-            # component concentration [kmol/m^3]
-            # Ci and Cs
-            # dataYs1 = dataYs[0:varNoCon, -1]
-            # 3d matrix
-            # dataYs1_Reshaped = np.reshape(
-            #     dataYs1, (compNo, varNoRows, varNoColumns))
+        # REVIEW
+        # convert concentration to mole fraction
+        dataYs1_Ctot = np.sum(dataYs1GasPhase, axis=0)
+        dataYs1_MoFri = dataYs1GasPhase/dataYs1_Ctot
 
-            dataYs1_Reshaped = dataYs_Reshaped[:-1]
+        # temperature - 2d matrix
+        # dataYs2 = np.array([dataYs[varNoCon:varNoLayerT, -1]])
+        # 2d matrix
+        # dataYs2_Reshaped = np.reshape(
+        #     dataYs2, (1, varNoRows, varNoColumns))
 
-            # gas phase
-            dataYs1GasPhase = dataYs1_Reshaped[:, 0, :]
-            # solid phase
-            dataYs1SolidPhase = dataYs1_Reshaped[:, 1:, :]
+        dataYs2_Reshaped = dataYs_Reshaped[indexTemp]
+        # gas phase
+        dataYs2GasPhase = dataYs2_Reshaped[0, :].reshape((1, zNo))
+        # solid phase
+        dataYs2SolidPhase = dataYs2_Reshaped[1:, :]
 
-            # REVIEW
-            # convert concentration to mole fraction
-            dataYs1_Ctot = np.sum(dataYs1GasPhase, axis=0)
-            dataYs1_MoFri = dataYs1GasPhase/dataYs1_Ctot
+        # combine
+        _dataYs = np.concatenate(
+            (dataYs1_MoFri, dataYs2GasPhase), axis=0)
 
-            # temperature - 2d matrix
-            # dataYs2 = np.array([dataYs[varNoCon:varNoLayerT, -1]])
-            # 2d matrix
-            # dataYs2_Reshaped = np.reshape(
-            #     dataYs2, (1, varNoRows, varNoColumns))
-
-            dataYs2_Reshaped = dataYs_Reshaped[indexTemp]
-            # gas phase
-            dataYs2GasPhase = dataYs2_Reshaped[0, :].reshape((1, zNo))
-            # solid phase
-            dataYs2SolidPhase = dataYs2_Reshaped[1:, :]
-
-            # combine
-            _dataYs = np.concatenate(
-                (dataYs1_MoFri, dataYs2GasPhase), axis=0)
-
-            # save data
-            dataPack.append({
-                "successStatus": successStatus,
-                "dataTime": dataTime[-1],
-                "dataYCon": dataYs1GasPhase,
-                "dataYTemp": dataYs2GasPhase,
-                "dataYs": _dataYs,
-                "dataYCons": dataYs1SolidPhase,
-                "dataYTemps": dataYs2SolidPhase,
-            })
-
-            for m in range(varNo):
-                # var list
-                dataPacktime[m][i, :] = dataPack[i]['dataYs'][m, :]
-
-            # update initial values [IV]
-            IV = dataYs[:, -1]
+        # save data
+        dataPack.append({
+            "successStatus": successStatus,
+            "dataTime": dataTime[-1],
+            "dataYCon": dataYs1GasPhase,
+            "dataYTemp": dataYs2GasPhase,
+            "dataYs": _dataYs,
+            "dataYCons": dataYs1SolidPhase,
+            "dataYTemps": dataYs2SolidPhase,
+        })
 
         # NOTE
         # end of computation
@@ -5294,7 +5366,7 @@ class PackedBedReactorClass:
 
         return res
 
-    def modelEquationM8(t, y, reactionListSorted, reactionStochCoeff, FunParam):
+    def modelEquationM8(y, reactionListSorted, reactionStochCoeff, FunParam):
         """
             M8 model [steady-state modeling]
             mass, energy, and momentum balance equations
@@ -5333,6 +5405,8 @@ class PackedBedReactorClass:
                         dz: differential length [m]
                     solverSetting:
                     reactionRateExpr: reaction rate expressions
+                    dimensionless-analysis:
+
 
         """
         # fun params
@@ -5353,6 +5427,8 @@ class PackedBedReactorClass:
 
         # reactor spec ->
         ReSpec = FunParam['ReSpec']
+        # reactor length
+        ReLe = ReSpec['ReLe']
         # particle diameter [m]
         PaDi = ReSpec['PaDi']
         # bed void fraction - porosity
@@ -5427,6 +5503,9 @@ class PackedBedReactorClass:
         indexV = indexP + 1
 
         # calculate
+        # z ref
+        zRef = ReLe
+
         # particle radius
         PaRa = PaDi/2
         # specific surface area exposed to the free fluid [m^2/m^3]
@@ -5523,6 +5602,13 @@ class PackedBedReactorClass:
         Ts_z = T_mz[1:]
         # temperature in the solid phase
         Ts_r = np.zeros(rNo)
+
+        # NOTE
+        ### dimensionless analysis ###
+        # vars
+
+        # Strouhal number
+        StNu = 1
 
         # diff/dt
         # dxdt = []
@@ -5795,25 +5881,29 @@ class PackedBedReactorClass:
             ToMaTrBeGaSo_z = np.sum(MoFli_z)*SpSuAr
 
             # NOTE
+            # bulk temperature [K]
+            T_c = T_z[z]
+
             # velocity from global concentration
             # check BC
             if z == 0:
                 # BC1
-                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
-                # next node
+                constT_BC1 = 2*dz*zRef*(MoFl*GaCpMeanMix/1000)
+                # forward
                 T_f = T_z[z+1]
-                # previous node
-                T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+                # backward
+                T_b = constT_BC1*(T0 - T_c) + GaThCoEff*T_f
             elif z == zNo - 1:
                 # BC2
-                # previous node
+                # backward
                 T_b = T_z[z - 1]
-                # next node
-                T_f = 0
+                # forward
+                T_f = T_b
             else:
                 # interior nodes
+                # backward
                 T_b = T_z[z-1]
-                # next node
+                # forward
                 T_f = T_z[z+1]
 
             dxdt_v_T = (T_z[z] - T_b)/dz
@@ -5824,60 +5914,26 @@ class PackedBedReactorClass:
             # velocity [forward value] is updated
             # backward value of temp is taken
             # dT/dt will update the old value
-            # FIXME
             v_z[z+1] = dxdt_v*dz + v_z[z]
 
             # NOTE
-            # diff/dt
+            # diff/dz
             # dxdt = []
-            # matrix
-            # dxdtMat = np.zeros((varNo, zNo))
-
-            # z ref
-            zRef = ReLe
 
             # loop vars
-            const_C1 = SuGaVe
+            const_C1 = SuGaVe/zRef
+            const_C2 = 1/(zRef**2)
             # [kmol/m^2.s][kJ/kmol.K]=[kJ/m^2.s.K]
             const_T1 = MoFl*GaCpMeanMix/zRef
-            # [kmol/m^3][kJ/kmol.K]=[kJ/m^3.K]
-            const_T2 = 1/(CoSp*GaCpMeanMixEff)
-            #
-            const_T3 = GaThCoEff/(zRef**2)
-
-            # catalyst
-            const_Cs1 = 1/(CaPo*(PaRa**2))
-            const_Ts1 = 1/(SoCpMeanMixEff*(PaRa**2))
+            const_T2 = GaThCoEff/(zRef**2)
 
             # bulk temperature [K]
-            T_c = T_z[z]
-
-            # REVIEW
-            # gas-solid interface BC
-            # concentration [m/s]*[m^2/s]=[1/m]
-            betaC = PaRa*(MaTrCo/SoDiiEff)
-            # temperature
-            betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
-
-            # concentration constants
-
-            const_C_alpha = -v_z[z]/(2*dz*zRef)
-            const_C_beta = [item/((dz**2)*zRef) for item in GaDii]
-            const_C_gamma = [item*SpSuAr for item in MaTrCo]
-
-            # temperature
-            const_T_alpha = (-1*MoFl*GaCpMeanMix/zRef)/(2*dz)
-            const_T_beta = (GaThCoEff/zRef)/(dz**2)
-            const_T_gamma = HeTrCo*SpSuAr
-            const_T_etta = Qm
+            # T_c = T_z[z]
 
             # universal index [j,i]
             # concentration
             UISet_z = (rNo + 1)
             UISet = z*UISet_z
-            UISet_Cf = UISet + UISet_z
-            UISet_Cb = UISet - UISet_z
-            UISet_Cs = UISet + 1
 
             # NOTE
             # concentration [mol/m^3]
@@ -5913,13 +5969,13 @@ class PackedBedReactorClass:
                 # FIXME
                 # cal differentiate
                 # central difference
-                dCdz = (Ci_f - Ci_b)/(2*dz)
+                dCdz = (Ci_c - Ci_b)/(1*dz)
                 # convective term
                 _convectiveTerm = -1*const_C1*dCdz
                 # central difference for dispersion
                 d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
                 # dispersion term [kmol/m^3.s]
-                _dispersionFluxC = GaDii[i]*BeVoFr*d2Cdz2
+                _dispersionFluxC = GaDii[i]*BeVoFr*const_C2*d2Cdz2
                 # concentration in the catalyst surface [kmol/m^3]
                 # CosSpi_cat
                 # inward flux [kmol/m^2.s]
@@ -5946,7 +6002,7 @@ class PackedBedReactorClass:
 
                 # C residual list
                 ResCi = FiDiBuildCMatrix(
-                    compNo, PaRa, rNo, _Cs_r_Flip, _dCsdtiVarLoop, mode="test")
+                    compNo, PaRa, rNo, _Cs_r_Flip, _dCsdtiVarLoop)
 
                 for r in range(rNo):
                     # update
@@ -5956,7 +6012,6 @@ class PackedBedReactorClass:
             # energy balance (temperature) [K]
             # temp [K]
             # T_c = T_z[z]
-
             # temperature at different points of particle radius [rNo]
             # Ts[3], Ts[2], Ts[1], Ts[0]
             _Ts_r = Ts_r.flatten()
@@ -5964,11 +6019,11 @@ class PackedBedReactorClass:
             # check BC
             if z == 0:
                 # BC1
-                constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix*1000)
+                constT_BC1 = 2*dz*zRef*(MoFl*GaCpMeanMix/1000)
                 # forward
                 T_f = T_z[z+1]
                 # backward
-                T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+                T_b = constT_BC1*(T0 - T_c) + GaThCoEff*T_f
             elif z == zNo - 1:
                 # BC2
                 # backward
@@ -5985,13 +6040,13 @@ class PackedBedReactorClass:
             # NOTE
             # cal differentiate
             # central difference
-            dTdz = (T_f - T_b)/(2*dz)
+            dTdz = (T_c - T_b)/(1*dz)
             # convective term
             _convectiveTerm = -1*const_T1*dTdz
             # central difference
             d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
             # dispersion flux [kJ/m^3.s]
-            _dispersionFluxT = (const_T3*d2Tdz2)*1e-3
+            _dispersionFluxT = (const_T2*d2Tdz2)*1e-3
             # temperature in the catalyst surface [K]
             # Ts_cat
             # outward flux [kJ/m^2.s]
@@ -6004,7 +6059,8 @@ class PackedBedReactorClass:
 
             ### solid phase ###
             # _Ts_r
-            # T[n], T[n-1], ..., T[0] => T[0],T[1], ...
+            # T[n], T[n-1], ...,
+            # T[0] => T[0],T[1], ...
             _Ts_r_Flip = np.flip(_Ts_r)
 
             # dC/dt list
@@ -6021,7 +6077,7 @@ class PackedBedReactorClass:
 
             # T residual list
             ResTi = FiDiBuildTMatrix(
-                compNo, PaRa, rNo, _Ts_r_Flip, _dTsdtiVarLoop, mode="test")
+                compNo, PaRa, rNo, _Ts_r_Flip, _dTsdtiVarLoop)
 
             for r in range(rNo):
                 # update
@@ -6035,6 +6091,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

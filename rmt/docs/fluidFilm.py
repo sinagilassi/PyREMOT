@@ -20,7 +20,8 @@ def calNuNoEq1(Pr, Re):
     """
     # try/except
     try:
-        return 2 + 1.1*(Pr**(1/3))*(Re**(0.6))
+        Nu = 2 + 1.1*(Pr**0.33)*(Re**0.6)
+        return Nu
     except Exception as e:
         raise
 
@@ -117,12 +118,28 @@ def calHeatTransferCoefficientEq1(Nu, GaThCo, CaPaDi):
         **note: for spherical particles
     args:
         Nu: Nusselt number
-        GaThCo: GaThCo: gas thermal conductivity [J/m.s.K]
+        GaThCo: gas thermal conductivity [J/m.s.K]
         CaPaDi: catalyst particle diameter [m]
     """
     # try/except
     try:
         return (Nu/CaPaDi)*GaThCo
+    except Exception as e:
+        raise
+
+
+def calThermalDiffusivity(GaThCo, GaDe, GaHeCaCoPr, GaMoWe):
+    """
+    calculate thermal diffusivity [m^2/s]
+    args:
+        GaThCo: gas thermal conductivity [J/m.s.K]
+        GaDe: gas density [kg/m^3]
+        GaHeCaCoPr: heat capacity at constant pressure [J/mol.K] 
+        GaMoWe: gas molecular weight [kg/mol]
+    """
+    # try/except
+    try:
+        return GaThCo/(GaDe*GaHeCaCoPr/GaMoWe)
     except Exception as e:
         raise
 

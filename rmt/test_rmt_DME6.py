@@ -121,6 +121,18 @@ externalHeat = {
 
 # gas mixture viscosity [Pa.s]
 GaMiVi = 1e-5
+# diffusivity coefficient - gas phase [m^2/s]
+# GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
+GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
+                  2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
+# thermal conductivity - gas phase [J/s.m.K]
+# GaThCoi = np.zeros(compNo)  # f(T);
+GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
+                    0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
+# mixture thermal conductivity - gas phase [J/s.m.K]
+# convert
+GaThCoMix = 0.125
+
 
 # NOTE
 # reaction rates
@@ -204,10 +216,11 @@ reactionRateSet = {
 # model ids
 # M11
 # T1
+# M12
 
 # model input - feed
 modelInput = {
-    "model": "T1",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -221,6 +234,9 @@ modelInput = {
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
         "mixture-viscosity": GaMiVi,
+        "diffusivity": GaDii,
+        "thermal-conductivity": GaThCoi,
+        "mixture-thermal-conductivity": GaThCoMix,
         "components": {
             "shell": compList,
             "tube": [],
@@ -243,7 +259,7 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "Radau"
+        "ivp": "LSODA"
     }
 }
 
