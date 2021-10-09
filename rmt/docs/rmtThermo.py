@@ -367,7 +367,26 @@ def calDensityIGFromEOS(P, T, MixMW):
         den = P/(Rg*T)
         return den
     except Exception as e:
-        pass
+        raise
+
+
+def calMolarFlowRate(SpCo, SuGaVe, CrSeAr):
+    """
+    calculate molar flowrate
+    args:
+        SpCo: species concentration [kmol/m^3] | [mol/m^3]
+        SuGaVe: superficial gas velocity [m/s]
+        CrSeAr: cross sectional area [m^2]
+    output: 
+        MoFlRa: molar flowrate [kmol/s] | [mol/s]
+    """
+    # try/exception
+    try:
+        # [kmol/m^3]*[m/s]*[m^2]
+        MoFlRa = SpCo*SuGaVe*CrSeAr
+        return MoFlRa
+    except Exception as e:
+        raise
 
 
 if __name__ == "__main__":

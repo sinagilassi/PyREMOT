@@ -579,7 +579,6 @@ class ParticleModelClass:
         # return
         return dxdt
 
-
 # NOTE
 # non-isothermal system
 

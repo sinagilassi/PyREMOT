@@ -11,16 +11,18 @@ from timeit import default_timer as timer
 from scipy.optimize import fsolve
 from scipy import optimize
 # internal
+from .modelSetting import MODEL_SETTING
+from .rmtUtility import rmtUtilityClass as rmtUtil
+from .rmtThermo import *
+from .fluidFilm import *
+from .rmtReaction import reactionRateExe, componentFormationRate
+from .gasTransPor import calTest
 from core.errors import errGeneralClass as errGeneral
 from data.inputDataReactor import *
 from core import constants as CONST
 from core.utilities import roundNum, selectFromListByIndex
 from core.config import REACTION_RATE_ACCURACY
-from .rmtUtility import rmtUtilityClass as rmtUtil
-from .rmtThermo import *
-from .rmtReaction import reactionRateExe, componentFormationRate
 from solvers.solSetting import solverSetting
-from .fluidFilm import *
 from core.eqConstants import CONST_EQ_Sh
 from solvers.solOrCo import OrCoClass
 from solvers.solCatParticle import OrCoCatParticleClass
@@ -5121,9 +5123,9 @@ class PackedBedReactorClass:
         Cpf = GaCpMeanMix0
 
         # gas phase
-        # mass convective term [kmol/m^3.s]
+        # mass convective term - (list) [kmol/m^3.s]
         GaMaCoTe0 = (vf/zf)*Cif
-        # mass diffusive term  [kmol/m^3.s]
+        # mass diffusive term - (list)  [kmol/m^3.s]
         GaMaDiTe0 = (1/zf**2)*(Cif*Dif)
         # heat convective term [kJ/m^3.s]
         GaHeCoTe0 = Cf*vf*Tf*Cpf/zf
@@ -5139,13 +5141,20 @@ class PackedBedReactorClass:
         ShNu0 = calShNoEq1(ScNu0, ReNu0, CONST_EQ_Sh['Frossling'])
         # Prandtl Number
         PrNu0 = calPrNoEq1(GaCpMeanMix0, GaViMix0, GaThCoMix0, MiMoWe0)
-
+        # Nu number
+        NuNu0 = calNuNoEq1(PrNu0, ReNu0)
         # Strouhal number
         StNu = 1
         # Peclet number - mass transfer
         PeNuMa0 = (vf*zf)/Dif
         # Peclet number - heat transfer
         PeNuHe0 = ReNu0*PrNu0
+
+        ### transfer coefficient ###
+        # mass transfer coefficient - gas/solid [m/s]
+        MaTrCo = calMassTransferCoefficientEq1(ShNu0, GaDii0, PaDi)
+        # heat transfer coefficient - gas/solid [J/m^2.s.K]
+        HeTrCo = calHeatTransferCoefficientEq1(NuNu0, GaThCoMix0, PaDi)
 
         # fun parameters
         FunParam = {
@@ -5167,7 +5176,9 @@ class PackedBedReactorClass:
                 "SpCo0": SpCo0,
                 "P0": P,
                 "T0": T,
-                "SuGaVe0": SuGaVe0
+                "SuGaVe0": SuGaVe0,
+                "GaDii0": GaDii0,
+                "GaThCoi0": GaThCoi0
             },
             "meshSetting": {
                 "noLayer": noLayer,
@@ -5198,7 +5209,9 @@ class PackedBedReactorClass:
                 "ShNu0": ShNu0,
                 "PrNu0": PrNu0,
                 "PeNuMa0": PeNuMa0,
-                "PeNuHe0": PeNuHe0
+                "PeNuHe0": PeNuHe0,
+                "MaTrCo": MaTrCo,
+                "HeTrCo": HeTrCo
             }
         }
 
@@ -5394,6 +5407,8 @@ class PackedBedReactorClass:
                         SpCo0: total concentration [kmol/m^3]
                         P0: inlet pressure [Pa]
                         T0: inlet temperature [K]
+                        GaDii0: diffusivity coefficient [m^2/s]
+                        GaThCoi0: gas thermal conductivity [J/s.m.K]
                     meshSetting:
                         noLayer: number of layers
                         varNoLayer: var no in each layer
@@ -5406,8 +5421,23 @@ class PackedBedReactorClass:
                     solverSetting:
                     reactionRateExpr: reaction rate expressions
                     dimensionless-analysis:
-
-
+                        Cif: feed concentration [kmol/m^3]
+                        vf: feed superficial velocity [m/s]
+                        zf: domain length [m]
+                        Dif: diffusivity coefficient of component [m^2/s]
+                        Cpif: feed heat capacity at constat pressure 
+                        GaMaCoTe0: feed mass convective term of gas phase [kmol/m^3.s]
+                        GaMaDiTe0: feed mass diffusive term of gas phase [kmol/m^3.s]
+                        GaHeCoTe0: feed heat convective term of gas phase [kJ/m^3.s]
+                        GaHeDiTe0, feed heat diffusive term of gas phase [kJ/m^3.s]
+                        ReNu0: Reynolds number
+                        ScNu0: Schmidt number
+                        ShNu0: Sherwood number
+                        PrNu0: Prandtl number
+                        PeNuMa0: mass Peclet number
+                        PeNuHe0: heat Peclet number 
+                        MaTrCo: mass transfer coefficient - gas/solid [m/s]
+                        HeTrCo: heat transfer coefficient - gas/solid [J/m^2.s.K]
         """
         # fun params
         # component symbol list
@@ -5466,6 +5496,12 @@ class PackedBedReactorClass:
         P0 = constBC1['P0']
         # inlet temperature [K]
         T0 = constBC1['T0']
+        # inlet superficial velocity [m/s]
+        # SuGaVe0 = constBC1['SuGaVe0']
+        # inlet diffusivity coefficient [m^2]
+        GaDii0 = constBC1['GaDii0']
+        # inlet gas thermal conductivity [J/s.m.K]
+        GaThCoi0 = constBC1['GaThCoi0']
 
         # mesh setting
         meshSetting = FunParam['meshSetting']
@@ -5578,12 +5614,16 @@ class PackedBedReactorClass:
 
         # species concentration in gas phase [kmol/m^3]
         CoSpi = np.zeros(compNo)
+        # dimensionless analysis
+        CoSpi_ReVa = np.zeros(compNo)
         # total concentration [kmol/m^3]
         CoSp = 0
         # species concentration in solid phase (catalyst) [kmol/m^3]
         # shape
         CosSpiMatShape = (rNo, compNo)
         CosSpi_r = np.zeros(CosSpiMatShape)
+        # dimensionless analysis
+        CosSpi_r_ReVa = np.zeros(CosSpiMatShape)
         # total concentration in the solid phase [kmol/m^3]
         CosSp_r = np.zeros(rNo)
 
@@ -5627,9 +5667,13 @@ class PackedBedReactorClass:
             for i in range(compNo):
                 _SpCoi_z = SpCoi_z[i][z]
                 CoSpi[i] = max(_SpCoi_z, CONST.EPS_CONST)
+                # dimensionless analysis: real value
+                CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(CoSpi[i], SpCoi0[i])
 
             # total concentration [kmol/m^3]
             CoSp = np.sum(CoSpi)
+            # dimensionless analysis: real value
+            CoSp_ReVa = np.sum(CoSpi_ReVa)
 
             # FIXME
             # concentration species in the solid phase [kmol/m^3]
@@ -5638,6 +5682,9 @@ class PackedBedReactorClass:
                 for r in range(rNo):
                     _CosSpi_z = SpCosi_mzr[i][r][z]
                     CosSpi_r[r][i] = max(_CosSpi_z, CONST.EPS_CONST)
+                    # dimensionless analysis: real value
+                    CosSpi_r_ReVa[r][i] = rmtUtil.calRealDiLessValue(
+                        CosSpi_r[r][i], SpCoi0[i])
 
             # total concentration in the solid phase [kmol/m^3]
             CosSp_r = np.sum(CosSpi_r, axis=1).reshape((rNo, 1))
@@ -5647,15 +5694,20 @@ class PackedBedReactorClass:
 
             # temperature [K]
             T = T_z[z]
+            T_ReVa = rmtUtil.calRealDiLessValue(T, T0)
             # temperature in the solid phase (for each point)
             # Ts[3], Ts[2], Ts[1], Ts[0]
             Ts_r = Ts_z[:, z]
+            Ts_r_ReVa = rmtUtil.calRealDiLessValue(Ts_r, T0)
 
             # pressure [Pa]
             P = P_z[z]
 
+            # FIXME
             # velocity
-            v = v_z[z]
+            # v = v_z[z]
+            # dimensionless case
+            v = 1
 
             ## calculate ##
             # mole fraction in the gas phase
@@ -5675,10 +5727,11 @@ class PackedBedReactorClass:
             # SuGaVe = InGaVe*BeVoFr
             # from ode eq. dv/dz
             SuGaVe = v
+            SuGaVe_ReVa = rmtUtil.calRealDiLessValue(SuGaVe, SuGaVe0)
 
             # total flowrate [kmol/s]
             # [kmol/m^3]*[m/s]*[m^2]
-            MoFlRa = CoSp*SuGaVe*CrSeAr
+            MoFlRa = calMolarFlowRate(CoSp, SuGaVe_ReVa, CrSeAr)
             # molar flowrate list [kmol/s]
             MoFlRai = MoFlRa*MoFri
             # convert to [mol/s]
@@ -5724,12 +5777,10 @@ class PackedBedReactorClass:
             # add loop for each r point/constant
             # catalyst thermal conductivity [J/s.m.K]
             # CaThCo
-            # membrane wall thermal conductivity [J/s.m.K]
-            MeThCo = 1
             # thermal conductivity - gas phase [J/s.m.K]
-            # GaThCoi = np.zeros(compNo)  # f(T);
-            GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
-                               0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
+            GaThCoi = GaThCoi0 if MODEL_SETTING['GaThCoi'] else calTest()
+            # dimensionless
+            GaThCoi_DiLe = GaThCoi/GaThCoi0
             # mixture thermal conductivity - gas phase [J/s.m.K]
             # convert
             GaThCoMix = 0.125
@@ -5748,24 +5799,26 @@ class PackedBedReactorClass:
 
             # REVIEW
             # diffusivity coefficient - gas phase [m^2/s]
-            # GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
-            GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
-                             2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
+            GaDii = GaDii0 if MODEL_SETTING['GaDii'] == "FIX" else calTest()
+            # dimensionless
+            GaDii_DiLe = GaDii/GaDii0
             # effective diffusivity - solid phase [m2/s]
             SoDiiEff = (CaPo/CaTo)*GaDii
+            # dimensionless
+            SoDiiEff_DiLe = (CaPo/CaTo)*GaDii_DiLe
 
             # REVIEW
-            ### dimensionless numbers ###
-            # Re Number
-            ReNu = calReNoEq1(GaDe, SuGaVe, PaDi, GaViMix)
-            # Sc Number
-            ScNu = calScNoEq1(GaDe, GaViMix, GaDii)
-            # Sh Number (choose method)
-            ShNu = calShNoEq1(ScNu, ReNu, CONST_EQ_Sh['Frossling'])
+            if MODEL_SETTING['MaTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Re Number
+                ReNu = calReNoEq1(GaDe, SuGaVe, PaDi, GaViMix)
+                # Sc Number
+                ScNu = calScNoEq1(GaDe, GaViMix, GaDii)
+                # Sh Number (choose method)
+                ShNu = calShNoEq1(ScNu, ReNu, CONST_EQ_Sh['Frossling'])
 
-            # REVIEW
-            # mass transfer coefficient - gas/solid [m/s]
-            MaTrCo = calMassTransferCoefficientEq1(ShNu, GaDii, PaDi)
+                # mass transfer coefficient - gas/solid [m/s]
+                MaTrCo = calMassTransferCoefficientEq1(ShNu, GaDii, PaDi)
 
             # NOTE
             ## kinetics ##
@@ -5834,15 +5887,17 @@ class PackedBedReactorClass:
                 OvHeReT[r] = np.dot(Ri_r[r, :], HeReT)
 
             # REVIEW
-            # Prandtl Number
-            # MW kg/mol -> g/mol
-            # MiMoWe_Conv = 1000*MiMoWe
-            PrNu = calPrNoEq1(
-                GaCpMeanMix, GaViMix, GaThCoMix, MiMoWe)
-            # Nu number
-            NuNu = calNuNoEq1(PrNu, ReNu)
-            # heat transfer coefficient - gas/solid [J/m^2.s.K]
-            HeTrCo = calHeatTransferCoefficientEq1(NuNu, GaThCoMix, PaDi)
+            if MODEL_SETTING['HeTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Prandtl Number
+                # MW kg/mol -> g/mol
+                # MiMoWe_Conv = 1000*MiMoWe
+                PrNu = calPrNoEq1(
+                    GaCpMeanMix, GaViMix, GaThCoMix, MiMoWe)
+                # Nu number
+                NuNu = calNuNoEq1(PrNu, ReNu)
+                # heat transfer coefficient - gas/solid [J/m^2.s.K]
+                HeTrCo = calHeatTransferCoefficientEq1(NuNu, GaThCoMix, PaDi)
 
             # REVIEW
             # heat transfer coefficient - medium side [J/m2.s.K]
@@ -5906,15 +5961,17 @@ class PackedBedReactorClass:
                 # forward
                 T_f = T_z[z+1]
 
-            dxdt_v_T = (T_z[z] - T_b)/dz
+            # dxdt_v_T = (T_z[z] - T_b)/dz
             # CoSp x 1000
             # OvR x 1000
-            dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
-                                      ((1/T_z[z])*dxdt_P - (P_z[z]/T_z[z]**2)*dxdt_v_T) - ToMaTrBeGaSo_z*1000)
+            # dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
+            #                           ((1/T_z[z])*dxdt_P - (P_z[z]/T_z[z]**2)*dxdt_v_T) - ToMaTrBeGaSo_z*1000)
             # velocity [forward value] is updated
             # backward value of temp is taken
             # dT/dt will update the old value
-            v_z[z+1] = dxdt_v*dz + v_z[z]
+            # v_z[z+1] = dxdt_v*dz + v_z[z]
+            # FIXME
+            v_z[z+1] = 1
 
             # NOTE
             # diff/dz
@@ -6091,7 +6148,6 @@ class PackedBedReactorClass:
 
 
 # FIXME
-
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

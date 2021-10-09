@@ -119,6 +119,8 @@ externalHeat = {
     "MeTe": Tm
 }
 
+# gas viscosity [Pa.s]
+GaVii = np.array([1, 1, 1, 1, 1, 1])
 # gas mixture viscosity [Pa.s]
 GaMiVi = 1e-5
 # diffusivity coefficient - gas phase [m^2/s]
@@ -233,6 +235,7 @@ modelInput = {
         "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
+        "viscosity": GaVii,
         "mixture-viscosity": GaMiVi,
         "diffusivity": GaDii,
         "thermal-conductivity": GaThCoi,

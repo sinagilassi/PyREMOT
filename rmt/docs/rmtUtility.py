@@ -451,3 +451,35 @@ class rmtUtilityClass:
             return Qm
         except Exception as e:
             raise
+
+    @staticmethod
+    def calRealDiLessValue(xr, xf):
+        """
+        calculate real value of scaled variable
+        args:
+            xr: dimensionless var
+            xf: initial value var
+        output:
+            x: real value var
+        """
+        # try/except
+        try:
+            return xr*xf
+        except Exception as e:
+            raise
+
+    @staticmethod
+    def calDiLessValue(x, xf):
+        """
+        calculate value of dimensionless var [0,1]
+        args:
+            xr: real value var 
+            xf: initial value var
+        output:
+            xr: dimensionless var
+        """
+        # try/except
+        try:
+            return x/xf
+        except Exception as e:
+            raise

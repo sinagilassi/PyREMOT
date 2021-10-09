@@ -168,5 +168,9 @@ def calGasVisEq1(params, T):
         raise
 
 
+def calTest():
+    return 1
+
+
 if __name__ == "__main__":
     main()
