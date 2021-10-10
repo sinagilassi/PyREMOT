@@ -72,6 +72,12 @@ modelTypes = {
             "dynamic model of catalyst diffusion-reaction",
         "numerical": ""
     },
+    "T2": {
+        "id": "T2",
+        "des":
+            "homogenous reactor model",
+        "numerical": ""
+    },
 }
 
 M1 = modelTypes['M1']['id']

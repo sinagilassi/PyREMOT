@@ -13,5 +13,6 @@ MODEL_SETTING = {
     "HeTrCo": "FIX",
     "GaDii": "FIX",
     "GaThCoi": "FIX",
-    "GaVii": "FIX"
+    "GaVii": "FIX",
+    "GaMaCoTe0": "MAX"
 }

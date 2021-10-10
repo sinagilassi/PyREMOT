@@ -12,6 +12,7 @@ from docs.pfReactor import PlugFlowReactorClass as pfRec
 from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
 from data.componentData import componentDataStore
 from examples.particleModels import ParticleModelClass as pMod
+from examples.homoModels import HomoModelClass as hMod
 from .rmtUtility import rmtUtilityClass as rmtUtil
 
 
@@ -108,6 +109,8 @@ class rmtCoreClass():
             return self.M12Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T1']['id']:
             return self.T1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['T2']['id']:
+            return self.T2Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -332,6 +335,17 @@ class rmtCoreClass():
         """
         # init reactor
         reInit = pMod(self.modelInput, internalData,
+                      reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runT1()
+        return res
+
+    def T2Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        model: homogenous model
+        """
+        # init reactor
+        reInit = hMod(self.modelInput, internalData,
                       reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = reInit.runT1()

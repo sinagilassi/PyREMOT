@@ -33,5 +33,9 @@ solverSetting = {
     },
     "S3": {
         "timesNo": 25
-    }
+    },
+    "T1": {
+        "zNo": 20,
+        "rNo": 0
+    },
 }

@@ -453,33 +453,45 @@ class rmtUtilityClass:
             raise
 
     @staticmethod
-    def calRealDiLessValue(xr, xf):
+    def calRealDiLessValue(xr, xf, mode="G"):
         """
         calculate real value of scaled variable
         args:
             xr: dimensionless var
             xf: initial value var
+            mode: 
+                G: general
+                T: temperature
         output:
             x: real value var
         """
         # try/except
         try:
-            return xr*xf
+            if mode == "TEMP":
+                return xr*xf + xf
+            else:
+                return xr*xf
         except Exception as e:
             raise
 
     @staticmethod
-    def calDiLessValue(x, xf):
+    def calDiLessValue(x, xf, mode="G"):
         """
         calculate value of dimensionless var [0,1]
         args:
             xr: real value var 
             xf: initial value var
+            mode: 
+                G: general
+                T: temperature
         output:
             xr: dimensionless var
         """
         # try/except
         try:
-            return x/xf
+            if mode == "TEMP":
+                return (x-xf)/xf
+            else:
+                return x/xf
         except Exception as e:
             raise

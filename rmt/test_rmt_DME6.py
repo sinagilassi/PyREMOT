@@ -217,12 +217,12 @@ reactionRateSet = {
 # NOTE
 # model ids
 # M11
-# T1
+# T1, T2
 # M12
 
 # model input - feed
 modelInput = {
-    "model": "M11",
+    "model": "T2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

@@ -9,12 +9,14 @@ from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy import optimize
+
 # internal
 from core.utilities import roundNum, selectFromListByIndex
 from docs.modelSetting import MODEL_SETTING
 from data.inputDataReactor import *
 from core import constants as CONST
 from solvers.solSetting import solverSetting
+from solvers.solResultAnalysis import setOptimizeRootMethod
 from docs.rmtReaction import reactionRateExe, componentFormationRate
 from docs.fluidFilm import *
 from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix
@@ -37,7 +39,7 @@ class HomoModelClass:
 
 # NOTE
 
-    def runT10(self):
+    def runT1(self):
         """
         modeling case: static model
         unknowns: Ci, T (dynamic), P, v (static), CT, GaDe = f(P, T, n)
@@ -120,13 +122,13 @@ class HomoModelClass:
         GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
 
         # finite difference points in the z direction
-        zNo = solverSetting['S2']['zNo']
+        zNo = solverSetting['T1']['zNo']
         # length list
-        dataXs = np.linspace(0, ReLe, zNo)
+        dataXs = np.linspace(0, 1, zNo)
         # element size - dz [m]
-        dz = ReLe/(zNo-1)
+        dz = 1/(zNo-1)
         # orthogonal collocation points in the r direction
-        rNo = solverSetting['S2']['rNo']
+        rNo = solverSetting['T1']['rNo']
 
         ### calculation ###
         # mole fraction in the gas phase
@@ -173,9 +175,14 @@ class HomoModelClass:
         # number of var rows [j]
         varNoRows = 1
 
-        # initial values at t = 0 and z >> 0
+        # NOTE
+        # initial guess at t = 0 and z >> 0
         IVMatrixShape = (noLayer, varNoRows, varNoColumns)
         IV2D = np.zeros(IVMatrixShape)
+        # bounds
+        BMatrixShape = (noLayer, varNoRows, varNoColumns)
+        BUp2D = np.zeros(BMatrixShape)
+        BLower2D = np.zeros(BMatrixShape)
         # initialize IV2D
         # -> concentration [kmol/m^3]
         for m in range(noLayer - 1):
@@ -183,19 +190,32 @@ class HomoModelClass:
                 for j in range(varNoRows):
                     # separate phase
                     if j == 0:
+                        # FIXME
                         # gas phase
-                        IV2D[m][j][i] = SpCoi0[m]
+                        IV2D[m][j][i] = SpCoi0[m]/np.max(SpCoi0)
+                        # set bounds
+                        BUp2D[m][j][i] = 1
+                        BLower2D[m][j][i] = 0
 
         # temperature [K]
         for i in range(varNoColumns):
             for j in range(varNoRows):
                 # separate phase
                 if j == 0:
+                    # FIXME
                     # gas phase
-                    IV2D[noLayer - 1][j][i] = T
+                    IV2D[noLayer - 1][j][i] = 0.20
+                    # set bounds
+                    BUp2D[noLayer - 1][j][i] = 1
+                    BLower2D[noLayer - 1][j][i] = 0
 
         # flatten IV
         IV = IV2D.flatten()
+        BUp = BUp2D.flatten()
+        BLower = BLower2D.flatten()
+
+        # set bound
+        setBounds = (BLower, BUp)
 
         # parameters
         # component data
@@ -231,7 +251,8 @@ class HomoModelClass:
 
         # gas phase
         # mass convective term - (list) [kmol/m^3.s]
-        GaMaCoTe0 = (vf/zf)*Cif
+        GaMaCoTe0 = (
+            vf/zf)*Cif if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.repeat((vf/zf)*np.max(Cif), compNo)
         # mass diffusive term - (list)  [kmol/m^3.s]
         GaMaDiTe0 = (1/zf**2)*(Cif*Dif)
         # heat convective term [kJ/m^3.s]
@@ -329,24 +350,31 @@ class HomoModelClass:
         }
 
         # time span
-        tNo = solverSetting['S2']['tNo']
-        opTSpan = np.linspace(0, opT, tNo + 1)
+        # tNo = solverSetting['S2']['tNo']
+        # opTSpan = np.linspace(0, opT, tNo + 1)
 
         # save data
-        timesNo = solverSetting['S2']['timesNo']
+        # timesNo = solverSetting['S2']['timesNo']
 
         # result
         dataPack = []
 
         # build data list
         # over time
-        dataPacktime = np.zeros((varNo, tNo, zNo))
-        #
+        # dataPacktime = np.zeros((varNo, tNo, zNo))
 
         # NOTE
         ### solve a system of nonlinear ode ###
-        sol = optimize.fsolve(HomoModelClass.modelEquationM8, IV, args=(
-            reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+        # sol = optimize.fsolve(HomoModelClass.modelEquationT1, IV, args=(
+        #     reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+
+        # root
+        sol = optimize.root(HomoModelClass.modelEquationT1, IV, args=(
+            reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), method='lm')
+
+        #
+        # sol = optimize.least_squares(HomoModelClass.modelEquationT1, IV, bounds=setBounds, method='trf', args=(
+        #     reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
 
         # ode result
         successStatus = sol.success
@@ -354,15 +382,24 @@ class HomoModelClass:
         if successStatus is False:
             raise
 
-        # time interval
-        dataTime = sol.t
         # all results
         # components, temperature layers
-        dataYs = sol.y
-
+        dataYs = sol.x
         # std format
         dataYs_Reshaped = np.reshape(
-            dataYs[:, -1], (noLayer, varNoRows, varNoColumns))
+            dataYs, (noLayer, varNoRows, varNoColumns))
+        # data
+        dataYs_Concentration_DiLeVa = dataYs_Reshaped[:-1]
+        dataYs_Temperature_DiLeVa = dataYs_Reshaped[-1]
+
+        # sort out
+        params1 = (compNo, noLayer, varNoRows, varNoColumns)
+        params2 = (Cif, Tf)
+        dataYs_Sorted = setOptimizeRootMethod(
+            dataYs_Reshaped, params1, params2)
+        #
+        dataYs_Concentration_ReVa = dataYs_Sorted['data1']
+        dataYs_Temperature_ReVa = dataYs_Sorted['data2']
 
         # component concentration [kmol/m^3]
         # Ci and Cs
@@ -402,7 +439,7 @@ class HomoModelClass:
         # save data
         dataPack.append({
             "successStatus": successStatus,
-            "dataTime": dataTime[-1],
+            "dataX": "1",
             "dataYCon": dataYs1GasPhase,
             "dataYTemp": dataYs2GasPhase,
             "dataYs": _dataYs,
@@ -415,7 +452,7 @@ class HomoModelClass:
         end = timer()
         elapsed = roundNum(end - start)
 
-    def modelEquationM8(y, reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams):
+    def modelEquationT1(y, reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams):
         """
             M8 model [steady-state modeling]
             mass, energy, and momentum balance equations
@@ -622,8 +659,6 @@ class HomoModelClass:
         indexV = indexP + 1
 
         # calculate
-        # z ref
-        zRef = ReLe
 
         # particle radius
         PaRa = PaDi/2
@@ -724,8 +759,12 @@ class HomoModelClass:
             for i in range(compNo):
                 _SpCoi_z = SpCoi_z[i][z]
                 CoSpi[i] = max(_SpCoi_z, CONST.EPS_CONST)
+                # REVIEW
                 # dimensionless analysis: real value
-                CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(CoSpi[i], SpCoi0[i])
+                SpCoi0_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(
+                    CoSpi[i], SpCoi0_Set)
 
             # total concentration [kmol/m^3]
             CoSp = np.sum(CoSpi)
@@ -734,21 +773,20 @@ class HomoModelClass:
 
             # temperature [K]
             T = T_z[z]
-            T_ReVa = rmtUtil.calRealDiLessValue(T, T0)
+            T_ReVa = rmtUtil.calRealDiLessValue(T, T0, "TEMP")
 
             # pressure [Pa]
             P = P_z[z]
 
             # FIXME
             # velocity
-            # v = v_z[z]
-            # dimensionless case
-            v = 1
+            # dimensionless value
+            v = 1  # v_z[z]
 
             ## calculate ##
             # mole fraction in the gas phase [0,1]
             MoFri = np.array(
-                rmtUtil.moleFractionFromConcentrationSpecies(CoSp_ReVa))
+                rmtUtil.moleFractionFromConcentrationSpecies(CoSpi_ReVa))
 
             # TODO
             # dv/dz
@@ -758,6 +796,7 @@ class HomoModelClass:
             # SuGaVe = InGaVe*BeVoFr
             # from ode eq. dv/dz
             SuGaVe = v
+            # dimensionless analysis
             SuGaVe_ReVa = rmtUtil.calRealDiLessValue(SuGaVe, SuGaVe0)
 
             # total flowrate [kmol/s]
@@ -818,17 +857,23 @@ class HomoModelClass:
             # dimensionless analysis
             GaThCoMix_DiLeVa = 1
             # effective thermal conductivity - gas phase [J/s.m.K]
-            GaThCoEff = BeVoFr*GaThCoMix_DiLeVa
+            GaThCoEff = BeVoFr*GaThCoMix
+            # dimensionless analysis
+            GaThCoEff_DiLeVa = BeVoFr*GaThCoMix_DiLeVa
 
             # REVIEW
             # diffusivity coefficient - gas phase [m^2/s]
             GaDii = GaDii0 if MODEL_SETTING['GaDii'] == "FIX" else calTest()
-            # dimensionless
-            GaDii_DiLe = GaDii/GaDii0
+            # dimensionless analysis
+            GaDii_DiLeVa = GaDii/GaDii0
+            # effective diffusivity coefficient - gas phase
+            GaDiiEff = GaDii*BeVoFr
+            # dimensionless analysis
+            GaDiiEff_DiLeVa = GaDiiEff/GaDii0
             # effective diffusivity - solid phase [m2/s]
             SoDiiEff = (CaPo/CaTo)*GaDii
-            # dimensionless
-            SoDiiEff_DiLe = (CaPo/CaTo)*GaDii_DiLe
+            # dimensionless analysis
+            SoDiiEff_DiLe = (CaPo/CaTo)*GaDii_DiLeVa
 
             # REVIEW
             if MODEL_SETTING['MaTrCo'] != "FIX":
@@ -878,6 +923,8 @@ class HomoModelClass:
                 GaCpMeanMix, GaCpMeanMix0)
             # effective heat capacity - gas phase [kJ/kmol.K] | [J/mol.K]
             GaCpMeanMixEff = GaCpMeanMix*BeVoFr
+            # dimensionless analysis
+            GaCpMeanMixEff_DiLeVa = GaCpMeanMix_DiLeVa*BeVoFr
 
             # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
             # enthalpy change
@@ -931,25 +978,25 @@ class HomoModelClass:
 
             # velocity from global concentration
             # check BC
-            if z == 0:
-                # BC1
-                constT_BC1 = 2*dz*zRef*(MoFl*GaCpMeanMix/1000)
-                # forward
-                T_f = T_z[z+1]
-                # backward
-                T_b = constT_BC1*(T0 - T_c) + GaThCoEff*T_f
-            elif z == zNo - 1:
-                # BC2
-                # backward
-                T_b = T_z[z - 1]
-                # forward
-                T_f = T_b
-            else:
-                # interior nodes
-                # backward
-                T_b = T_z[z-1]
-                # forward
-                T_f = T_z[z+1]
+            # if z == 0:
+            #     # BC1
+            #     constT_BC1 = 2*dz*zRef*(MoFl*GaCpMeanMix/1000)
+            #     # forward
+            #     T_f = T_z[z+1]
+            #     # backward
+            #     T_b = constT_BC1*(T0 - T_c) + GaThCoEff*T_f
+            # elif z == zNo - 1:
+            #     # BC2
+            #     # backward
+            #     T_b = T_z[z - 1]
+            #     # forward
+            #     T_f = T_b
+            # else:
+            #     # interior nodes
+            #     # backward
+            #     T_b = T_z[z-1]
+            #     # forward
+            #     T_f = T_z[z+1]
 
             # dxdt_v_T = (T_z[z] - T_b)/dz
             # CoSp x 1000
@@ -961,7 +1008,9 @@ class HomoModelClass:
             # dT/dt will update the old value
             # v_z[z+1] = dxdt_v*dz + v_z[z]
             # FIXME
-            v_z[z+1] = 1
+            v_z[z+1] = v_z[z]
+            # dimensionless analysis
+            v_z_DiLeVa = rmtUtil.calDiLessValue(v_z[z+1], vf)
 
             # NOTE
             # diff/dz
@@ -982,10 +1031,14 @@ class HomoModelClass:
                     # BC1
                     #
                     BC1_C_1 = PeNuMa0[i]*dz
+                    BC1_C_2 = 1/BC1_C_1
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
                     # backward
-                    Ci_b = (BC1_C_1*SpCoi0[i] - Ci_c) - Ci_f
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
                 elif z == zNo - 1:
                     # BC2
                     # backward
@@ -1003,12 +1056,13 @@ class HomoModelClass:
                 # central difference
                 dCdz = (Ci_c - Ci_b)/(1*dz)
                 # convective term
-                _convectiveTerm = -1*v_z[z]*dCdz
+                _convectiveTerm = -1*v_z_DiLeVa*dCdz
                 # central difference for dispersion
                 d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
                 # dispersion term [kmol/m^3.s]
-                _dispersionFluxC = BeVoFr*(GaDii[i]/PeNuMa0[i])*d2Cdz2
+                _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
                 # reaction term [kmol/m^3.s]
+                # REVIEW
                 _reactionTerm = (1/GaMaCoTe0[i])*ri[i]
                 # mass balance
                 # convective, dispersion, reaction terms
@@ -1023,11 +1077,15 @@ class HomoModelClass:
             # check BC
             if z == 0:
                 # BC1
-                constT_BC1 = 2*dz*zRef*(MoFl*GaCpMeanMix/1000)
+                BC1_T_1 = PeNuHe0*dz
+                BC1_T_2 = 1/BC1_T_1
                 # forward
                 T_f = T_z[z+1]
                 # backward
-                T_b = constT_BC1*(T0 - T_c) + GaThCoEff*T_f
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
             elif z == zNo - 1:
                 # BC2
                 # backward
@@ -1046,17 +1104,17 @@ class HomoModelClass:
             # central difference
             dTdz = (T_c - T_b)/(1*dz)
             # convective term
-            _convectiveTerm = -1*v_z[z]*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
+            _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
             # central difference
             d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
             # dispersion flux [kJ/m^3.s]
-            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff*d2Tdz2)*1e-3
+            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1e-3
             # heat of reaction term
             # OvHeReT [kJ/m^3.s]
             OvHeReT_Conv = -1*OvHeReT
-            _reactionHeatTerm = (1/PeNuHe0)*OvHeReT_Conv
+            _reactionHeatTerm = (1/GaHeCoTe0)*OvHeReT_Conv
             # heat exchange term [kJ/m^3.s]
-            _heatExchangeTerm = (1/PeNuHe0)*Qm
+            _heatExchangeTerm = (1/GaHeCoTe0)*Qm
             # convective flux, diffusive flux, enthalpy of reaction, heat exchange term
             dxdt_T = (_convectiveTerm + _dispersionFluxT +
                       _reactionHeatTerm + _heatExchangeTerm)
