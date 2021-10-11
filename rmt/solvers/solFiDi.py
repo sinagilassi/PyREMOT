@@ -425,7 +425,7 @@ def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
         A = np.zeros(AMatShape)
 
         # params
-        CaThCo_DiLeVa, HeTrCo, OvHeReT, TBulk, CaPo, SoHeDiTe0, rf, CaThCo = params
+        CaThCo_DiLeVa, HeTrCo, OvHeReT, TBulk, CaPo, SoHeDiTe0, CaThCo, rf = params
 
         # temperature
         # element of yj

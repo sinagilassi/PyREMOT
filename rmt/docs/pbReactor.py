@@ -3949,10 +3949,10 @@ class PackedBedReactorClass:
                 # separate phase
                 if j == 0:
                     # gas phase
-                    IV2D[noLayer - 1][j][i] = 0.2  # T
+                    IV2D[noLayer - 1][j][i] = 0  # T
                 else:
                     # solid phase
-                    IV2D[noLayer - 1][j][i] = 0.2  # T
+                    IV2D[noLayer - 1][j][i] = 0  # T
 
         # flatten IV
         IV = IV2D.flatten()
@@ -4656,6 +4656,8 @@ class PackedBedReactorClass:
 
             # total concentration in the solid phase [kmol/m^3]
             CosSp_r = np.sum(CosSpi_r, axis=1).reshape((rNo, 1))
+            # dimensionless analysis: real value
+            CosSp_r_ReVa = np.sum(CosSpi_r_ReVa, axis=1).reshape((rNo, 1))
 
             # concentration in the outer surface of the catalyst [kmol/m^3]
             CosSpi_cat = CosSpi_r[0]
@@ -4864,7 +4866,7 @@ class PackedBedReactorClass:
                     MoFrsi_r[r], SoCpMeanList)
 
                 # effective heat capacity - solid phase [kJ/m^3.K]
-                SoCpMeanMixEff_ReVa[r] = CosSpi_r_ReVa[r] * \
+                SoCpMeanMixEff_ReVa[r] = CosSp_r_ReVa[r] * \
                     SoCpMeanMix[r]*CaPo + (1-CaPo)*CaDe*CaSpHeCa
 
                 # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
@@ -5089,7 +5091,7 @@ class PackedBedReactorClass:
 
                 # loop
                 _dCsdtiVarLoop = (
-                    GaDii_DiLeVa[i], MaTrCo[i], ri_r[:, i], Ci_c, CaPo, SoMaDiTe0, GaDii0[i], rf)
+                    GaDii_DiLeVa[i], MaTrCo[i], ri_r[:, i], Ci_c, CaPo, SoMaDiTe0[i], GaDii0[i], rf)
 
                 # dC/dt list
                 dCsdti = FiDiBuildCMatrix_DiLe(
@@ -5181,7 +5183,7 @@ class PackedBedReactorClass:
             HeTrCo_Conv = HeTrCo/1000
             # var loop
             _dTsdtiVarLoop = (SoThCoEff_DiLeVa, HeTrCo_Conv,
-                              OvHeReT_Conv, T_c, CaPo, SoHeDiTe0, SoThCoEff_Conv)
+                              OvHeReT_Conv, T_c, CaPo, SoHeDiTe0, SoThCoEff_Conv, rf)
 
             # dTs/dt list
             dTsdti = FiDiBuildTMatrix_DiLe(
@@ -5193,7 +5195,7 @@ class PackedBedReactorClass:
             #
             for r in range(rNo):
                 # update
-                dxdtMat[indexT][r+1][z] = _const2*dTsdti[r]
+                dxdtMat[indexT][r+1][z] = _const2[r]*dTsdti[r]
 
         # NOTE
         # flat
@@ -5209,7 +5211,6 @@ class PackedBedReactorClass:
 
 
 # FIXME
-
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

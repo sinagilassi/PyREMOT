@@ -131,6 +131,9 @@ class HomoModelClass:
         rNo = solverSetting['T1']['rNo']
 
         ### calculation ###
+        # interstitial gas velocity [m/s]
+        InGaVe0 = SuGaVe0/BeVoFr
+
         # mole fraction in the gas phase
         MoFri0 = np.array(rmtUtil.moleFractionFromConcentrationSpecies(SpCoi0))
 
@@ -192,7 +195,7 @@ class HomoModelClass:
                     if j == 0:
                         # FIXME
                         # gas phase
-                        IV2D[m][j][i] = 0.5  # SpCoi0[m]/np.max(SpCoi0)
+                        IV2D[m][j][i] = 0.1  # SpCoi0[m]/np.max(SpCoi0)
                         # set bounds
                         BUp2D[m][j][i] = 1
                         BLower2D[m][j][i] = 0
@@ -204,10 +207,10 @@ class HomoModelClass:
                 if j == 0:
                     # FIXME
                     # gas phase
-                    IV2D[noLayer - 1][j][i] = 0.20
+                    IV2D[noLayer - 1][j][i] = 0.1
                     # set bounds
                     BUp2D[noLayer - 1][j][i] = 1
-                    BLower2D[noLayer - 1][j][i] = 0
+                    BLower2D[noLayer - 1][j][i] = -1
 
         # flatten IV
         IV = IV2D.flatten()
@@ -361,6 +364,7 @@ class HomoModelClass:
 
         # result
         dataPack = []
+        successStatus = False
 
         # build data list
         # over time
@@ -378,9 +382,9 @@ class HomoModelClass:
             dataYs = sol
         elif solverRootSet == "root":
             # root
-            # lm, krylov, anderson
+            # lm, krylov, anderson, hybr
             sol = optimize.root(HomoModelClass.modelEquationT1, IV, args=(
-                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), method='anderson')
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), method='lm')
             # result
             successStatus = sol.success
             # all results
@@ -389,6 +393,14 @@ class HomoModelClass:
         elif solverRootSet == "least_squares":
             sol = optimize.least_squares(HomoModelClass.modelEquationT1, IV, bounds=setBounds, args=(
                 reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+            # result
+            successStatus = sol.success
+            # all results
+            # components, temperature layers
+            dataYs = sol.x
+        elif solverRootSet == "minimize":
+            sol = optimize.minimize(HomoModelClass.modelEquationT1, IV, args=(
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), bounds=setBounds)
             # result
             successStatus = sol.success
             # all results
@@ -872,7 +884,7 @@ class HomoModelClass:
             # effective thermal conductivity - gas phase [J/s.m.K]
             GaThCoEff = BeVoFr*GaThCoMix
             # dimensionless analysis
-            GaThCoEff_DiLeVa = BeVoFr*GaThCoMix_DiLeVa
+            GaThCoEff_DiLeVa = GaThCoMix_DiLeVa  # BeVoFr*GaThCoMix_DiLeVa
 
             # REVIEW
             # diffusivity coefficient - gas phase [m^2/s]
@@ -915,8 +927,10 @@ class HomoModelClass:
 
             # REVIEW
             # component formation rate [kmol/m^3.s]
-            ri = componentFormationRate(
+            riRes = componentFormationRate(
                 compNo, comList, reactionStochCoeff, Ri)
+
+            ri = (1-BeVoFr)*riRes
 
             # overall formation rate [kmol/m^3.s]
             OvR = np.sum(ri)
@@ -945,7 +959,7 @@ class HomoModelClass:
                 calEnthalpyChangeOfReaction(reactionListSorted, T_ReVa))
             # heat of reaction at T [kJ/kmol] | [J/mol]
             HeReT = np.array(EnChList + StHeRe25)
-            # overall heat of reaction [J/m^3.s]
+            # overall heat of reaction [kJ/m^3.s]
             OvHeReT = np.dot(Ri, HeReT)
 
             # FIXME
@@ -1121,7 +1135,7 @@ class HomoModelClass:
             # central difference
             d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
             # dispersion flux [kJ/m^3.s] -> [no unit]
-            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1
+            _dispersionFluxT = (1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2
             # heat of reaction term
             # OvHeReT [kJ/m^3.s] -> [no unit]
             OvHeReT_Conv = -1*OvHeReT
