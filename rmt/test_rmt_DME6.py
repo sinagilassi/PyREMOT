@@ -109,7 +109,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 0
+Tm = T
 # Ua
 Ua = U*a
 #
@@ -222,7 +222,7 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -262,7 +262,8 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "LSODA"
+        "ivp": "LSODA",
+        "root": "root"
     }
 }
 

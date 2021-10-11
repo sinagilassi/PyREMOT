@@ -40,7 +40,7 @@ def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params, mode="default"):
         A = np.zeros(AMatShape)
 
         # params
-        DiCoi, MaTrCoi, Ri, SpCoiBulk, CaPo = params
+        DiCoi, MaTrCoi, Ri, SpCoiBulk, CaPo, SoMaDiTe0 = params
 
         # concentration
 
@@ -306,5 +306,163 @@ def FiDiSetMatrix(compNo, DoLe, rNo, yj, params):
 
         # return
         return res
+    except Exception as e:
+        raise
+
+# NOTE
+# dimensionless type
+
+
+def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
+    '''
+    build concentration residual matrix [R]
+    args:
+        compNo: component no
+        DoLe: domain length [m]
+        rNo: number of finite difference points
+        yi: y variables
+        params: 
+            DiCoi: diffusivity coefficient of components [m^2/s]
+            MaTrCoi: mass transfer coefficient [m/s]
+            Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
+            SpCoiBulk: species concentration of component in the bulk phase [kmol/m^3] | [mol/m^3]
+            CaPo: catalyst porosity
+    '''
+    # try/except
+    try:
+        # number of finite differene points
+        # rNo
+        # number of elements
+        NoEl_FiDi = rNo - 1
+        # number of total nodes
+        N = rNo*compNo
+        # dr size [m]
+        dr = 1/NoEl_FiDi
+        # formula
+        rp = DoLe
+
+        # NOTE
+        ### matrix structure ##
+        # residual matrix
+        AMatShape = rNo
+        A = np.zeros(AMatShape)
+
+        # params
+        DiCoi_DiLeVa, MaTrCoi, Ri, SpCoiBulk, CaPo, SoMaDiTe0, GaDii0, rf = params
+
+        # concentration
+
+        for i in range(rNo):
+            # dr distance
+            ri = 1 if i == 0 else i*dr
+
+            # constant
+            const1 = (DiCoi_DiLeVa/(dr**2))
+            const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
+
+            # reaction term
+            _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+
+            if i == 0:
+                A[i] = 3*const1*(2*yi[i+1] - 2*yi[i]) + _Ri
+            elif i > 0 and i < rNo-1:
+                A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
+                    const2*(yi[i+1] - yi[i-1]) + _Ri
+            elif i == rNo-1:
+                # const
+                alpha = rf/GaDii0
+                beta = MaTrCoi/DiCoi_DiLeVa
+                # ghost point y[N+1]
+                yN__1 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk) + yi[i-1]
+                A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
+                    const2*(yN__1 - yi[i-1]) + _Ri
+
+        # flip
+        A_Flip = np.flip(A)
+
+        # check
+        A_Res = A_Flip if mode == "default" else A
+
+        # res
+        return A_Res
+    except Exception as e:
+        raise
+
+
+def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
+    '''
+    build temperature residual matrix [R]
+    args:
+        compNo: component no
+        DoLe: domain length [m]
+        rNo: number of finite difference points
+        **args: 
+            CaThCo: thermal conductivity of catalyst [kJ/s.m.K] | [J/s.m.K]
+            HeTrCo: heat transfer coefficient [kJ/m^2.s.K] | [J/m^2.s.K] .
+            OvHeReT: overall heat of reaction [kJ/m^3.s] | [J/m^3.s]
+            TBulk: temperature of component in the bulk phase [K]
+            optional:
+                Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
+                dHi: enthalpy of reactions [kJ/kmol] | [J/kmol]
+    '''
+    # try/except
+    try:
+        # number of finite differene points
+        # rNo
+        # number of elements
+        NoEl_FiDi = rNo - 1
+        # number of total nodes
+        N = rNo*compNo
+        # dr size [m]
+        dr = 1/NoEl_FiDi
+        # formula
+        rp = DoLe
+
+        # NOTE
+        ### matrix structure ##
+        # residual matrix
+        AMatShape = (rNo)
+        A = np.zeros(AMatShape)
+
+        # params
+        CaThCo_DiLeVa, HeTrCo, OvHeReT, TBulk, CaPo, SoHeDiTe0, rf, CaThCo = params
+
+        # temperature
+        # element of yj
+        Ti = yi
+
+        # constant
+        const1 = CaThCo_DiLeVa/(dr**2)
+
+        for i in range(rNo):
+            # dr distance
+            ri = 1 if i == 0 else i*dr
+            const2 = 2*CaThCo_DiLeVa/(ri*2*dr)
+
+            # reaction term
+            _dHRi = (1/SoHeDiTe0)*(1 - CaPo)*OvHeReT[i]
+
+            if i == 0:
+                A[i] = 3*const1*(2*Ti[i+1] - 2*Ti[i]) + _dHRi
+            elif i > 0 and i < rNo-1:
+                A[i] = const1*(Ti[i-1] - 2*Ti[i] + Ti[i+1]) + \
+                    const2*(Ti[i+1] - Ti[i-1]) + _dHRi
+            elif i == rNo-1:
+                # const
+                alpha = rf/CaThCo
+                beta = -1*HeTrCo/CaThCo_DiLeVa
+                # ghost point y[N+1]
+                yN__1 = (2*dr)*alpha*beta*(Ti[i] - TBulk) + Ti[i-1]
+                A[i] = const1*(Ti[i-1] - 2*Ti[i] + yN__1) + \
+                    const2*(yN__1 - Ti[i-1]) + _dHRi
+
+        # flip
+        A_Flip = np.flip(A)
+
+        # check
+        A_Res = A_Flip if mode == "default" else A
+
+        # res
+        return A_Res
     except Exception as e:
         raise

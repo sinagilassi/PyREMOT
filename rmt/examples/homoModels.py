@@ -50,7 +50,7 @@ class HomoModelClass:
 
         # solver setting
         solverConfig = self.modelInput['solver-config']
-        solverIVPSet = solverConfig['ivp']
+        solverRootSet = solverConfig['root']
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -123,7 +123,7 @@ class HomoModelClass:
 
         # finite difference points in the z direction
         zNo = solverSetting['T1']['zNo']
-        # length list
+        # length list [reactor length]
         dataXs = np.linspace(0, 1, zNo)
         # element size - dz [m]
         dz = 1/(zNo-1)
@@ -192,7 +192,7 @@ class HomoModelClass:
                     if j == 0:
                         # FIXME
                         # gas phase
-                        IV2D[m][j][i] = SpCoi0[m]/np.max(SpCoi0)
+                        IV2D[m][j][i] = 0.5  # SpCoi0[m]/np.max(SpCoi0)
                         # set bounds
                         BUp2D[m][j][i] = 1
                         BLower2D[m][j][i] = 0
@@ -251,14 +251,15 @@ class HomoModelClass:
 
         # gas phase
         # mass convective term - (list) [kmol/m^3.s]
-        GaMaCoTe0 = (
-            vf/zf)*Cif if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.repeat((vf/zf)*np.max(Cif), compNo)
+        _Cif = Cif if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.repeat(
+            np.max(Cif), compNo)
+        GaMaCoTe0 = (vf/zf)*_Cif
         # mass diffusive term - (list)  [kmol/m^3.s]
-        GaMaDiTe0 = (1/zf**2)*(Cif*Dif)
+        GaMaDiTe0 = (1/zf**2)*(_Cif*Dif)
         # heat convective term [kJ/m^3.s]
-        GaHeCoTe0 = Cf*vf*Tf*Cpf/zf
-        # heat diffusive term
-        GaHeDiTe0 = Tf*GaThCoMix0/zf**2
+        GaHeCoTe0 = (GaDe0*vf*Tf*(Cpf/MiMoWe0)/zf)*1e-3
+        # heat diffusive term [kJ/m^3.s]
+        GaHeDiTe0 = (Tf*GaThCoMix0/zf**2)*1e-3
 
         ### dimensionless numbers ###
         # Re Number
@@ -276,7 +277,9 @@ class HomoModelClass:
         # Peclet number - mass transfer
         PeNuMa0 = (vf*zf)/Dif
         # Peclet number - heat transfer
-        PeNuHe0 = ReNu0*PrNu0
+        _PeNuHe0 = ReNu0*PrNu0
+        _PeNuHe1 = GaHeDiTe0/GaHeCoTe0
+        PeNuHe0 = GaThCoMix0/(zf*GaDe0*(Cpf/MiMoWe0)*vf)
 
         ### transfer coefficient ###
         # mass transfer coefficient - gas/solid [m/s]
@@ -364,27 +367,38 @@ class HomoModelClass:
         # dataPacktime = np.zeros((varNo, tNo, zNo))
 
         # NOTE
-        ### solve a system of nonlinear ode ###
-        # sol = optimize.fsolve(HomoModelClass.modelEquationT1, IV, args=(
-        #     reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+        ### solve a system of nonlinear algebraic equation ###
+        if solverRootSet == "fsolve":
+            sol = optimize.fsolve(HomoModelClass.modelEquationT1, IV, args=(
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+            # result
+            successStatus = True if len(sol) > 0 else False
+            # all results
+            # components, temperature layers
+            dataYs = sol
+        elif solverRootSet == "root":
+            # root
+            # lm, krylov, anderson
+            sol = optimize.root(HomoModelClass.modelEquationT1, IV, args=(
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), method='anderson')
+            # result
+            successStatus = sol.success
+            # all results
+            # components, temperature layers
+            dataYs = sol.x
+        elif solverRootSet == "least_squares":
+            sol = optimize.least_squares(HomoModelClass.modelEquationT1, IV, bounds=setBounds, args=(
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
+            # result
+            successStatus = sol.success
+            # all results
+            # components, temperature layers
+            dataYs = sol.x
 
-        # root
-        sol = optimize.root(HomoModelClass.modelEquationT1, IV, args=(
-            reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams), method='lm')
-
-        #
-        # sol = optimize.least_squares(HomoModelClass.modelEquationT1, IV, bounds=setBounds, method='trf', args=(
-        #     reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams))
-
-        # ode result
-        successStatus = sol.success
         # check
         if successStatus is False:
             raise
 
-        # all results
-        # components, temperature layers
-        dataYs = sol.x
         # std format
         dataYs_Reshaped = np.reshape(
             dataYs, (noLayer, varNoRows, varNoColumns))
@@ -397,60 +411,59 @@ class HomoModelClass:
         params2 = (Cif, Tf)
         dataYs_Sorted = setOptimizeRootMethod(
             dataYs_Reshaped, params1, params2)
-        #
-        dataYs_Concentration_ReVa = dataYs_Sorted['data1']
-        dataYs_Temperature_ReVa = dataYs_Sorted['data2']
-
         # component concentration [kmol/m^3]
-        # Ci and Cs
-        # dataYs1 = dataYs[0:varNoCon, -1]
-        # 3d matrix
-        # dataYs1_Reshaped = np.reshape(
-        #     dataYs1, (compNo, varNoRows, varNoColumns))
-
-        dataYs1_Reshaped = dataYs_Reshaped[:-1]
-
-        # gas phase
-        dataYs1GasPhase = dataYs1_Reshaped[:, 0, :]
-        # solid phase
-        dataYs1SolidPhase = dataYs1_Reshaped[:, 1:, :]
+        dataYs_Concentration_ReVa = dataYs_Sorted['data1']
+        # temperature [K]
+        dataYs_Temperature_ReVa = dataYs_Sorted['data2']
 
         # REVIEW
         # convert concentration to mole fraction
-        dataYs1_Ctot = np.sum(dataYs1GasPhase, axis=0)
-        dataYs1_MoFri = dataYs1GasPhase/dataYs1_Ctot
-
-        # temperature - 2d matrix
-        # dataYs2 = np.array([dataYs[varNoCon:varNoLayerT, -1]])
-        # 2d matrix
-        # dataYs2_Reshaped = np.reshape(
-        #     dataYs2, (1, varNoRows, varNoColumns))
-
-        dataYs2_Reshaped = dataYs_Reshaped[indexTemp]
-        # gas phase
-        dataYs2GasPhase = dataYs2_Reshaped[0, :].reshape((1, zNo))
-        # solid phase
-        dataYs2SolidPhase = dataYs2_Reshaped[1:, :]
-
-        # combine
-        _dataYs = np.concatenate(
-            (dataYs1_MoFri, dataYs2GasPhase), axis=0)
-
-        # save data
-        dataPack.append({
-            "successStatus": successStatus,
-            "dataX": "1",
-            "dataYCon": dataYs1GasPhase,
-            "dataYTemp": dataYs2GasPhase,
-            "dataYs": _dataYs,
-            "dataYCons": dataYs1SolidPhase,
-            "dataYTemps": dataYs2SolidPhase,
-        })
+        dataYs1_Ctot = np.sum(dataYs_Concentration_ReVa, axis=0)
+        dataYs1_MoFri = dataYs_Concentration_ReVa/dataYs1_Ctot
 
         # NOTE
         # end of computation
         end = timer()
         elapsed = roundNum(end - start)
+
+        # FIXME
+        # build matrix
+        _dataYs = np.concatenate(
+            (dataYs1_MoFri, dataYs_Temperature_ReVa), axis=0)
+
+        # plot info
+        plotTitle = f"Steady-State Homogenous Modeling [T1], Computation Time: {elapsed} seconds"
+
+        # check
+        if successStatus is True:
+            # plot setting: build (x,y) series
+            XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
+            # -> add label
+            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # datalists
+            dataLists = [dataList[0:compNo],
+                         dataList[indexTemp]]
+            # select datalist
+            _dataListsSelected = selectFromListByIndex([0, 1], dataLists)
+            # subplot result
+            xLabelSet = "Reactor Length (m)"
+            yLabelSet = "Concentration (mol/m^3)"
+            pltc.plots2DSub(_dataListsSelected, xLabelSet,
+                            yLabelSet, plotTitle)
+
+        else:
+            _dataYs = []
+            XYList = []
+            dataList = []
+
+        # return
+        res = {
+            "dataYs": _dataYs,
+            "XYList": XYList,
+            "dataList": dataList
+        }
+
+        return res
 
     def modelEquationT1(y, reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams):
         """
@@ -1055,13 +1068,13 @@ class HomoModelClass:
                 # cal differentiate
                 # central difference
                 dCdz = (Ci_c - Ci_b)/(1*dz)
-                # convective term
+                # convective term -> [no unit]
                 _convectiveTerm = -1*v_z_DiLeVa*dCdz
                 # central difference for dispersion
                 d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
-                # dispersion term [kmol/m^3.s]
+                # dispersion term [kmol/m^3.s] -> [no unit]
                 _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
-                # reaction term [kmol/m^3.s]
+                # reaction term [kmol/m^3.s] -> [no unit]
                 # REVIEW
                 _reactionTerm = (1/GaMaCoTe0[i])*ri[i]
                 # mass balance
@@ -1107,13 +1120,13 @@ class HomoModelClass:
             _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
             # central difference
             d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
-            # dispersion flux [kJ/m^3.s]
-            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1e-3
+            # dispersion flux [kJ/m^3.s] -> [no unit]
+            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1
             # heat of reaction term
-            # OvHeReT [kJ/m^3.s]
+            # OvHeReT [kJ/m^3.s] -> [no unit]
             OvHeReT_Conv = -1*OvHeReT
             _reactionHeatTerm = (1/GaHeCoTe0)*OvHeReT_Conv
-            # heat exchange term [kJ/m^3.s]
+            # heat exchange term [kJ/m^3.s] -> [no unit]
             _heatExchangeTerm = (1/GaHeCoTe0)*Qm
             # convective flux, diffusive flux, enthalpy of reaction, heat exchange term
             dxdt_T = (_convectiveTerm + _dispersionFluxT +
