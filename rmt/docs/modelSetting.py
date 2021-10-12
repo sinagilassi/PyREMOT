@@ -16,3 +16,8 @@ MODEL_SETTING = {
     "GaVii": "FIX",
     "GaMaCoTe0": "MAX"
 }
+
+# process setting
+PROCESS_SETTING = {
+    "ISO-THER": "iso-thermal"
+}

@@ -5,7 +5,7 @@
 import numpy as np
 # internal
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from docs.modelSetting import MODEL_SETTING
+from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
 
 
 def setOptimizeRootMethod(y, params1, params2):
@@ -25,12 +25,14 @@ def setOptimizeRootMethod(y, params1, params2):
     #  try/except
     try:
         compNo, noLayer, varNoRows, varNoColumns = params1
-        Cif, Tf = params2
+        Cif, Tf, processType = params2
 
         # concentration
-        dataYs_Concentration_DiLeVa = y[:-1]
+        dataYs_Concentration_DiLeVa = y[:-
+                                        1] if processType != PROCESS_SETTING['ISO-THER'] else y[:]
         # temperature
-        dataYs_Temperature_DiLeVa = y[-1]
+        dataYs_Temperature_DiLeVa = y[-1] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+            0, varNoColumns).reshape((varNoRows, varNoColumns))
 
         # convert to real value
         # concentration

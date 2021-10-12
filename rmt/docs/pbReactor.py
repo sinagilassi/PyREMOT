@@ -319,6 +319,8 @@ class PackedBedReactorClass:
             #              "Temperature (K)", "1D Plug-Flow Reactor")
 
         else:
+            # error
+            print(f"Final result: {successStatus}")
             _dataYs = []
             XYList = []
             dataList = []
