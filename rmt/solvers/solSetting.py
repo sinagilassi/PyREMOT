@@ -19,6 +19,11 @@
 
 # S4
 
+DIFF_SETTING = {
+    "BD": -1,
+    "CD": 0,
+    "FD": 1
+}
 
 solverSetting = {
     "S1": {
@@ -35,7 +40,19 @@ solverSetting = {
         "timesNo": 25
     },
     "T1": {
-        "zNo": 25,
-        "rNo": 0
+        "zNo": 30,
+        "rNo": 0,
+        "dFdz": DIFF_SETTING['BD'],
+        "d2Fdz2": {
+            "BC1": DIFF_SETTING['CD'],
+            "BC2": DIFF_SETTING['CD'],
+            "G": DIFF_SETTING['BD']
+        },
+        "dTdz": DIFF_SETTING['BD'],
+        "d2Tdz2": {
+            "BC1": DIFF_SETTING['CD'],
+            "BC2": DIFF_SETTING['CD'],
+            "G": DIFF_SETTING['BD']
+        },
     },
 }

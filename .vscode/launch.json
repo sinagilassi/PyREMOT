@@ -77,7 +77,7 @@
       "python": "${command:python.interpreterPath}"
     },
     {
-      "name": "Dynamic Modeling CH4 [M7]",
+      "name": "Static Modeling CH4 [M7]",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/rmt/test_rmt_CH4_6.py",

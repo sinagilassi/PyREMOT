@@ -109,7 +109,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = T
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -227,7 +227,7 @@ modelInput = {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal"
+        "process-type": "non-iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -264,7 +264,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "Radau",
-        "root": "fsolve"
+        "root": "least_squares"
     }
 }
 

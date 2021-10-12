@@ -3,6 +3,7 @@
 
 # import module/packages
 import numpy as np
+from solvers.solSetting import DIFF_SETTING
 
 
 def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params, mode="default"):
@@ -464,5 +465,65 @@ def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
 
         # res
         return A_Res
+    except Exception as e:
+        raise
+
+
+def FiDiDerivative1(F, dz, mode):
+    """
+    calculate approximate first derivate of function F
+    args:
+        F: value at i-1, i, i+1
+        dz: step size 
+        mode: derivate algorithm 
+            backward: -1
+            central: 0
+            forward: 1
+    output:
+        dF/dt: value
+    """
+    # try/except
+    try:
+        F_b = F[0]
+        F_c = F[1]
+        F_f = F[2]
+        if mode == DIFF_SETTING['BD']:
+            dFdz = (F_c - F_b)/dz
+        elif mode == DIFF_SETTING['CD']:
+            dFdz = (F_f - F_b)/(2*dz)
+        elif mode == DIFF_SETTING['FD']:
+            dFdz = (F_f - F_c)/dz
+        return dFdz
+    except Exception as e:
+        raise
+
+
+def FiDiDerivative2(F, dz, mode):
+    """
+    calculate approximate second derivate of function F
+    args:
+        F: value at i-2, i-1, i, i+1, i+2
+        dz: step size 
+        mode: derivate algorithm 
+            backward: -1
+            central: 0
+            forward: 1
+    output:
+        d2F/dz2: value
+    """
+    # try/except
+    try:
+        F_bb = F[0]
+        F_b = F[1]
+        F_c = F[2]
+        F_f = F[3]
+        F_ff = F[4]
+        if mode == DIFF_SETTING['BD']:
+            d2Fdz2 = (F_c - 2*F_b + F_bb)/(dz**2)
+        elif mode == DIFF_SETTING['CD']:
+            d2Fdz2 = (F_f - 2*F_c + F_b)/(dz**2)
+        elif mode == DIFF_SETTING['FD']:
+            d2Fdz2 = (F_ff - 2*F_f + F_c)/(dz**2)
+        return d2Fdz2
     except Exception as e:
         raise

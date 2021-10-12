@@ -97,7 +97,7 @@ CaBeDe = bulk_rho
 # NOTE
 # external heat
 # overall heat transfer coefficient [J/m^2.s.K]
-U = 100  # 50
+U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
@@ -203,7 +203,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "fsolve"
+        "root": "least_squares"
     }
 }
 

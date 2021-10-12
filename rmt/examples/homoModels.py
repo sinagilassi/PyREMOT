@@ -20,7 +20,7 @@ from solvers.solSetting import solverSetting
 from solvers.solResultAnalysis import setOptimizeRootMethod
 from docs.rmtReaction import reactionRateExe, componentFormationRate
 from docs.fluidFilm import *
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix
+from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiDerivative1, FiDiDerivative2
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from docs.rmtThermo import *
 from docs.gasTransPor import calTest
@@ -217,7 +217,7 @@ class HomoModelClass:
                     if j == 0:
                         # FIXME
                         # gas phase
-                        IV2D[noLayer - 1][j][i] = 0.5 + i/100
+                        IV2D[noLayer - 1][j][i] = 0
                         # set bounds
                         BUp2D[noLayer - 1][j][i] = 1
                         BLower2D[noLayer - 1][j][i] = -1
@@ -291,8 +291,8 @@ class HomoModelClass:
         PeNuMa0 = (vf*zf)/Dif
         # Peclet number - heat transfer
         _PeNuHe0 = ReNu0*PrNu0
-        _PeNuHe1 = GaHeDiTe0/GaHeCoTe0
-        PeNuHe0 = GaThCoMix0/(zf*GaDe0*(Cpf/MiMoWe0)*vf)
+        _PeNuHe1 = GaHeCoTe0/GaHeDiTe0
+        PeNuHe0 = (zf*GaDe0*(Cpf/MiMoWe0)*vf)/GaThCoMix0
 
         ### transfer coefficient ###
         # mass transfer coefficient - gas/solid [m/s]
@@ -341,7 +341,10 @@ class HomoModelClass:
                 "dz": dz
             },
             "solverSetting": {
-
+                "dFdz": solverSetting['T1']['dFdz'],
+                "d2Fdz2": solverSetting['T1']['d2Fdz2'],
+                "dTdz": solverSetting['T1']['dTdz'],
+                "d2Tdz2": solverSetting['T1']['d2Tdz2'],
             },
             "reactionRateExpr": reactionRateExpr,
         }
@@ -656,6 +659,15 @@ class HomoModelClass:
 
         # solver setting
         solverSetting = FunParam['solverSetting']
+        DIFF_SET = solverSetting['dFdz']
+        DIFF_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        DIFF_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        DIFF_SET_G = solverSetting['d2Fdz2']['G']
+        # energy balance equation
+        DIFF_T_SET = solverSetting['dTdz']
+        DIFF_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        DIFF_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        DIFF_T_SET_G = solverSetting['d2Tdz2']['G']
 
         # reaction rate expressions
         reactionRateExpr = FunParam['reactionRateExpr']
@@ -806,7 +818,7 @@ class HomoModelClass:
 
         # NOTE
         # define ode equations for each finite difference [zNo]
-        for z in range(varNoColumns):
+        for z in range(zNo):
             # concentration species in the gas phase [kmol/m^3]
             for i in range(compNo):
                 _SpCoi_z = SpCoi_z[i][z]
@@ -825,7 +837,7 @@ class HomoModelClass:
 
             # temperature [K]
             T = T_z[z]
-            T_ReVa = rmtUtil.calRealDiLessValue(T, T0, "TEMP")
+            T_ReVa = rmtUtil.calRealDiLessValue(T, Tf, "TEMP")
 
             # pressure [Pa]
             P = P_z[z]
@@ -1088,31 +1100,58 @@ class HomoModelClass:
                     BC1_C_2 = 1/BC1_C_1
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
                     # backward
                     # GaDii_DiLeVa = 1
                     Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
                         SpCoi0)
                     Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC1)
                 elif z == zNo - 1:
                     # BC2
                     # backward
-                    Ci_b = SpCoi_z[i][z - 1]
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
                     # forward difference
                     Ci_f = Ci_b
+                    Ci_ff = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC2)
                 else:
                     # interior nodes
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2] if z < zNo-2 else 0
                     # backward
                     Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_G)
 
-                # cal differentiate
                 # central difference
-                dCdz = (Ci_c - Ci_b)/(1*dz)
+                # (Ci_c - Ci_b)/(1*dz)
+                # dCdz = FiDiDerivative1(funC, dz, DIFF_SET)
                 # convective term -> [no unit]
                 _convectiveTerm = -1*v_z_DiLeVa*dCdz
                 # central difference for dispersion
-                d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
+                # d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
                 # dispersion term [kmol/m^3.s] -> [no unit]
                 _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
                 # reaction term [kmol/m^3.s] -> [no unit]
@@ -1136,32 +1175,59 @@ class HomoModelClass:
                     BC1_T_2 = 1/BC1_T_1
                     # forward
                     T_f = T_z[z+1]
+                    T_ff = T_z[z+2]
                     # backward
                     # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
                     # T*[0] = (T0 - Tf)/Tf
                     T_0 = 0
                     T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                    T_bb = 0
+                    # function value
+                    dFdz_T = [T_b, T_c, T_f]
+                    d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # dFdz
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    # d2Fdz2
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
                 elif z == zNo - 1:
                     # BC2
                     # backward
                     T_b = T_z[z-1]
+                    T_bb = T_z[z-2]
                     # forward
                     T_f = T_b
+                    T_ff = 0
+                    # function value
+                    dFdz_T = [T_b, T_c, T_f]
+                    d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # dFdz
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    # d2Fdz2
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC2)
                 else:
                     # interior nodes
-                    # backward
-                    T_b = T_z[z-1]
                     # forward
                     T_f = T_z[z+1]
+                    T_ff = T_z[z+2] if z < zNo-2 else 0
+                    # backward
+                    T_b = T_z[z-1]
+                    T_bb = T_z[z-2]
+                    # function value
+                    dFdz_T = [T_b, T_c, T_f]
+                    d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # dFdz
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    # d2Fdz2
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_G)
 
                 # NOTE
                 # cal differentiate
                 # central difference
-                dTdz = (T_c - T_b)/(1*dz)
+                # dTdz = (T_c - T_b)/(1*dz)
                 # convective term
                 _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
                 # central difference
-                d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
+                # d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
                 # dispersion flux [kJ/m^3.s] -> [no unit]
                 _dispersionFluxT = (1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2
                 # heat of reaction term
