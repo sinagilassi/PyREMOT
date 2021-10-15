@@ -166,7 +166,7 @@ modelInput = {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "non-iso-thermal"
+        "process-type": "iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -203,9 +203,14 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "least_squares"
+        "root": "fsolve"
     }
 }
+
+# least_squares
+# Radau
+# LSODA
+# BDF
 
 # run exe
 res = rmtExe(modelInput)

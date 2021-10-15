@@ -3,6 +3,7 @@
 
 # import module/packages
 import numpy as np
+import matplotlib.pyplot as plt
 from solvers.solSetting import DIFF_SETTING
 
 
@@ -525,5 +526,161 @@ def FiDiDerivative2(F, dz, mode):
         elif mode == DIFF_SETTING['FD']:
             d2Fdz2 = (F_ff - 2*F_f + F_c)/(dz**2)
         return d2Fdz2
+    except Exception as e:
+        raise
+
+
+def FiDiNonUniformDerivative1(F, dz, mode, R):
+    """
+    calculate approximate first derivate of function F (non-uniform grid)
+    args:
+        F: value at i-1, i, i+1
+        dz: step size 
+        mode: derivate algorithm 
+            backward: -1
+            central: 0
+            forward: 1
+        R: ratio, x[i+1] = R*dz[i]
+    output:
+        dF/dt: value
+    """
+    # try/except
+    try:
+        F_b = F[0]
+        F_c = F[1]
+        F_f = F[2]
+        if mode == DIFF_SETTING['BD']:
+            dFdz = 0
+        elif mode == DIFF_SETTING['CD']:
+            dFdz = (F_f + ((R**2) - 1)*F_c - (R**2)*F_b)/(R*(R+1)*dz)
+        elif mode == DIFF_SETTING['FD']:
+            dFdz = 0
+        return dFdz
+    except Exception as e:
+        raise
+
+
+def FiDiNonUniformDerivative2(F, dz, mode, R):
+    """
+    calculate approximate second derivate of function F
+    args:
+        F: value at i-2, i-1, i, i+1, i+2
+        dz: step size 
+        mode: derivate algorithm 
+            backward: -1
+            central: 0
+            forward: 1
+        R: ratio, x[i+1] = R*dz[i]
+    output:
+        d2F/dz2: value
+    """
+    # try/except
+    try:
+        F_bb = F[0]
+        F_b = F[1]
+        F_c = F[2]
+        F_f = F[3]
+        F_ff = F[4]
+        if mode == DIFF_SETTING['BD']:
+            d2Fdz2 = (F_f - (R+1)*F_c + R*F_b)/(R*(R+1)*dz)
+        elif mode == DIFF_SETTING['CD']:
+            d2Fdz2 = (F_f - (R+1)*F_c + R*F_b)/(R*(R+1)*(dz**2)/2)
+        elif mode == DIFF_SETTING['FD']:
+            d2Fdz2 = 0
+        return d2Fdz2
+    except Exception as e:
+        raise
+
+
+def FiDiMeshGenerator(NoNo, DoLe, DoLeSe, MeReDe, display=False):
+    """
+    mesh generator: uniform/non-uniform
+    args:
+        NoNo: number of nodes
+            1: dense
+            2: normal
+        DoLe: domain length
+        DoLeSe: domain length section [%]
+            default: 
+                dense
+                normal
+        MeReDe: refineness degree
+            n>1: left side dense
+            n<1: right side dense
+    """
+    # try/except
+    try:
+        # dense domain length
+        DoLeDe = (DoLeSe/100)*DoLe
+        # normal domain length
+        DoLeNo = DoLe - DoLeDe
+        # dense node number
+        NoNoDe = NoNo[0]
+        # normal node number
+        NoNoNo = NoNo[1]
+        # total node numbers (overlap)
+        NoNoTo = NoNoDe + NoNoNo - 1
+        # total elements
+        ElNo = NoNoTo - 1
+        # element number dense
+        ElNoDe = NoNoDe-1
+        # element number normal
+        ElNoNo = NoNoNo-1
+
+        # display y
+        Ys = np.zeros(NoNoTo)
+        # node matrix
+        XsDense = np.zeros(NoNoDe)
+        dzDense = np.zeros(ElNoDe)
+
+        # index
+        n = 0
+        # mesh generation [dense]
+        for i in range(NoNoDe):
+            _Xsi = ((i/(NoNoDe - 1))**MeReDe)*DoLeDe
+            XsDense[i] = _Xsi
+            # check
+            if i > 0 and i < NoNoDe:
+                dzDense[n] = XsDense[i] - XsDense[i-1]
+                n = n+1
+
+        # mesh generation [normal]
+        XsNormal = np.linspace(DoLeDe, 1, NoNoNo)
+        dzNormal = np.zeros(NoNoNo-1)
+        # element size - dz [m]
+        _dz = (DoLe - DoLeDe)/(NoNoNo-1)
+        #
+        dzNormal = np.repeat(_dz, ElNoNo)
+
+        # combine
+        Xs = [*XsDense, *XsNormal[1:]]
+        dzs = [*dzDense, *dzNormal]
+
+        # R ratio
+        Rs = np.zeros(ElNo)
+        m = 0
+        for i in range(ElNo):
+            if i < ElNoDe-1:
+                _R = dzs[i]/dzs[i+1]
+                Rs[m] = _R
+                m = m+1
+            else:
+                Rs[m] = 1
+                m = m+1
+
+        #
+        res = {
+            "data1": Xs,
+            "data2": dzs,
+            "data3": NoNoTo,
+            "data4": Rs
+        }
+
+        # display
+        if display is True:
+            plt.scatter(Xs, Ys, marker='o')
+
+        # return
+        return res
     except Exception as e:
         raise

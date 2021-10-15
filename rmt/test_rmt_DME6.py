@@ -222,12 +222,12 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "non-iso-thermal"
+        "process-type": "iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,

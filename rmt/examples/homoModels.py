@@ -18,9 +18,10 @@ from data.inputDataReactor import *
 from core import constants as CONST
 from solvers.solSetting import solverSetting
 from solvers.solResultAnalysis import setOptimizeRootMethod
+from solvers.solFiDi import FiDiMeshGenerator
 from docs.rmtReaction import reactionRateExe, componentFormationRate
 from docs.fluidFilm import *
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiDerivative1, FiDiDerivative2
+from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from docs.rmtThermo import *
 from docs.gasTransPor import calTest
@@ -124,14 +125,34 @@ class HomoModelClass:
         # mixture thermal conductivity - gas phase [J/s.m.K]
         GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
 
+        # domain length
+        DoLe = 1
         # finite difference points in the z direction
         zNo = solverSetting['T1']['zNo']
         # length list [reactor length]
         dataXs = np.linspace(0, 1, zNo)
         # element size - dz [m]
-        dz = 1/(zNo-1)
+        dz = DoLe/(zNo-1)
         # orthogonal collocation points in the r direction
         rNo = solverSetting['T1']['rNo']
+        # mesh setting
+        zMesh = solverSetting['T1']['zMesh']
+        # number of nodes
+        zNoNo = zMesh['zNoNo']
+        # domain length section
+        DoLeSe = zMesh['DoLeSe']
+        # mesh refinement degree
+        MeReDe = zMesh['MeReDe']
+        # mesh installment
+        zMeshRes = FiDiMeshGenerator(zNoNo, DoLe, DoLeSe, MeReDe)
+        # finite difference points
+        dataXs = zMeshRes['data1']
+        # dz lengths
+        dzs = zMeshRes['data2']
+        # finite difference point number
+        zNo = zMeshRes['data3']
+        # R ratio
+        zR = zMeshRes['data4']
 
         ### calculation ###
         # interstitial gas velocity [m/s]
@@ -217,7 +238,7 @@ class HomoModelClass:
                     if j == 0:
                         # FIXME
                         # gas phase
-                        IV2D[noLayer - 1][j][i] = 0
+                        IV2D[noLayer - 1][j][i] = 0.5
                         # set bounds
                         BUp2D[noLayer - 1][j][i] = 1
                         BLower2D[noLayer - 1][j][i] = -1
@@ -338,7 +359,10 @@ class HomoModelClass:
                 "varNoColumns": varNoColumns,
                 "rNo": rNo,
                 "zNo": zNo,
-                "dz": dz
+                "dz": dz,
+                "dzs": dzs,
+                "zR": zR,
+                "zNoNo": zNoNo
             },
             "solverSetting": {
                 "dFdz": solverSetting['T1']['dFdz'],
@@ -540,7 +564,10 @@ class HomoModelClass:
                         varNoColumns: number of var columns [i]
                         zNo: number of finite difference in z direction
                         rNo: number of orthogonal collocation points in r direction
-                        dz: differential length [m]
+                        dz: differential length [-]
+                        dzs: differential length list [-]
+                        zR: z ratio
+                        zNoNo: number of nodes in the dense and normal sections
                     solverSetting:
                     reactionRateExpr: reaction rate expressions
                 DimensionlessAnalysisParams:
@@ -656,6 +683,16 @@ class HomoModelClass:
         zNo = meshSetting['zNo']
         # dz [m]
         dz = meshSetting['dz']
+        # dzs [m]/[-]
+        dzs = meshSetting['dzs']
+        # R ratio
+        zR = meshSetting['zR']
+        # number of nodes in the dense and normal sections
+        zNoNo = meshSetting['zNoNo']
+        # dense
+        zNoNoDense = zNoNo[0]
+        # normal
+        zNoNoNormal = zNoNo[1]
 
         # solver setting
         solverSetting = FunParam['solverSetting']
@@ -1093,9 +1130,9 @@ class HomoModelClass:
                 Ci_c = SpCoi_z[i][z]
 
                 # check BC
-                if z == 0:
-                    # BC1
-                    #
+                if z == 10000:
+                    # NOTE
+                    # BC1 (normal)
                     BC1_C_1 = PeNuMa0[i]*dz
                     BC1_C_2 = 1/BC1_C_1
                     # forward
@@ -1114,7 +1151,51 @@ class HomoModelClass:
                     dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
                     # d2Fdz2
                     d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC1)
+                elif z == 0:
+                    # NOTE
+                    # BC1 (dense)
+                    BC1_C_1 = PeNuMa0[i]*dzs[z]
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dzs[z], DIFF_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF_SET_G, zR[z])
+                elif z > 0 and z < zNoNoDense:
+                    # NOTE
+                    # dense section
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2] if z < zNoNoDense-2 else 0
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dzs[z], DIFF_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF_SET_G, zR[z])
                 elif z == zNo - 1:
+                    # NOTE
                     # BC2
                     # backward
                     Ci_b = SpCoi_z[i][z-1]
@@ -1130,6 +1211,8 @@ class HomoModelClass:
                     # d2Fdz2
                     d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC2)
                 else:
+                    # NOTE
+                    # normal sections
                     # interior nodes
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
@@ -1140,10 +1223,19 @@ class HomoModelClass:
                     # function value
                     dFdz_C = [Ci_b, Ci_c, Ci_f]
                     d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
                     # dFdz
                     dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
                     # d2Fdz2
                     d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_G)
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dz, DIFF_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dz, DIFF_SET_G, zR[z])
 
                 # central difference
                 # (Ci_c - Ci_b)/(1*dz)

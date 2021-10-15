@@ -91,6 +91,14 @@
       "program": "${workspaceFolder}\\rmt\\solvers\\solOrCo.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Mesh Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\rmt\\testMesh.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
     }
   ]
 }

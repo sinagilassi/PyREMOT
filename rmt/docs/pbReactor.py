@@ -4029,7 +4029,7 @@ class PackedBedReactorClass:
         # Peclet number - mass transfer
         PeNuMa0 = (vf*zf)/Dif
         # Peclet number - heat transfer
-        PeNuHe0 = GaThCoMix0/(zf*GaDe0*(Cpf/MiMoWe0)*vf)
+        PeNuHe0 = (zf*GaDe0*(Cpf/MiMoWe0)*vf)/GaThCoMix0
 
         ### transfer coefficient ###
         # mass transfer coefficient - gas/solid [m/s]
@@ -4910,10 +4910,10 @@ class PackedBedReactorClass:
             # heat transfer area over volume [m^2/m^3]
             a = ExHe['EfHeTrAr']
             # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
-            Ua = U*a
+            # Ua = U*a
             # external heat [kJ/m^3.s]
             Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
-                Tm, T, U, a, 'kJ/m^3.s')
+                Tm, T_ReVa, U, a, 'kJ/m^3.s')
 
             # NOTE
             # mass transfer between
@@ -4978,24 +4978,8 @@ class PackedBedReactorClass:
             # matrix
             # dxdtMat = np.zeros((varNo, zNo))
 
-            # [kmol/m^2.s][kJ/kmol.K]=[kJ/m^2.s.K]
-            const_T1 = MoFl*GaCpMeanMix
-            # [kmol/m^3][kJ/kmol.K]=[kJ/m^3.K]
-            const_T2 = 1/(CoSp*GaCpMeanMixEff)
-
-            # catalyst
-            const_Cs1 = 1/(CaPo*(PaRa**2))
-            const_Ts1 = 1/(SoCpMeanMixEff*(PaRa**2))
-
             # bulk temperature [K]
             T_c = T_z[z]
-
-            # REVIEW
-            # gas-solid interface BC
-            # concentration [m/s]*[m^2/s]=[1/m]
-            betaC = PaRa*(MaTrCo/SoDiiEff)
-            # temperature
-            betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
 
             # universal index [j,i]
             # UISet = z*(rNo + 1)
@@ -5069,7 +5053,7 @@ class PackedBedReactorClass:
                 # CosSpi_cat
                 # inward flux [kmol/m^2.s]
                 # MoFli_z[i] = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
-                _inwardFlux = MoFli_z[i]*SpSuAr
+                _inwardFlux = (1/GaMaCoTe0[i])*MoFli_z[i]*SpSuAr
                 # mass balance
                 # convective, dispersion, inward flux
                 # const

@@ -32,7 +32,7 @@ solverSetting = {
     },
     "S2": {
         "tNo": 10,
-        "zNo": 25,
+        "zNo": 100,
         "rNo": 5,
         "timesNo": 5
     },
@@ -40,6 +40,11 @@ solverSetting = {
         "timesNo": 25
     },
     "T1": {
+        "zMesh": {
+            "zNoNo": [20, 10],
+            "DoLeSe": 30,
+            "MeReDe": 2.5
+        },
         "zNo": 30,
         "rNo": 0,
         "dFdz": DIFF_SETTING['BD'],
