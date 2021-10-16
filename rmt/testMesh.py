@@ -1,17 +1,21 @@
 # import module//package
 from solvers.solFiDi import FiDiMeshGenerator
+from solvers.solSetting import solverSetting
 
 # input
-# number of nodes
-NoNo = [20, 10]
 # domain length
 DoLe = 1
+# mesh setting
+zMesh = solverSetting['T1']['zMesh']
+# number of nodes
+NoNo = zMesh['zNoNo']
 # domain length section
-DoLeSe = 30
+DoLeSe = zMesh['DoLeSe']
 # mesh refinement degree
-MeReDe = 2.5
+MeReDe = zMesh['MeReDe']
+
 # display
 display = True
 
 res = FiDiMeshGenerator(NoNo, DoLe, DoLeSe, MeReDe, display)
-print("res: ", res)
+# print("res: ", res)

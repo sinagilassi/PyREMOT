@@ -17,7 +17,9 @@
 # NOTE
 # timeNo = zNo of S2 for comparison
 
-# S4
+# T2
+# backward diffrentate for dF/dz
+# central diffrentate for d2F/dz2
 
 DIFF_SETTING = {
     "BD": -1,
@@ -33,7 +35,7 @@ solverSetting = {
     "S2": {
         "tNo": 10,
         "zNo": 100,
-        "rNo": 5,
+        "rNo": 10,
         "timesNo": 5
     },
     "S3": {
@@ -41,9 +43,9 @@ solverSetting = {
     },
     "T1": {
         "zMesh": {
-            "zNoNo": [20, 10],
-            "DoLeSe": 30,
-            "MeReDe": 2.5
+            "zNoNo": [100, 3],
+            "DoLeSe": 95,
+            "MeReDe": 1.3
         },
         "zNo": 30,
         "rNo": 0,
@@ -51,13 +53,13 @@ solverSetting = {
         "d2Fdz2": {
             "BC1": DIFF_SETTING['CD'],
             "BC2": DIFF_SETTING['CD'],
-            "G": DIFF_SETTING['BD']
+            "G": DIFF_SETTING['CD']
         },
         "dTdz": DIFF_SETTING['BD'],
         "d2Tdz2": {
             "BC1": DIFF_SETTING['CD'],
             "BC2": DIFF_SETTING['CD'],
-            "G": DIFF_SETTING['BD']
+            "G": DIFF_SETTING['CD']
         },
     },
 }

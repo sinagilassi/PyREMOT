@@ -161,12 +161,12 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal"
+        "process-type": "non-iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -203,14 +203,18 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "fsolve"
+        "root": "least_squares",
+        "mesh": "refine"
     }
 }
 
+# fsolve
 # least_squares
 # Radau
 # LSODA
 # BDF
+# refine
+# normal
 
 # run exe
 res = rmtExe(modelInput)

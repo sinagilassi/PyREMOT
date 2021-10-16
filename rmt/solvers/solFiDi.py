@@ -546,15 +546,17 @@ def FiDiNonUniformDerivative1(F, dz, mode, R):
     """
     # try/except
     try:
-        F_b = F[0]
-        F_c = F[1]
-        F_f = F[2]
+        F_bb = F[0]
+        F_b = F[1]
+        F_c = F[2]
+        F_f = F[3]
+        F_ff = F[4]
         if mode == DIFF_SETTING['BD']:
-            dFdz = 0
+            dFdz = (F_bb - ((1+R)**2)*F_b + R*(R+2)*F_c)/(R*(R+1)*dz)
         elif mode == DIFF_SETTING['CD']:
             dFdz = (F_f + ((R**2) - 1)*F_c - (R**2)*F_b)/(R*(R+1)*dz)
         elif mode == DIFF_SETTING['FD']:
-            dFdz = 0
+            dFdz = (-F_ff + ((R+1)**2)*F_f - R*(R+2)*F_c)/(R*(R+1)*dz)
         return dFdz
     except Exception as e:
         raise
@@ -582,11 +584,11 @@ def FiDiNonUniformDerivative2(F, dz, mode, R):
         F_f = F[3]
         F_ff = F[4]
         if mode == DIFF_SETTING['BD']:
-            d2Fdz2 = (F_f - (R+1)*F_c + R*F_b)/(R*(R+1)*dz)
+            d2Fdz2 = (F_ff - (R+1)*F_f + R*F_c)/(R*(R+1)*(dz**2)/2)
         elif mode == DIFF_SETTING['CD']:
             d2Fdz2 = (F_f - (R+1)*F_c + R*F_b)/(R*(R+1)*(dz**2)/2)
         elif mode == DIFF_SETTING['FD']:
-            d2Fdz2 = 0
+            d2Fdz2 = (F_ff - (R+1)*F_f + R*F_c)/(R*(R+1)*(dz**2)/2)
         return d2Fdz2
     except Exception as e:
         raise
@@ -621,16 +623,20 @@ def FiDiMeshGenerator(NoNo, DoLe, DoLeSe, MeReDe, display=False):
         # total node numbers (overlap)
         NoNoTo = NoNoDe + NoNoNo - 1
         # total elements
-        ElNo = NoNoTo - 1
+        ElNo = NoNoTo
         # element number dense
         ElNoDe = NoNoDe-1
         # element number normal
-        ElNoNo = NoNoNo-1
+        ElNoNo = NoNoNo
 
         # display y
         Ys = np.zeros(NoNoTo)
+        Ys0 = np.ones(NoNoTo)
+
         # node matrix
         XsDense = np.zeros(NoNoDe)
+        YsDense = 0.1*np.ones(NoNoDe)
+        # backward
         dzDense = np.zeros(ElNoDe)
 
         # index
@@ -640,45 +646,86 @@ def FiDiMeshGenerator(NoNo, DoLe, DoLeSe, MeReDe, display=False):
             _Xsi = ((i/(NoNoDe - 1))**MeReDe)*DoLeDe
             XsDense[i] = _Xsi
             # check
-            if i > 0 and i < NoNoDe:
+            if i > 0 and i <= NoNoDe:
                 dzDense[n] = XsDense[i] - XsDense[i-1]
                 n = n+1
 
         # mesh generation [normal]
         XsNormal = np.linspace(DoLeDe, 1, NoNoNo)
+        YsNormal = 0.2*np.ones(NoNoNo)
         dzNormal = np.zeros(NoNoNo-1)
         # element size - dz [m]
-        _dz = (DoLe - DoLeDe)/(NoNoNo-1)
-        #
-        dzNormal = np.repeat(_dz, ElNoNo)
+        dz = (DoLe - DoLeDe)/(NoNoNo-1)
+        # normal size
+        dzNormal = np.repeat(dz, ElNoNo)
 
         # combine
         Xs = [*XsDense, *XsNormal[1:]]
         dzs = [*dzDense, *dzNormal]
 
+        # sum dz
+        dzSum = np.sum(dzs)
+
         # R ratio
         Rs = np.zeros(ElNo)
+        # backward
+        Rs_b = np.zeros(ElNo)
+        # central
+        Rs_c = np.zeros(ElNo)
+        # forward
+        Rs_f = np.zeros(ElNo)
+
         m = 0
         for i in range(ElNo):
-            if i < ElNoDe-1:
-                _R = dzs[i]/dzs[i+1]
-                Rs[m] = _R
-                m = m+1
+            # backward
+            if i < 2:
+                pass
+            elif i >= 2 and i <= ElNoDe:
+                _Rs_b = dzs[i-2]/dzs[i-1]
+                Rs_b[m] = _Rs_b
             else:
-                Rs[m] = 1
-                m = m+1
+                Rs_b[m] = 1
+            # central
+            if i == 0:
+                pass
+            elif i > 0 and i <= ElNoDe:
+                _Rs_c = dzs[i]/dzs[i-1]
+                Rs_c[m] = _Rs_c
+            else:
+                Rs_c[m] = 1
+            # forward
+            if i < ElNoDe:
+                _Rs_f = dzs[i+1]/dzs[i]
+                Rs_f[m] = _Rs_f
+            else:
+                Rs_f[m] = 1
+            # set m
+            m = m+1
 
         #
         res = {
             "data1": Xs,
             "data2": dzs,
             "data3": NoNoTo,
-            "data4": Rs
+            "data4": Rs,
+            "data5": dz
         }
 
         # display
         if display is True:
             plt.scatter(Xs, Ys, marker='o')
+            plt.scatter(XsDense, YsDense, marker='o', c='coral')
+            plt.scatter(XsNormal, YsNormal, marker='o', c='lightblue')
+            # show
+            plt.show()
+
+        # check
+        # last mesh size dense
+        dzDenseEnd = dzDense[-1]
+        lineRatio = dz/dzDenseEnd
+        if lineRatio < 1:
+            print("dz is smaller that dzDense[-1]")
+            # raise
 
         # return
         return res

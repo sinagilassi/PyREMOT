@@ -222,7 +222,7 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "M11",
+    "model": "T2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -264,9 +264,17 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "Radau",
-        "root": "least_squares"
+        "root": "least_squares",
+        "mesh": "refine"
     }
 }
+
+# fsolve
+# least_squares
+# Radau
+# LSODA
+# BDF
+# normal
 
 # run exe
 res = rmtExe(modelInput)

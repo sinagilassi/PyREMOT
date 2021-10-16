@@ -27,6 +27,7 @@ from core.eqConstants import CONST_EQ_Sh
 from solvers.solOrCo import OrCoClass
 from solvers.solCatParticle import OrCoCatParticleClass
 from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiSetMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
+from solvers.solFiDi import FiDiMeshGenerator, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
 
 
 class PackedBedReactorClass:
@@ -2719,6 +2720,9 @@ class PackedBedReactorClass:
         # gas mixture viscosity [Pa.s]
         GaMiVi = self.modelInput['feed']['mixture-viscosity']
 
+        # REVIEW
+        # domain length
+        DoLe = 1
         # finite difference points in the z direction
         zNo = solverSetting['S2']['zNo']
         # length list
@@ -3797,6 +3801,8 @@ class PackedBedReactorClass:
         # solver setting
         solverConfig = self.modelInput['solver-config']
         solverIVPSet = solverConfig['ivp']
+        solverMesh = solverConfig['mesh']
+        solverMeshSet = True if solverMesh == "normal" else False
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -3867,16 +3873,42 @@ class PackedBedReactorClass:
         # mixture thermal conductivity - gas phase [J/s.m.K]
         GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
 
-        # finite difference points in the z direction
         # REVIEW
-        # dimensionless length [0,1]
-        zNo = solverSetting['S2']['zNo']
-        # length list
-        dataXs = np.linspace(0, 1, zNo)
-        # element size - dz [m]
-        dz = 1/(zNo-1)
+        # domain length
+        DoLe = 1
         # orthogonal collocation points in the r direction
         rNo = solverSetting['S2']['rNo']
+        # mesh setting
+        zMesh = solverSetting['T1']['zMesh']
+        # number of nodes
+        zNoNo = zMesh['zNoNo']
+        # domain length section
+        DoLeSe = zMesh['DoLeSe']
+        # mesh refinement degree
+        MeReDe = zMesh['MeReDe']
+        # mesh installment
+        if solverMeshSet is False:
+            zMeshRes = FiDiMeshGenerator(zNoNo, DoLe, DoLeSe, MeReDe)
+            # finite difference points
+            dataXs = zMeshRes['data1']
+            # dz lengths
+            dzs = zMeshRes['data2']
+            # finite difference point number
+            zNo = zMeshRes['data3']
+            # R ratio
+            zR = zMeshRes['data4']
+            # dz
+            dz = zMeshRes['data5']
+        else:
+            # finite difference points in the z direction
+            zNo = solverSetting['T1']['zNo']
+            # length list [reactor length]
+            dataXs = np.linspace(0, DoLe, zNo)
+            # element size - dz [m]
+            dz = DoLe/(zNo-1)
+            # reset
+            dzs = []
+            zR = []
 
         ### calculation ###
         # mole fraction in the gas phase
@@ -4066,6 +4098,8 @@ class PackedBedReactorClass:
                 "GaThCoMix0": GaThCoMix0
             },
             "meshSetting": {
+                "solverMesh": solverMesh,
+                "solverMeshSet": solverMeshSet,
                 "noLayer": noLayer,
                 "varNoLayer": varNoLayer,
                 "varNoLayerT": varNoLayerT,
@@ -4073,10 +4107,16 @@ class PackedBedReactorClass:
                 "varNoColumns": varNoColumns,
                 "rNo": rNo,
                 "zNo": zNo,
-                "dz": dz
+                "dz": dz,
+                "dzs": dzs,
+                "zR": zR,
+                "zNoNo": zNoNo
             },
             "solverSetting": {
-
+                "dFdz": solverSetting['T1']['dFdz'],
+                "d2Fdz2": solverSetting['T1']['d2Fdz2'],
+                "dTdz": solverSetting['T1']['dTdz'],
+                "d2Tdz2": solverSetting['T1']['d2Tdz2'],
             },
             "reactionRateExpr": reactionRateExpr
 
@@ -4323,6 +4363,10 @@ class PackedBedReactorClass:
                         P0: inlet pressure [Pa]
                         T0: inlet temperature [K]
                     meshSetting:
+                        solverMesh: mesh installment
+                        solverMeshSet: 
+                            true: normal
+                            false: mesh refinement
                         noLayer: number of layers
                         varNoLayer: var no in each layer
                         varNoLayerT: total number of vars (Ci,T,Cci,Tci)
@@ -4331,6 +4375,9 @@ class PackedBedReactorClass:
                         zNo: number of finite difference in z direction
                         rNo: number of orthogonal collocation points in r direction
                         dz: differential length [m]
+                        dzs: differential length list [-]
+                        zR: z ratio
+                        zNoNo: number of nodes in the dense and normal sections
                     solverSetting:
                     reactionRateExpr: reaction rate expressions
                 DimensionlessAnalysisParams:
@@ -4430,6 +4477,10 @@ class PackedBedReactorClass:
 
         # mesh setting
         meshSetting = FunParam['meshSetting']
+        # mesh installment
+        solverMesh = meshSetting['solverMesh']
+        # mesh refinement
+        solverMeshSet = meshSetting['solverMeshSet']
         # number of layers
         noLayer = meshSetting['noLayer']
         # var no in each layer
@@ -4446,9 +4497,29 @@ class PackedBedReactorClass:
         zNo = meshSetting['zNo']
         # dz [m]
         dz = meshSetting['dz']
+        # dzs [m]/[-]
+        dzs = meshSetting['dzs']
+        # R ratio
+        zR = meshSetting['zR']
+        # number of nodes in the dense and normal sections
+        zNoNo = meshSetting['zNoNo']
+        # dense
+        zNoNoDense = zNoNo[0]
+        # normal
+        zNoNoNormal = zNoNo[1]
 
         # solver setting
         solverSetting = FunParam['solverSetting']
+        # mass balance equation
+        DIFF1_C_SET = solverSetting['dFdz']
+        DIFF2_C_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        DIFF2_C_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        DIFF2_C_SET_G = solverSetting['d2Fdz2']['G']
+        # energy balance equation
+        DIFF1_T_SET = solverSetting['dTdz']
+        DIFF2_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        DIFF2_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        DIFF2_T_SET_G = solverSetting['d2Tdz2']['G']
 
         # reaction rate expressions
         reactionRateExpr = FunParam['reactionRateExpr']
@@ -4993,60 +5064,156 @@ class PackedBedReactorClass:
                 # concentration [kmol/m^3]
                 # central
                 Ci_c = SpCoi_z[i][z]
+                # # check BC
+                # if z == 0:
+                #     # BC1
+                #     #
+                #     BC1_C_1 = PeNuMa0[i]*dz
+                #     BC1_C_2 = 1/BC1_C_1
+                #     # forward
+                #     Ci_f = SpCoi_z[i][z+1]
+                #     # backward
+                #     # GaDii_DiLeVa = 1
+                #     Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                #         SpCoi0)
+                #     Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                # elif z == zNo - 1:
+                #     # BC2
+                #     # backward
+                #     Ci_b = SpCoi_z[i][z - 1]
+                #     # forward difference
+                #     Ci_f = Ci_b
+                # else:
+                #     # interior nodes
+                #     # forward
+                #     Ci_f = SpCoi_z[i][z+1]
+                #     # backward
+                #     Ci_b = SpCoi_z[i][z-1]
+
                 # check BC
-                if z == 0:
-                    # BC1
-                    #
+                if z == 0 and solverMeshSet is True:
+                    # NOTE
+                    # BC1 (normal)
                     BC1_C_1 = PeNuMa0[i]*dz
                     BC1_C_2 = 1/BC1_C_1
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
                     # backward
                     # GaDii_DiLeVa = 1
                     Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
                         SpCoi0)
                     Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC1)
+                elif z == 0 and solverMeshSet is False:
+                    # NOTE
+                    # BC1 (dense)
+                    # i=0 is discretized based on inlet
+                    # i=1
+                    BC1_C_1 = PeNuMa0[i]*dzs[z]
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dzs[z], DIFF1_C_SET)
+                    # d2Fdz2
+                    # d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1)
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = 0
+                    _zR_c = dzs[z]/dzs[z-1]
+                    # dCdz = FiDiNonUniformDerivative1(
+                    #     dFdz_C, dzs[z], DIFF1_C_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1, _zR_c)
+                elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                    # NOTE
+                    # dense section
+                    # i=2,...,zNoNoDense-1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = dzs[z-2]/dzs[z-1]
+                    _zR_c = dzs[z]/dzs[z-1]
+                    #
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dzs[z], DIFF1_C_SET, _zR_b)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_G, _zR_c)
                 elif z == zNo - 1:
+                    # NOTE
                     # BC2
                     # backward
-                    Ci_b = SpCoi_z[i][z - 1]
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
                     # forward difference
                     Ci_f = Ci_b
+                    Ci_ff = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC2)
                 else:
+                    # NOTE
+                    # normal sections
                     # interior nodes
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2] if z < zNo-2 else 0
                     # backward
                     Ci_b = SpCoi_z[i][z-1]
-
-                # check BC
-                # if z == 0:
-                #     # BC1
-                #     constC_BC1 = GaDii[i]*BeVoFr/v_z[z]
-                #     # forward
-                #     Ci_f = SpCoi_z[i][z+1]
-                #     Ci_b = (1/(constC_BC1 + dz)) * \
-                #         (SpCoi0[i]*dz + constC_BC1*(Ci_f))
-                # elif z == zNo - 1:
-                #     # BC2
-                #     # forward difference
-                #     Ci_f = 0
-                #     # previous node
-                #     Ci_b = max(SpCoi_z[i][z - 1], CONST.EPS_CONST)
-                # else:
-                #     # forward
-                #     Ci_f = SpCoi_z[i][z+1]
-                #     # interior nodes
-                #     Ci_b = max(SpCoi_z[i][z - 1], CONST.EPS_CONST)
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_G)
 
                 # REVIEW
                 # cal differentiate
                 # backward difference
-                dCdz = (Ci_c - Ci_b)/(1*dz)
+                # dCdz = (Ci_c - Ci_b)/(1*dz)
                 # convective term
                 _convectiveTerm = -1*v_z_DiLeVa*dCdz
                 # central difference for dispersion
-                d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
+                # d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
                 # dispersion term [kmol/m^3.s]
                 _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
                 # concentration in the catalyst surface [kmol/m^3]
@@ -5102,38 +5269,148 @@ class PackedBedReactorClass:
             _Ts_r = Ts_r.flatten()
 
             # check BC
-            if z == 0:
+            # if z == 0:
+            #     # BC1
+            #     BC1_T_1 = PeNuHe0*dz
+            #     BC1_T_2 = 1/BC1_T_1
+            #     # forward
+            #     T_f = T_z[z+1]
+            #     # backward
+            #     # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+            #     # T*[0] = (T0 - Tf)/Tf
+            #     T_0 = 0
+            #     T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+            # elif z == zNo - 1:
+            #     # BC2
+            #     # backward
+            #     T_b = T_z[z-1]
+            #     # forward
+            #     T_f = T_b
+            # else:
+            #     # interior nodes
+            #     # backward
+            #     T_b = T_z[z-1]
+            #     # forward
+            #     T_f = T_z[z+1]
+
+            # check BC
+            if z == 0 and solverMeshSet is True:
                 # BC1
                 BC1_T_1 = PeNuHe0*dz
                 BC1_T_2 = 1/BC1_T_1
                 # forward
                 T_f = T_z[z+1]
+                T_ff = T_z[z+2]
                 # backward
                 # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
                 # T*[0] = (T0 - Tf)/Tf
                 T_0 = 0
                 T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC1)
+            elif z == 0 and solverMeshSet is False:
+                # BC1
+                BC1_T_1 = PeNuHe0*dzs[z]
+                BC1_T_2 = 1/BC1_T_1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dzs[z], DIFF1_T_SET)
+                # d2Fdz2
+                # d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = 0
+                _zR_c = dzs[z]/dzs[z-1]
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+            elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                # NOTE
+                # dense section
+                # i=2,...,zNoNoDense-1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_bb, T_b, T_c, T_f, T_ff]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = dzs[z-2]/dzs[z-1]
+                _zR_c = dzs[z]/dzs[z-1]
+                #
+                dTdz = FiDiNonUniformDerivative1(
+                    dFdz_T, dzs[z], DIFF1_T_SET, _zR_b)
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
             elif z == zNo - 1:
                 # BC2
                 # backward
                 T_b = T_z[z-1]
+                T_bb = T_z[z-2]
                 # forward
                 T_f = T_b
+                T_ff = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC2)
             else:
                 # interior nodes
-                # backward
-                T_b = T_z[z-1]
                 # forward
                 T_f = T_z[z+1]
+                T_ff = T_z[z+2] if z < zNo-2 else 0
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_G)
 
             # REVIEW
             # cal differentiate
             # backward difference
-            dTdz = (T_c - T_b)/(1*dz)
+            # dTdz = (T_c - T_b)/(1*dz)
             # convective term
             _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
             # central difference
-            d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
+            # d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
             # dispersion flux [kJ/m^3.s]
             # _dispersionFluxT = (GaThCoEff*d2Tdz2)*1e-3
             _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1
@@ -5197,6 +5474,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

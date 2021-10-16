@@ -53,6 +53,8 @@ class HomoModelClass:
         # solver setting
         solverConfig = self.modelInput['solver-config']
         solverRootSet = solverConfig['root']
+        solverMesh = solverConfig['mesh']
+        solverMeshSet = True if solverMesh == "normal" else False
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -127,12 +129,7 @@ class HomoModelClass:
 
         # domain length
         DoLe = 1
-        # finite difference points in the z direction
-        zNo = solverSetting['T1']['zNo']
-        # length list [reactor length]
-        dataXs = np.linspace(0, 1, zNo)
-        # element size - dz [m]
-        dz = DoLe/(zNo-1)
+
         # orthogonal collocation points in the r direction
         rNo = solverSetting['T1']['rNo']
         # mesh setting
@@ -144,15 +141,28 @@ class HomoModelClass:
         # mesh refinement degree
         MeReDe = zMesh['MeReDe']
         # mesh installment
-        zMeshRes = FiDiMeshGenerator(zNoNo, DoLe, DoLeSe, MeReDe)
-        # finite difference points
-        dataXs = zMeshRes['data1']
-        # dz lengths
-        dzs = zMeshRes['data2']
-        # finite difference point number
-        zNo = zMeshRes['data3']
-        # R ratio
-        zR = zMeshRes['data4']
+        if solverMeshSet is False:
+            zMeshRes = FiDiMeshGenerator(zNoNo, DoLe, DoLeSe, MeReDe)
+            # finite difference points
+            dataXs = zMeshRes['data1']
+            # dz lengths
+            dzs = zMeshRes['data2']
+            # finite difference point number
+            zNo = zMeshRes['data3']
+            # R ratio
+            zR = zMeshRes['data4']
+            # dz
+            dz = zMeshRes['data5']
+        else:
+            # finite difference points in the z direction
+            zNo = solverSetting['T1']['zNo']
+            # length list [reactor length]
+            dataXs = np.linspace(0, DoLe, zNo)
+            # element size - dz [m]
+            dz = DoLe/(zNo-1)
+            # reset
+            dzs = []
+            zR = []
 
         ### calculation ###
         # interstitial gas velocity [m/s]
@@ -238,7 +248,7 @@ class HomoModelClass:
                     if j == 0:
                         # FIXME
                         # gas phase
-                        IV2D[noLayer - 1][j][i] = 0.5
+                        IV2D[noLayer - 1][j][i] = 0.25
                         # set bounds
                         BUp2D[noLayer - 1][j][i] = 1
                         BLower2D[noLayer - 1][j][i] = -1
@@ -350,6 +360,8 @@ class HomoModelClass:
                 "GaThCoMix0": GaThCoMix0,
             },
             "meshSetting": {
+                "solverMesh": solverMesh,
+                "solverMeshSet": solverMeshSet,
                 "noLayerC": noLayerC,
                 "noLayerT": noLayerT,
                 "noLayer": noLayer,
@@ -424,7 +436,7 @@ class HomoModelClass:
             # root
             # lm, krylov, anderson, hybr, broyden1, linearmixing, diagbroyden, excitingmixing
             sol = optimize.root(HomoModelClass.modelEquationT1, IV, args=(
-                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, processType), method='lm')
+                reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, processType), method='anderson')
             # result
             successStatus = sol.success
             # all results
@@ -555,6 +567,10 @@ class HomoModelClass:
                         GaCpMeanMix0: heat capacity at constant pressure of gas mixture [kJ/kmol.K] | [J/mol.K]
                         GaThCoMix0: gas thermal conductivity [J/s.m.K]
                     meshSetting:
+                        solverMesh: mesh installment
+                        solverMeshSet: 
+                            true: normal
+                            false: mesh refinement
                         noLayerC: number of layers for concentration
                         noLayerT: number of layers for temperature
                         noLayer: number of layers
@@ -665,6 +681,10 @@ class HomoModelClass:
 
         # mesh setting
         meshSetting = FunParam['meshSetting']
+        # mesh installment
+        solverMesh = meshSetting['solverMesh']
+        # mesh refinement
+        solverMeshSet = meshSetting['solverMeshSet']
         # number of layers for concentration
         noLayerC = meshSetting['noLayerC']
         # number of layers for temperature
@@ -696,15 +716,16 @@ class HomoModelClass:
 
         # solver setting
         solverSetting = FunParam['solverSetting']
-        DIFF_SET = solverSetting['dFdz']
-        DIFF_SET_BC1 = solverSetting['d2Fdz2']['BC1']
-        DIFF_SET_BC2 = solverSetting['d2Fdz2']['BC2']
-        DIFF_SET_G = solverSetting['d2Fdz2']['G']
+        # mass balance equation
+        DIFF1_C_SET = solverSetting['dFdz']
+        DIFF2_C_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        DIFF2_C_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        DIFF2_C_SET_G = solverSetting['d2Fdz2']['G']
         # energy balance equation
-        DIFF_T_SET = solverSetting['dTdz']
-        DIFF_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
-        DIFF_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
-        DIFF_T_SET_G = solverSetting['d2Tdz2']['G']
+        DIFF1_T_SET = solverSetting['dTdz']
+        DIFF2_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        DIFF2_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        DIFF2_T_SET_G = solverSetting['d2Tdz2']['G']
 
         # reaction rate expressions
         reactionRateExpr = FunParam['reactionRateExpr']
@@ -1130,7 +1151,7 @@ class HomoModelClass:
                 Ci_c = SpCoi_z[i][z]
 
                 # check BC
-                if z == 10000:
+                if z == 0 and solverMeshSet is True:
                     # NOTE
                     # BC1 (normal)
                     BC1_C_1 = PeNuMa0[i]*dz
@@ -1148,12 +1169,14 @@ class HomoModelClass:
                     dFdz_C = [Ci_b, Ci_c, Ci_f]
                     d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
                     # dFdz
-                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
                     # d2Fdz2
-                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC1)
-                elif z == 0:
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC1)
+                elif z == 0 and solverMeshSet is False:
                     # NOTE
                     # BC1 (dense)
+                    # i=0 is discretized based on inlet
+                    # i=1
                     BC1_C_1 = PeNuMa0[i]*dzs[z]
                     BC1_C_2 = 1/BC1_C_1
                     # forward
@@ -1169,31 +1192,44 @@ class HomoModelClass:
                     dFdz_C = [Ci_b, Ci_c, Ci_f]
                     d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
                     # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dzs[z], DIFF1_C_SET)
+                    # d2Fdz2
+                    # d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1)
                     ### non-uniform nodes ###
-                    dCdz = FiDiNonUniformDerivative1(
-                        dFdz_C, dzs[z], DIFF_SET, zR[z])
+                    # R value
+                    _zR_b = 0
+                    _zR_c = dzs[z]/dzs[z-1]
+                    # dCdz = FiDiNonUniformDerivative1(
+                    #     dFdz_C, dzs[z], DIFF1_C_SET, zR[z])
                     # d2Fdz2
                     d2Cdz2 = FiDiNonUniformDerivative2(
-                        d2Fdz2_C, dzs[z], DIFF_SET_G, zR[z])
-                elif z > 0 and z < zNoNoDense:
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1, _zR_c)
+                elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
                     # NOTE
                     # dense section
+                    # i=2,...,zNoNoDense-1
                     # forward
                     Ci_f = SpCoi_z[i][z+1]
-                    Ci_ff = SpCoi_z[i][z+2] if z < zNoNoDense-2 else 0
+                    Ci_ff = SpCoi_z[i][z+2]
                     # backward
                     Ci_b = SpCoi_z[i][z-1]
                     Ci_bb = SpCoi_z[i][z-2]
                     # function value
-                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    dFdz_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
                     d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
                     # REVIEW
                     ### non-uniform nodes ###
+                    # R value
+                    _zR_b = dzs[z-2]/dzs[z-1]
+                    _zR_c = dzs[z]/dzs[z-1]
+                    #
                     dCdz = FiDiNonUniformDerivative1(
-                        dFdz_C, dzs[z], DIFF_SET, zR[z])
+                        dFdz_C, dzs[z], DIFF1_C_SET, _zR_b)
                     # d2Fdz2
                     d2Cdz2 = FiDiNonUniformDerivative2(
-                        d2Fdz2_C, dzs[z], DIFF_SET_G, zR[z])
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_G, _zR_c)
                 elif z == zNo - 1:
                     # NOTE
                     # BC2
@@ -1207,9 +1243,9 @@ class HomoModelClass:
                     dFdz_C = [Ci_b, Ci_c, Ci_f]
                     d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
                     # dFdz
-                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
                     # d2Fdz2
-                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_BC2)
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC2)
                 else:
                     # NOTE
                     # normal sections
@@ -1226,28 +1262,15 @@ class HomoModelClass:
                     # REVIEW
                     ### uniform nodes ###
                     # dFdz
-                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF_SET)
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
                     # d2Fdz2
-                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF_SET_G)
-                    # REVIEW
-                    ### non-uniform nodes ###
-                    dCdz = FiDiNonUniformDerivative1(
-                        dFdz_C, dz, DIFF_SET, zR[z])
-                    # d2Fdz2
-                    d2Cdz2 = FiDiNonUniformDerivative2(
-                        d2Fdz2_C, dz, DIFF_SET_G, zR[z])
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_G)
 
-                # central difference
-                # (Ci_c - Ci_b)/(1*dz)
-                # dCdz = FiDiDerivative1(funC, dz, DIFF_SET)
                 # convective term -> [no unit]
                 _convectiveTerm = -1*v_z_DiLeVa*dCdz
-                # central difference for dispersion
-                # d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
                 # dispersion term [kmol/m^3.s] -> [no unit]
                 _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
                 # reaction term [kmol/m^3.s] -> [no unit]
-                # REVIEW
                 _reactionTerm = (1/GaMaCoTe0[i])*ri[i]
                 # mass balance
                 # convective, dispersion, reaction terms
@@ -1261,7 +1284,7 @@ class HomoModelClass:
 
             if processType != PROCESS_SETTING['ISO-THER']:
                 # check BC
-                if z == 0:
+                if z == 0 and solverMeshSet is True:
                     # BC1
                     BC1_T_1 = PeNuHe0*dz
                     BC1_T_2 = 1/BC1_T_1
@@ -1278,9 +1301,63 @@ class HomoModelClass:
                     dFdz_T = [T_b, T_c, T_f]
                     d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
                     # dFdz
-                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
                     # d2Fdz2
-                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC1)
+                elif z == 0 and solverMeshSet is False:
+                    # BC1
+                    BC1_T_1 = PeNuHe0*dzs[z]
+                    BC1_T_2 = 1/BC1_T_1
+                    # forward
+                    T_f = T_z[z+1]
+                    T_ff = T_z[z+2]
+                    # backward
+                    # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                    # T*[0] = (T0 - Tf)/Tf
+                    T_0 = 0
+                    T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                    T_bb = 0
+                    # function value
+                    dFdz_T = [T_b, T_c, T_f]
+                    d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dTdz = FiDiDerivative1(dFdz_T, dzs[z], DIFF1_T_SET)
+                    # d2Fdz2
+                    # d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = 0
+                    _zR_c = dzs[z]/dzs[z-1]
+                    # d2Fdz2
+                    d2Tdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+                elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                    # NOTE
+                    # dense section
+                    # i=2,...,zNoNoDense-1
+                    # forward
+                    T_f = T_z[z+1]
+                    T_ff = T_z[z+2]
+                    # backward
+                    T_b = T_z[z-1]
+                    T_bb = T_z[z-2]
+                    # function value
+                    dFdz_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = dzs[z-2]/dzs[z-1]
+                    _zR_c = dzs[z]/dzs[z-1]
+                    #
+                    dTdz = FiDiNonUniformDerivative1(
+                        dFdz_T, dzs[z], DIFF1_T_SET, _zR_b)
+                    # d2Fdz2
+                    d2Tdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
                 elif z == zNo - 1:
                     # BC2
                     # backward
@@ -1292,10 +1369,12 @@ class HomoModelClass:
                     # function value
                     dFdz_T = [T_b, T_c, T_f]
                     d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # REVIEW
+                    ### uniform nodes ###
                     # dFdz
-                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
                     # d2Fdz2
-                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC2)
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC2)
                 else:
                     # interior nodes
                     # forward
@@ -1307,19 +1386,16 @@ class HomoModelClass:
                     # function value
                     dFdz_T = [T_b, T_c, T_f]
                     d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                    # REVIEW
+                    ### uniform nodes ###
                     # dFdz
-                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF_T_SET)
+                    dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
                     # d2Fdz2
-                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_G)
+                    d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_G)
 
                 # NOTE
-                # cal differentiate
-                # central difference
-                # dTdz = (T_c - T_b)/(1*dz)
                 # convective term
                 _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
-                # central difference
-                # d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
                 # dispersion flux [kJ/m^3.s] -> [no unit]
                 _dispersionFluxT = (1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2
                 # heat of reaction term
