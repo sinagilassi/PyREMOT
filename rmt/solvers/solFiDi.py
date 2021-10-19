@@ -374,8 +374,12 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
                 # const
                 alpha = rf/GaDii0
                 beta = MaTrCoi/DiCoi_DiLeVa
+                _DiLeNo = alpha*beta
                 # ghost point y[N+1]
-                yN__1 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk) + yi[i-1]
+                _a1 = (2*dr)
+                _a2 = alpha*beta*(yi[i] - SpCoiBulk)
+                _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
+                yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) + yi[i-1])
                 A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
                     const2*(yN__1 - yi[i-1]) + _Ri
 
@@ -469,6 +473,48 @@ def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
     except Exception as e:
         raise
 
+
+def FiDiUpdateInterfaceNode(compNo, DoLe, rNo, yi, params):
+    """
+    update interface (gas-solid) node
+    args:
+        compNo: component no
+        DoLe: domain length [m]
+        rNo: number of finite difference points
+        yi: y variables
+        params: 
+            DiCoi: diffusivity coefficient of components [m^2/s]
+            MaTrCoi: mass transfer coefficient [m/s]
+            Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
+            SpCoiBulk: species concentration of component in the bulk phase [kmol/m^3] | [mol/m^3]
+            CaPo: catalyst porosity
+    """
+    try:
+        # number of finite differene points
+        # rNo
+        # number of elements
+        NoEl_FiDi = rNo - 1
+        # number of total nodes
+        N = rNo*compNo
+        # dr size [m]
+        dr = 1/NoEl_FiDi
+        # formula
+        rp = DoLe
+
+        # NOTE
+        ### matrix structure ##
+        # residual matrix
+        AMatShape = rNo
+        A = np.zeros(AMatShape)
+
+        # params
+        DiCoi_DiLeVa, MaTrCoi, Ri, SpCoiBulk, CaPo, SoMaDiTe0, GaDii0, rf = params
+    except Exception as e:
+        raise
+
+
+# NOTE
+# derivation
 
 def FiDiDerivative1(F, dz, mode):
     """

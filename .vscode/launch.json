@@ -99,6 +99,14 @@
       "program": "${workspaceFolder}\\rmt\\testMesh.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "ODE Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\rmt\\solvers\\odeSolver.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
     }
   ]
 }

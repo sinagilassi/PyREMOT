@@ -35,7 +35,7 @@ solverSetting = {
     "S2": {
         "tNo": 10,
         "zNo": 100,
-        "rNo": 10,
+        "rNo": 7,
         "timesNo": 5
     },
     "S3": {
@@ -43,9 +43,9 @@ solverSetting = {
     },
     "T1": {
         "zMesh": {
-            "zNoNo": [100, 3],
-            "DoLeSe": 95,
-            "MeReDe": 1.3
+            "zNoNo": [65, 5],
+            "DoLeSe": 80,
+            "MeReDe": 1.001
         },
         "zNo": 30,
         "rNo": 0,

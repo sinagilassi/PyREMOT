@@ -32,6 +32,8 @@ class OrCoCatParticleClass:
                 yj: var matrix (species concentration or temperature at oc points)
                 CTb: list of species concentration in the gas phase [kmol/m^3]
                 beta: beta/betaT (for each component)
+            output:
+                yj_flip
         '''
         # try/except
         try:
@@ -48,7 +50,8 @@ class OrCoCatParticleClass:
             # constant y[0 to N]*A[N+1,r]
             _Ay_Selected = self.A[-1, :-1]
             _yj_Selected = yj_flip[:-1, 0]
-            _Ay = np.dot(_Ay_Selected, _yj_Selected)
+            _Ay0 = np.dot(_Ay_Selected, _yj_Selected)
+            _Ay = _Ay_Selected*_yj_Selected
             _alpha = np.sum(_Ay) + beta*CTb
             # y[N+1] constant
             _gamma = beta - self.A[-1, -1]

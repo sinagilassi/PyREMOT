@@ -21,6 +21,11 @@ class OrCoClass:
     # x2 = 0.76505
     # x3 = 1
 
+    # x1 = 0
+    # x1 = 0.4688
+    # x2 = 0.8302
+    # x3 = 1
+
     # 6 points [spherical shape]
     # x1 = 0
     x1 = 0.215353

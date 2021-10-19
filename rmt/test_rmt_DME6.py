@@ -222,7 +222,7 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -263,7 +263,7 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "Radau",
+        "ivp": "LSODA",
         "root": "least_squares",
         "mesh": "refine"
     }

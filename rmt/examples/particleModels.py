@@ -13,9 +13,14 @@ from data.inputDataReactor import *
 from core import constants as CONST
 from solvers.solSetting import solverSetting
 from docs.rmtReaction import reactionRateExe, componentFormationRate
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix
+from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiBuildCMatrix_DiLe
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from docs.rmtThermo import *
+from solvers.solOrCo import OrCoClass
+from docs.modelSetting import MODEL_SETTING
+from solvers.solCatParticle import OrCoCatParticleClass
+from docs.gasTransPor import calTest
+from core.utilities import roundNum, selectFromListByIndex
 
 
 class ParticleModelClass:
@@ -43,6 +48,8 @@ class ParticleModelClass:
         # solver setting
         solverConfig = self.modelInput['solver-config']
         solverIVPSet = solverConfig['ivp']
+        solverMesh = solverConfig['mesh']
+        solverMeshSet = True if solverMesh == "normal" else False
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -61,7 +68,7 @@ class ParticleModelClass:
 
         # graph label setting
         labelList = compList.copy()
-        labelList.append("Temperature")
+        # labelList.append("Temperature")
         # labelList.append("Pressure")
 
         # component no
@@ -101,20 +108,52 @@ class ParticleModelClass:
         # external heat
         ExHe = self.modelInput['external-heat']
 
+        # diffusivity coefficient - gas phase [m^2/s]
+        GaDii0 = self.modelInput['feed']['diffusivity']
+        # gas viscosity [Pa.s]
+        GaVii0 = self.modelInput['feed']['viscosity']
         # gas mixture viscosity [Pa.s]
-        GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        GaViMix0 = self.modelInput['feed']['mixture-viscosity']
+
+        # thermal conductivity - gas phase [J/s.m.K]
+        GaThCoi0 = self.modelInput['feed']['thermal-conductivity']
+        # mixture thermal conductivity - gas phase [J/s.m.K]
+        GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
+
+        ### calculation ###
+        # mole fraction in the gas phase
+        MoFri0 = np.array(rmtUtil.moleFractionFromConcentrationSpecies(SpCoi0))
+
+        # mixture molecular weight [kg/mol]
+        MiMoWe0 = rmtUtil.mixtureMolecularWeight(MoFri0, MoWei, "kg/mol")
+
+        # gas density [kg/m^3]
+        GaDe0 = calDensityIG(MiMoWe0, SpCo0*1000)
+
+        # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+        # Cp mean list
+        GaCpMeanList0 = calMeanHeatCapacityAtConstantPressure(compList, T)
+        # Cp mixture
+        GaCpMeanMix0 = calMixtureHeatCapacityAtConstantPressure(
+            MoFri0, GaCpMeanList0)
+
+        # NOTE
+        # dimensionless length
+        DiLeLe = 1
 
         # finite difference points in the z direction
         zNo = solverSetting['S2']['zNo']
         # length list
-        dataXs = np.linspace(0, ReLe, zNo)
+        dataXs = np.linspace(0, DiLeLe, zNo)
         # element size - dz [m]
-        dz = ReLe/(zNo-1)
+        dz = DiLeLe/(zNo-1)
         # orthogonal collocation points in the r direction
         rNo = solverSetting['S2']['rNo']
+        # length list
+        dataRs = np.linspace(0, DiLeLe, rNo)
 
         # var no (Ci,T)
-        varNo = compNo + 1
+        varNo = compNo
         # concentration var no
         varNoCon = compNo*zNo
         # temperature var no
@@ -152,7 +191,7 @@ class ParticleModelClass:
             for i in range(rNo):
                 # solid phase
                 # FIXME
-                IV2D[m][i] = SpCoi0[m]
+                IV2D[m][i] = 1e-6  # SpCoi0[m]/np.max(SpCoi0)  # SpCoi0[m]
 
         # flatten IV
         IV = IV2D.flatten()
@@ -171,6 +210,12 @@ class ParticleModelClass:
 
         # REVIEW
         # solver setting
+        # orthogonal collocation method
+        OrCoClassSet = OrCoClass()
+        OrCoClassSetRes = OrCoClassSet.buildMatrix()
+
+        # REVIEW
+        # solver setting
         ReactionParams = {
             "reactionListSorted": reactionListSorted,
             "reactionStochCoeff": reactionStochCoeff
@@ -183,7 +228,7 @@ class ParticleModelClass:
                 "CrSeAr": CrSeAr,
                 "MoWei": MoWei,
                 "StHeRe25": StHeRe25,
-                "GaMiVi": GaMiVi,
+                "GaMiVi": GaViMix0,
                 "varNo": varNo,
                 "varNoT": varNoT,
                 "reactionListNo": reactionListNo,
@@ -196,9 +241,17 @@ class ParticleModelClass:
                 "SpCo0": SpCo0,
                 "P0": P,
                 "T0": T,
-                "SuGaVe0": SuGaVe0
+                "SuGaVe0": SuGaVe0,
+                "GaDii0": GaDii0,
+                "GaThCoi0": GaThCoi0,
+                "GaVii0": GaVii0,
+                "GaDe0": GaDe0,
+                "GaCpMeanMix0": GaCpMeanMix0,
+                "GaThCoMix0": GaThCoMix0
             },
             "meshSetting": {
+                "solverMesh": solverMesh,
+                "solverMeshSet": solverMeshSet,
                 "noLayer": noLayer,
                 "varNoLayer": varNoLayer,
                 "varNoLayerT": varNoLayerT,
@@ -206,47 +259,84 @@ class ParticleModelClass:
                 "varNoColumns": varNoColumns,
                 "rNo": rNo,
                 "zNo": zNo,
-                "dz": dz
+                "dz": dz,
             },
             "solverSetting": {
-
+                "OrCoClassSetRes": OrCoClassSetRes
             },
             "reactionRateExpr": reactionRateExpr
         }
 
-        # FIXME
-        # concentration in the bulk phase [kmol/m^3]
-        cti_H2 = 0.574947645267422
-        cti_CO2 = 0.287473822633711
-        cti_H2O = 1.14989529053484e-05
-        cti_CO = 0.287473822633711
-        cti_CH3OH = 1.14989529053484e-05
-        cti_DME = 1.14989529053484e-05
-        Cbs = np.array([cti_H2, cti_CO2, cti_H2O, cti_CO, cti_CH3OH, cti_DME])
+        # NOTE
+        ### dimensionless analysis ###
+        # concentration [kmol/m^3]
+        Cif = np.copy(SpCoi0)
+        # total concentration
+        Cf = SpCo0
+        # temperature [K]
+        Tf = T
+        # superficial velocity [m/s]
+        vf = SuGaVe0
+        # length [m]
+        zf = ReLe
+        # diffusivity [m^2/s]
+        Dif = np.copy(GaDii0)
+        # heat capacity at constant pressure [J/mol.K] | [kJ/kmol.K]
+        Cpif = np.copy(GaCpMeanList0)
+        # mixture heat capacity [J/mol.K] | [kJ/kmol.K]
+        Cpf = GaCpMeanMix0
+        # radius
+        rf = PaDi/2
 
-        # temperature in the bulk phase [K]
-        Tb = 523
+        # solid phase
+        # mass convective term - (list) [kmol/m^3.s]
+        _Cif = Cif if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.repeat(
+            np.max(Cif), compNo)
+        # mass diffusive term - (list)  [kmol/m^3.s]
+        SoMaDiTe0 = (Dif*_Cif)/rf**2
+        # heat diffusive term [kJ/m^3.s]
+        SoHeDiTe0 = (GaThCoMix0*Tf/rf**2)*1e-3
 
-        # diffusivity coefficient [m^2/s]
-        GaDii = np.array([2.27347635942262e-06, 9.16831604900657e-07, 5.70318666607403e-07,
-                          9.98820628335698e-07, 5.40381353373092e-07, 4.28676364755756e-07])
         # mass transfer coefficient [m/s]
-        MaTrCo = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
-                           0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
+        MaTrCo0 = self.modelInput['test-const']['MaTrCo0']
+        # heat transfer coefficient - gas/solid [J/m^2.s.K]
+        HeTrCo0 = self.modelInput['test-const']['MaTrCo0']
+
+        # dimensionless analysis parameters
+        DimensionlessAnalysisParams = {
+            "Cif": Cif,
+            "Tf": Tf,
+            "vf": vf,
+            "Dif": Dif,
+            "Cpif": Cpif,
+            "Cpf": Cpf,
+            "rf": rf,
+            "SoMaDiTe0": SoMaDiTe0,
+            "SoHeDiTe0": SoHeDiTe0,
+            "HeTrCo": HeTrCo0,
+            "MaTrCo": MaTrCo0,
+        }
+
+        # FIXME
+        ### bulk properties ###
+        # concentration in the bulk phase [kmol/m^3]
+        Cbs = self.modelInput['test-const']['Cbi']
+        # temperature in the bulk phase [K]
+        Tb = self.modelInput['test-const']['Tb']
 
         # SoCpMeanMixEff [kJ/m^3.K]
         SoCpMeanMixEff = 279.34480838441203
 
-        # heat transfer coefficient - gas/solid [J/m^2.s.K]
-        HeTrCo = 1731
+        # -> concentration [kmol/m^3]
+        Cbs_DiLeVa = np.zeros(compNo)
+        for m in range(compNo):
+            Cbs_DiLeVa[m] = Cbs[m]/np.max(Cbs)
 
         # particle params
         ParticleParams = {
             "SoCpMeanMixEff": SoCpMeanMixEff,
-            "HeTrCo": HeTrCo,
-            "MaTrCo": MaTrCo,
-            "GaDii": GaDii,
-            "Cbs": Cbs,
+            "GaDii0": GaDii0,
+            "Cbs": Cbs_DiLeVa,
             "Tb": Tb
         }
 
@@ -277,7 +367,7 @@ class ParticleModelClass:
             # ode call
             # method [1]: LSODA, [2]: BDF, [3]: Radau
             sol = solve_ivp(ParticleModelClass.modelEquationT1, t, IV, method=solverIVP,
-                            t_eval=times,  args=(ReactionParams, FunParam, ParticleParams))
+                            t_eval=times,  args=(ReactionParams, FunParam, ParticleParams, DimensionlessAnalysisParams))
 
             # ode result
             successStatus = sol.success
@@ -290,34 +380,100 @@ class ParticleModelClass:
             # all results
             # components layers
             dataYs = sol.y
+            # last time result
+            dataYs_End = dataYs[:, -1]
+
+            # std format
+            dataYs1SolidPhase = np.reshape(
+                dataYs_End, IVMatrixShape)
 
             # REVIEW
             # convert concentration to mole fraction
-            # dataYs1_Ctot = np.sum(dataYs, axis=0)
-            # dataYs1_MoFri = dataYs/dataYs1_Ctot
+            dataYs1_Ctot = np.sum(dataYs1SolidPhase, axis=0)
+            dataYs1_MoFri = dataYs1SolidPhase/dataYs1_Ctot
 
             # save data
             dataPack.append({
                 "successStatus": successStatus,
                 "dataTime": dataTime[-1],
-                "dataYCons": dataYs[:, -1],
+                "dataYCons": dataYs1_MoFri,
             })
 
-            # for m in range(compNo):
-            #     # var list
-            #     dataPacktime[m][i, :] = dataPack[i]['dataYCons'][m, :]
+            for m in range(compNo):
+                # var list
+                dataPacktime[m][i, :] = dataPack[i]['dataYCons'][m, :]
 
             # update initial values [IV]
             IV = dataYs[:, -1]
-
-            checkme = 0
 
         # NOTE
         # end of computation
         end = timer()
         elapsed = roundNum(end - start)
 
-    def modelEquationT1(t, y, ReactionParams, FunParam, ParticleParams):
+        # plot info
+        plotTitle = f"Dynamic Modeling for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
+
+        # REVIEW
+        # display result at specific time
+        for i in range(tNo):
+            # var list
+            _dataYs = dataPack[i]['dataYCons']
+            # plot setting: build (x,y) series
+            XYList = pltc.plots2DSetXYList(dataRs, _dataYs)
+            # -> add label
+            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # datalists
+            dataLists = dataList[0:compNo]
+            if i == tNo-1:
+                # subplot result
+                # pltc.plots2DSub(dataLists, "Reactor Length (m)",
+                #                 "Concentration (mol/m^3)", plotTitle)
+                pltc.plots2D(dataLists, "Reactor Length (m)",
+                             "Concentration (mol/m^3)", plotTitle)
+
+        # REVIEW
+        # display result within time span
+        _dataListsLoop = []
+        _labelNameTime = []
+
+        for i in range(varNo):
+            # var list
+            _dataPacktime = dataPacktime[i]
+            # plot setting: build (x,y) series
+            XYList = pltc.plots2DSetXYList(dataRs, _dataPacktime)
+            # -> add label
+            # build label
+            for t in range(tNo):
+                _name = labelList[i] + " at t=" + str(opTSpan[t+1])
+
+                _labelNameTime.append(_name)
+
+            dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
+            # datalists
+            _dataListsLoop.append(dataList[0:tNo])
+            # reset
+            _labelNameTime = []
+
+        # select items
+        # indices = [0, 2, -1]
+        # selected_elements = [_dataListsLoop[index] for index in indices]
+        # select datalist
+        _dataListsSelected = selectFromListByIndex([0, -1], _dataListsLoop)
+
+        # subplot result
+        pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
+                        "Concentration (mol/m^3)", "Dynamic Modeling of 1D Plug-Flow Reactor")
+
+        # return
+        res = {
+            "XYList": XYList,
+            "dataList": dataList
+        }
+
+        return res
+
+    def modelEquationT1(t, y, ReactionParams, FunParam, ParticleParams, DimensionlessAnalysisParams):
         '''
         T1 model
             mass, energy, and momentum balance equations
@@ -359,9 +515,12 @@ class ParticleModelClass:
                     reactionRateExpr: reaction rate expressions
         '''
         # parameters
+        # NOTE
         # reaction params
         reactionListSorted = ReactionParams['reactionListSorted']
         reactionStochCoeff = ReactionParams['reactionStochCoeff']
+
+        # NOTE
         # fun params
         # component symbol list
         comList = FunParam['compList']
@@ -378,6 +537,7 @@ class ParticleModelClass:
         # reaction no
         reactionListNo = const['reactionListNo']
 
+        # NOTE
         # reactor spec ->
         ReSpec = FunParam['ReSpec']
         # particle diameter [m]
@@ -397,6 +557,7 @@ class ParticleModelClass:
         # catalyst thermal conductivity [J/K.m.s]
         CaThCo = ReSpec['CaThCo']
 
+        # NOTE
         # exchange heat spec ->
         ExHe = FunParam['ExHe']
         # var no. (concentration, temperature)
@@ -404,6 +565,7 @@ class ParticleModelClass:
         # var no. in the domain
         varNoT = const['varNoT']
 
+        # NOTE
         # boundary conditions constants
         constBC1 = FunParam['constBC1']
         ## inlet values ##
@@ -417,7 +579,22 @@ class ParticleModelClass:
         P0 = constBC1['P0']
         # inlet temperature [K]
         T0 = constBC1['T0']
+        # inlet superficial velocity [m/s]
+        # SuGaVe0 = constBC1['SuGaVe0']
+        # inlet diffusivity coefficient [m^2]
+        GaDii0 = constBC1['GaDii0']
+        # inlet gas thermal conductivity [J/s.m.K]
+        GaThCoi0 = constBC1['GaThCoi0']
+        # gas viscosity
+        GaVii0 = constBC1['GaVii0']
+        # gas density [kg/m^3]
+        GaDe0 = constBC1['GaDe0']
+        # heat capacity at constant pressure [kJ/kmol.K] | [J/mol.K]
+        GaCpMeanMix0 = constBC1['GaCpMeanMix0']
+        # gas thermal conductivity [J/s.m.K]
+        GaThCoMix0 = constBC1['GaThCoMix0']
 
+        # NOTE
         # mesh setting
         meshSetting = FunParam['meshSetting']
         # number of layers
@@ -437,22 +614,65 @@ class ParticleModelClass:
         # dz [m]
         dz = meshSetting['dz']
 
+        # NOTE
         # solver setting
         solverSetting = FunParam['solverSetting']
+        # # mass balance equation
+        # DIFF1_C_SET = solverSetting['dFdz']
+        # DIFF2_C_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        # DIFF2_C_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        # DIFF2_C_SET_G = solverSetting['d2Fdz2']['G']
+        # # energy balance equation
+        # DIFF1_T_SET = solverSetting['dTdz']
+        # DIFF2_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        # DIFF2_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        # DIFF2_T_SET_G = solverSetting['d2Tdz2']['G']
+        # number of collocation points
+        ocN = solverSetting['OrCoClassSetRes']['N']
+        ocXc = solverSetting['OrCoClassSetRes']['Xc']
+        ocA = solverSetting['OrCoClassSetRes']['A']
+        ocB = solverSetting['OrCoClassSetRes']['B']
+        ocQ = solverSetting['OrCoClassSetRes']['Q']
+        # init OrCoCatParticle
+        OrCoCatParticleClassSet = OrCoCatParticleClass(
+            ocXc, ocN, ocQ, ocA, ocB, varNo)
 
+        # NOTE
         # reaction rate expressions
         reactionRateExpr = FunParam['reactionRateExpr']
         # using equation
         varisSet = reactionRateExpr['VARS']
         ratesSet = reactionRateExpr['RATES']
 
+        # NOTE
         # particle parameters
         SoCpMeanMixEff = ParticleParams['SoCpMeanMixEff']
-        HeTrCo = ParticleParams['HeTrCo']
-        MaTrCo = ParticleParams['MaTrCo']
-        GaDii = ParticleParams['GaDii']
+        GaDii = ParticleParams['GaDii0']
         Cbs = ParticleParams['Cbs']
         Tb = ParticleParams['Tb']
+
+        # NOTE
+        # dimensionless analysis params
+        #  feed concentration [kmol/m^3]
+        Cif = DimensionlessAnalysisParams['Cif']
+        # feed temperature
+        Tf = DimensionlessAnalysisParams['Tf']
+        # feed superficial velocity [m/s]
+        vf = DimensionlessAnalysisParams['vf']
+        # particle radius [m]
+        rf = DimensionlessAnalysisParams['rf']
+        # diffusivity coefficient of component [m^2/s]
+        Dif = DimensionlessAnalysisParams['Dif']
+        # feed heat capacity at constat pressure
+        Cpif = DimensionlessAnalysisParams['Cpif']
+        # feed mass diffusive term of solid phase [kmol/m^3.s]
+        SoMaDiTe0 = DimensionlessAnalysisParams['SoMaDiTe0']
+        # feed heat diffusive term of solid phase [kJ/m^3.s]
+        SoHeDiTe0 = DimensionlessAnalysisParams['SoHeDiTe0']
+        # mass transfer coefficient - gas/solid [m/s]
+        MaTrCo = DimensionlessAnalysisParams['MaTrCo']
+        # heat transfer coefficient - gas/solid [J/m^2.s.K]
+        HeTrCo = DimensionlessAnalysisParams['HeTrCo']
 
         # components no
         # y: component molar flowrate, total molar flux, temperature, pressure
@@ -481,20 +701,30 @@ class ParticleModelClass:
 
         # concentration [kmol/m^3]
         SpCoi_mr = yj_Reshape
-
+        # shape
+        CosSpiMatShape = (rNo, compNo)
         # concentration species in the solid phase [kmol/m^3]
-        SpCoi_r = np.zeros((rNo, compNo))
+        CosSpi_r = np.zeros(CosSpiMatShape)
+        # dimensionless analysis
+        CosSpi_r_ReVa = np.zeros(CosSpiMatShape)
+
         # display concentration list in each oc point (rNo)
         for i in range(compNo):
             for r in range(rNo):
                 _CosSpi_z = SpCoi_mr[i][r]
-                SpCoi_r[r][i] = max(_CosSpi_z, CONST.EPS_CONST)
+                CosSpi_r[r][i] = max(_CosSpi_z, CONST.EPS_CONST)
+                # REVIEW
+                # dimensionless analysis: real value
+                SpCoi0_r_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                CosSpi_r_ReVa[r][i] = rmtUtil.calRealDiLessValue(
+                    CosSpi_r[r][i], SpCoi0_r_Set)
 
         # component mole fraction
         # mole fraction in the solid phase
         # MoFrsi_r0 = CosSpi_r/CosSp_r
         MoFrsi_r = rmtUtil.moleFractionFromConcentrationSpeciesMat(
-            SpCoi_r)
+            CosSpi_r_ReVa)
 
         # NOTE
         ## kinetics ##
@@ -506,15 +736,45 @@ class ParticleModelClass:
         # overall enthalpy
         OvHeReT = np.zeros(rNo)
 
-        # catalyst
-        const_Cs1 = 1/(CaPo*(PaRa**2))
-        const_Ts1 = 1/(SoCpMeanMixEff*(PaRa**2))
+        # REVIEW
+        # FIXME
+        # solid gas thermal conductivity [J/s.m.K]
+        SoThCoMix0 = GaThCoMix0
+        # thermal conductivity - gas phase [J/s.m.K]
+        # GaThCoi = np.zeros(compNo)  # f(T);
+        GaThCoi = GaThCoi0 if MODEL_SETTING['GaThCoi'] == "FIX" else calTest()
+        # thermal conductivity - solid phase [J/s.m.K]
+        # assume the same as gas phase
+        # SoThCoi = np.zeros(compNo)  # f(T);
+        SoThCoi = GaThCoi
+        # mixture thermal conductivity - solid phase [J/s.m.K]
+        SoThCoMix = GaThCoMix0
+        # dimensionless analysis
+        SoThCoMix_DiLeVa = SoThCoMix/SoThCoMix0
+        SoThCoEff = CaPo*SoThCoMix
+        # dimensionless analysis
+        # SoThCoEff_DiLeVa = GaThCoMix_DiLeVa*((1 - CaPo)/CaTo)
+        SoThCoEff_DiLeVa = CaPo*SoThCoMix_DiLeVa
+
+        # REVIEW
+        # diffusivity coefficient - gas phase [m^2/s]
+        GaDii = GaDii0 if MODEL_SETTING['GaDii'] == "FIX" else calTest()
+        # dimensionless analysis
+        GaDii_DiLeVa = GaDii/GaDii0
+        # effective diffusivity coefficient - gas phase
+        GaDiiEff = GaDii*BeVoFr
+        # dimensionless analysis
+        GaDiiEff_DiLeVa = GaDiiEff/GaDii0
+        # effective diffusivity - solid phase [m^2/s]
+        SoDiiEff = (CaPo/CaTo)*GaDii
+        # dimensionless analysis
+        SoDiiEff_DiLe = GaDii_DiLeVa
 
         # net reaction rate expression [kmol/m^3.s]
         # rf[kmol/kgcat.s]*CaDe[kgcat/m^3]
         for r in range(rNo):
             # loop
-            loopVars0 = (Ts_r[r], P_z, MoFrsi_r[r], SpCoi_r[r])
+            loopVars0 = (Ts_r[r], P_z, MoFrsi_r[r], CosSpi_r_ReVa[r])
 
             # component formation rate [mol/m^3.s]
             # check unit
@@ -555,19 +815,26 @@ class ParticleModelClass:
             Ci_c = Cbs[i]
             # species concentration at different points of particle radius [rNo]
             # [Cs[3], Cs[2], Cs[1], Cs[0]]
-            _Cs_r = SpCoi_r[:, i].flatten()
+            _Cs_r = CosSpi_r[:, i].flatten()
+            # Cs[0], Cs[1], ...
+            # _Cs_r_Flip = np.flip(_Cs_r)
 
+            # dimensionless analysis
             # loop
-            _dCsdtiVarLoop = (GaDii[i], MaTrCo[i],
-                              ri_r[:, i], Ci_c, CaPo)
+            _dCsdtiVarLoop = (
+                SoDiiEff_DiLe[i], MaTrCo[i], ri_r[:, i], Ci_c, CaPo, SoMaDiTe0[i], SoDiiEff[i], rf)
 
             # dC/dt list
-            dCsdti = FiDiBuildCMatrix(
+            dCsdti = FiDiBuildCMatrix_DiLe(
                 compNo, PaRa, rNo, _Cs_r, _dCsdtiVarLoop, mode="test")
+
+            # const
+            _const1 = CaPo*(rf**2/GaDii0[i])
+            _const2 = 1/_const1
 
             for r in range(rNo):
                 # update
-                fxMat[i][r] = const_Cs1*dCsdti[r]
+                fxMat[i][r] = _const2*dCsdti[r]
 
         # NOTE
         # flat
