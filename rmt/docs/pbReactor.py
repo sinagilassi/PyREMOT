@@ -3806,6 +3806,8 @@ class PackedBedReactorClass:
         T = self.modelInput['operating-conditions']['temperature']
         # operation time [s]
         opT = self.modelInput['operating-conditions']['period']
+        # numerical method
+        numericalMethod = self.modelInput['operating-conditions']['numerical-method']
 
         # reaction list
         reactionDict = self.modelInput['reactions']
@@ -3874,7 +3876,16 @@ class PackedBedReactorClass:
         # domain length
         DoLe = 1
         # orthogonal collocation points in the r direction
-        rNo = solverSetting['S2']['rNo']
+        # rNo = solverSetting['S2']['rNo']
+        if numericalMethod == "fdm":
+            # finite difference points in the r direction
+            rNo = solverSetting['T1']['rNo']['fdm']
+        elif numericalMethod == "oc":
+            # orthogonal collocation points in the r direction
+            rNo = solverSetting['T1']['rNo']['oc']
+        else:
+            raise
+
         # mesh setting
         zMesh = solverSetting['T1']['zMesh']
         # number of nodes
@@ -3976,7 +3987,7 @@ class PackedBedReactorClass:
                     else:
                         # solid phase
                         # SpCoi0[m]/np.max(SpCoi0)  # SpCoi0[m]
-                        IV2D[m][j][i] = SpCoi0[m]/np.max(SpCoi0)
+                        IV2D[m][j][i] = 1e-6
 
         # temperature
         for i in range(varNoColumns):
@@ -3987,7 +3998,7 @@ class PackedBedReactorClass:
                     if i == 0:
                         IV2D[noLayer - 1][j][i] = 0  # T
                     else:
-                        IV2D[m][j][i] = 0
+                        IV2D[noLayer - 1][j][i] = 0  # T
                 else:
                     # solid phase
                     IV2D[noLayer - 1][j][i] = 0  # T
@@ -4153,11 +4164,11 @@ class PackedBedReactorClass:
         }
 
         # time span
-        tNo = solverSetting['S2']['tNo']
+        tNo = solverSetting['T1']['tNo']
         opTSpan = np.linspace(0, opT, tNo + 1)
 
         # save data
-        timesNo = solverSetting['S2']['timesNo']
+        timesNo = solverSetting['T1']['timesNo']
 
         # result
         dataPack = []
@@ -4172,7 +4183,7 @@ class PackedBedReactorClass:
         solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
 
         # FIXME
-        n = 1000
+        n = solverSetting['T1']['ode-solver']['PreCorr3']['n']
         # t0 = 0
         # tn = 5
         # t = np.linspace(t0, tn, n+1)
@@ -4188,35 +4199,37 @@ class PackedBedReactorClass:
             print(f"time: {t} seconds")
 
             # ode call
-            # method [1]: LSODA, [2]: BDF, [3]: Radau
-            # options
-            solverOptions = {
-                "atol": 1e-7
-            }
+            if solverIVP == "AM":
+                # sol = AdBash3(t[0], t[1], n, IV, funSet, paramsSet)
+                # PreCorr3
+                sol = PreCorr3(t[0], t[1], n, IV, funSet, paramsSet)
+                successStatus = True
+                # time interval
+                dataTime = t
+                # all results
+                # components, temperature layers
+                dataYs = sol
+            else:
+                # method [1]: LSODA, [2]: BDF, [3]: Radau
+                # options
+                solverOptions = {
+                    "atol": 1e-7
+                }
+                sol = solve_ivp(funSet, t, IV, method=solverIVP,
+                                t_eval=times,  args=(paramsSet,))
+                # ode result
+                successStatus = sol.success
+                # check
+                if successStatus is False:
+                    raise
+                # time interval
+                dataTime = sol.t
+                # all results
+                # components, temperature layers
+                dataYs = sol.y
 
-            # sol = solve_ivp(funSet, t, IV, method=solverIVP,
-            #                 t_eval=times,  args=paramsSet)
-            # # ode result
-            # successStatus = sol.success
-            # # check
-            # if successStatus is False:
-            #     raise
-            # # time interval
-            # dataTime = sol.t
-            # # all results
-            # # components, temperature layers
-            # dataYs = sol.y
-
-            # sol = AdBash3(t[0], t[1], n, IV, funSet, paramsSet)
-            # PreCorr3
-            sol = PreCorr3(t[0], t[1], n, IV, funSet, paramsSet)
-            successStatus = True
-            # time interval
-            dataTime = t
-            # all results
-            # components, temperature layers
-            dataYs = sol
-
+            # REVIEW
+            # post-processing result
             # std format
             dataYs_Reshaped = np.reshape(
                 dataYs[:, -1], (noLayer, varNoRows, varNoColumns))
@@ -4241,11 +4254,6 @@ class PackedBedReactorClass:
             dataYs1_MoFri = dataYs1GasPhase/dataYs1_Ctot
 
             # temperature - 2d matrix
-            # dataYs2 = np.array([dataYs[varNoCon:varNoLayerT, -1]])
-            # 2d matrix
-            # dataYs2_Reshaped = np.reshape(
-            #     dataYs2, (1, varNoRows, varNoColumns))
-
             dataYs2_Reshaped = dataYs_Reshaped[indexTemp]
             # gas phase
             dataYs2GasPhase = dataYs2_Reshaped[0, :].reshape((1, zNo))
@@ -4284,13 +4292,13 @@ class PackedBedReactorClass:
         # txt
         # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
         # binary
-        ssModelingResult = np.load('ResM1.npy')
+        # ssModelingResult = np.load('ResM1.npy')
         # ssdataXs = np.linspace(0, ReLe, zNo)
-        ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
-        ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
+        # ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
+        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
         # datalists
-        ssdataLists = [ssdataList[0:compNo],
-                       ssdataList[indexTemp]]
+        # ssdataLists = [ssdataList[0:compNo],
+        #                ssdataList[indexTemp]]
         # subplot result
         # pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
         #                 "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
@@ -4300,6 +4308,10 @@ class PackedBedReactorClass:
 
         # REVIEW
         # display result at specific time
+        # subplot result
+        xLabelSet = "Dimensionless Reactor Length"
+        yLabelSet = "Dimensionless Concentration"
+
         for i in range(tNo):
             # var list
             _dataYs = dataPack[i]['dataYs']
@@ -4312,8 +4324,7 @@ class PackedBedReactorClass:
                          dataList[indexTemp]]
             if i == tNo-1:
                 # subplot result
-                pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                                "Concentration (mol/m^3)", plotTitle, ssdataLists)
+                pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
 
         # REVIEW
         # display result within time span
@@ -4765,7 +4776,8 @@ class PackedBedReactorClass:
             # temperature in the solid phase (for each point)
             # Ts[3], Ts[2], Ts[1], Ts[0]
             Ts_r = Ts_z[:, z]
-            Ts_r_ReVa = rmtUtil.calRealDiLessValue(Ts_r, T0, "TEMP")
+            Ts_r_ReVa0 = rmtUtil.calRealDiLessValue(Ts_r, Tf, "TEMP")
+            Ts_r_ReVa = np.reshape(Ts_r_ReVa0, -1)
 
             # pressure [Pa]
             P = P_z[z]
@@ -4961,7 +4973,7 @@ class PackedBedReactorClass:
                 # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
                 # Cp mean list
                 SoCpMeanList = calMeanHeatCapacityAtConstantPressure(
-                    comList, Ts_r[r])
+                    comList, Ts_r_ReVa[r])
                 # Cp mixture
                 SoCpMeanMix[r] = calMixtureHeatCapacityAtConstantPressure(
                     MoFrsi_r[r], SoCpMeanList)
@@ -4973,7 +4985,7 @@ class PackedBedReactorClass:
                 # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
                 # enthalpy change
                 EnChList = np.array(
-                    calEnthalpyChangeOfReaction(reactionListSorted, Ts_r[r]))
+                    calEnthalpyChangeOfReaction(reactionListSorted, Ts_r_ReVa[r]))
                 # heat of reaction at T [kJ/kmol] | [J/mol]
                 HeReT = np.array(EnChList + StHeRe25)
                 # overall heat of reaction [kJ/m^3.s]
@@ -5092,32 +5104,6 @@ class PackedBedReactorClass:
                 # concentration [kmol/m^3]
                 # central
                 Ci_c = SpCoi_z[i][z]
-                # # check BC
-                # if z == 0:
-                #     # BC1
-                #     #
-                #     BC1_C_1 = PeNuMa0[i]*dz
-                #     BC1_C_2 = 1/BC1_C_1
-                #     # forward
-                #     Ci_f = SpCoi_z[i][z+1]
-                #     # backward
-                #     # GaDii_DiLeVa = 1
-                #     Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
-                #         SpCoi0)
-                #     Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
-                # elif z == zNo - 1:
-                #     # BC2
-                #     # backward
-                #     Ci_b = SpCoi_z[i][z - 1]
-                #     # forward difference
-                #     Ci_f = Ci_b
-                # else:
-                #     # interior nodes
-                #     # forward
-                #     Ci_f = SpCoi_z[i][z+1]
-                #     # backward
-                #     Ci_b = SpCoi_z[i][z-1]
-
                 # check BC
                 if z == 0 and solverMeshSet is True:
                     # NOTE
@@ -5299,32 +5285,6 @@ class PackedBedReactorClass:
             # temperature at different points of particle radius [rNo]
             # Ts[3], Ts[2], Ts[1], Ts[0]
             _Ts_r = Ts_r.flatten()
-
-            # check BC
-            # if z == 0:
-            #     # BC1
-            #     BC1_T_1 = PeNuHe0*dz
-            #     BC1_T_2 = 1/BC1_T_1
-            #     # forward
-            #     T_f = T_z[z+1]
-            #     # backward
-            #     # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
-            #     # T*[0] = (T0 - Tf)/Tf
-            #     T_0 = 0
-            #     T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
-            # elif z == zNo - 1:
-            #     # BC2
-            #     # backward
-            #     T_b = T_z[z-1]
-            #     # forward
-            #     T_f = T_b
-            # else:
-            #     # interior nodes
-            #     # backward
-            #     T_b = T_z[z-1]
-            #     # forward
-            #     T_f = T_z[z+1]
-
             # check BC
             if z == 0 and solverMeshSet is True:
                 # BC1
@@ -5503,7 +5463,7 @@ class PackedBedReactorClass:
         # print
         strTime = "time: {:.5f} seconds".format(t)
         # print(strTime)
-        # print(f"time: {t} seconds")
+        print(f"time: {t} seconds")
 
         return dxdt
 
@@ -7199,6 +7159,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 5
+opT = 1
 
 # set feed mole fraction
 # H2/COx ratio
@@ -135,6 +135,16 @@ GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
 # convert
 GaThCoMix = 0.125
 
+# NOTE
+### TEST ###
+# bulk concentration
+GaSpCoi = ct0
+# mass transfer coefficient [m/s]
+MaTrCo0 = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
+                    0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
+# heat transfer coefficient - gas/solid [J/m^2.s.K]
+HeTrCo0 = 1731
+
 
 # NOTE
 # reaction rates
@@ -222,12 +232,13 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "M11",
+    "model": "T1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal"
+        "process-type": "iso-thermal",
+        "numerical-method": "fdm"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -263,9 +274,16 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "LSODA",
+        "ivp": "AM",
         "root": "least_squares",
         "mesh": "refine"
+    },
+    "test-const": {
+        "numerical-method": "fdm",
+        "Cbi": GaSpCoi,
+        "Tb": T,
+        "MaTrCo0": MaTrCo0,
+        "HeTrCo0": HeTrCo0
     }
 }
 

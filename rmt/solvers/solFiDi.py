@@ -365,6 +365,24 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
             # reaction term
             _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
 
+            # if i == 0:
+            #     A[i] = 3*const1*(2*yi[i+1] - 2*yi[i]) + _Ri
+            # elif i > 0 and i < rNo-1:
+            #     A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
+            #         const2*(yi[i+1] - yi[i-1]) + _Ri
+            # elif i == rNo-1:
+            #     # const
+            #     alpha = rf/GaDii0
+            #     beta = MaTrCoi/DiCoi_DiLeVa
+            #     _DiLeNo = alpha*beta
+            #     # ghost point y[N+1]
+            #     _a1 = (2*dr)
+            #     _a2 = alpha*beta*(yi[i] - SpCoiBulk)
+            #     _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
+            #     yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) - yi[i-1])
+            #     A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
+            #         const2*(yN__1 - yi[i-1]) + _Ri
+
             if i == 0:
                 A[i] = 3*const1*(2*yi[i+1] - 2*yi[i]) + _Ri
             elif i > 0 and i < rNo-1:
@@ -379,7 +397,7 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
                 _a1 = (2*dr)
                 _a2 = alpha*beta*(yi[i] - SpCoiBulk)
                 _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
-                yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) + yi[i-1])
+                yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) - yi[i-1])
                 A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
                     const2*(yN__1 - yi[i-1]) + _Ri
 

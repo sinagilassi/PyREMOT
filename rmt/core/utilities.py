@@ -32,3 +32,49 @@ def selectFromListByIndex(indices, refList):
     # select items
     selected_elements = [refList[index] for index in indices]
     return selected_elements
+
+
+def selectRandomList(myList, no, labelNameTime):
+    """
+    select sorted random index from array
+    args:
+        myList: 2D array 
+        no: number of element to be selected
+        labelNameTime: label name time
+    """
+    # array shape
+    myListShape = np.shape(myList)
+
+    # set elements
+    myListIndex = [*range(myListShape[0])]
+    myListIndex_2 = myListIndex[1:-1]
+    myListIndex_3 = np.sort(np.random.choice(myListIndex_2, no, replace=False))
+
+    # select from array
+    # element
+    myList_2 = []
+    # label
+    labelNameTime_2 = []
+    for i in myListIndex_3:
+        myList_2.append(myList[i])
+        # label
+        labelNameTime_2.append(labelNameTime[i])
+
+    a = myList[0]
+    b = myList_2
+    c = myList[-1]
+    # combine
+    myList_3 = [a, *b, c]
+
+    # set label
+    a1 = labelNameTime[0]
+    b1 = labelNameTime_2
+    c1 = labelNameTime[-1]
+    labelNameTime_3 = [a1, *b1, c1]
+
+    # res
+    res = {
+        "data1": myList_3,
+        "data2": labelNameTime_3
+    }
+    return res

@@ -26,7 +26,7 @@ P = 3*1e5
 T = 973
 # operation period [s]
 # [h]
-opT = 100
+opT = 1
 
 # component all
 compList = ["CH4", "C2H4", "H2"]
@@ -165,10 +165,10 @@ reactionRateSet = {
 
 # NOTE
 # model ids
-# M11
+# M11: hetero finite difference method
 # T1: isothermal particle
 # T2: non-isothermal particle
-# M12
+# M12: hetero orthogonal collocation method
 
 # model input - feed
 modelInput = {
@@ -177,7 +177,8 @@ modelInput = {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "non-iso-thermal"
+        "process-type": "non-iso-thermal",
+        "numerical-method": "fdm"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -218,6 +219,7 @@ modelInput = {
         "mesh": "refine"
     },
     "test-const": {
+        "numerical-method": "fdm",
         "Cbi": GaSpCoi,
         "Tb": T,
         "MaTrCo0": MaTrCo0,
@@ -230,6 +232,7 @@ modelInput = {
 # Radau
 # LSODA
 # BDF
+# AM
 # refine
 # normal
 

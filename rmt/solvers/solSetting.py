@@ -43,12 +43,22 @@ solverSetting = {
     },
     "T1": {
         "zMesh": {
-            "zNoNo": [65, 5],
-            "DoLeSe": 80,
+            "zNoNo": [15, 10],
+            "DoLeSe": 30,
             "MeReDe": 1.001
         },
+        "tNo": 20,
+        "timesNo": 5,
         "zNo": 30,
-        "rNo": 0,
+        "rNo": {
+            "fdm": 7,
+            "oc": 7
+        },
+        "ode-solver": {
+            "PreCorr3": {
+                "n": 100
+            }
+        },
         "dFdz": DIFF_SETTING['BD'],
         "d2Fdz2": {
             "BC1": DIFF_SETTING['CD'],
@@ -62,4 +72,15 @@ solverSetting = {
             "G": DIFF_SETTING['CD']
         },
     },
+    "ParticleModel": {
+        "tNo": 10,
+        "timesNo": 5,
+        "rNo": {
+            "fdm": 7,
+            "oc": 7
+        },
+        "display": {
+            "tNo": 3
+        }
+    }
 }
