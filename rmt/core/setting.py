@@ -66,6 +66,12 @@ modelTypes = {
             "steady-state plug-flow heterogenous reactor [concentration base]",
         "numerical": "fdm"
     },
+    "M13": {
+        "id": "M13",
+        "des":
+            "dynamic heterogenous reactor [two time domain]",
+        "numerical": "fdm"
+    },
     "T1": {
         "id": "T1",
         "des":

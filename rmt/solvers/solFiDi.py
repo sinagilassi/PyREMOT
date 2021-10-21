@@ -315,7 +315,7 @@ def FiDiSetMatrix(compNo, DoLe, rNo, yj, params):
 # dimensionless type
 
 
-def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
+def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default", fluxDir="rl"):
     '''
     build concentration residual matrix [R]
     args:
@@ -329,6 +329,12 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
             Ri: formation rate of component [kmol/m^3.s] | [mol/m^3.s]
             SpCoiBulk: species concentration of component in the bulk phase [kmol/m^3] | [mol/m^3]
             CaPo: catalyst porosity
+        mode: 
+            default
+            test
+        fluxDir:
+            rl: outward
+            lr: inward
     '''
     # try/except
     try:
@@ -352,60 +358,86 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
         # params
         DiCoi_DiLeVa, MaTrCoi, Ri, SpCoiBulk, CaPo, SoMaDiTe0, GaDii0, rf = params
 
-        # concentration
-
-        for i in range(rNo):
-            # dr distance
-            ri = 1 if i == 0 else i*dr
-
-            # constant
-            const1 = (DiCoi_DiLeVa/(dr**2))
-            const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
-
-            # reaction term
-            _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
-
-            # if i == 0:
-            #     A[i] = 3*const1*(2*yi[i+1] - 2*yi[i]) + _Ri
-            # elif i > 0 and i < rNo-1:
-            #     A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
-            #         const2*(yi[i+1] - yi[i-1]) + _Ri
-            # elif i == rNo-1:
-            #     # const
-            #     alpha = rf/GaDii0
-            #     beta = MaTrCoi/DiCoi_DiLeVa
-            #     _DiLeNo = alpha*beta
-            #     # ghost point y[N+1]
-            #     _a1 = (2*dr)
-            #     _a2 = alpha*beta*(yi[i] - SpCoiBulk)
-            #     _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
-            #     yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) - yi[i-1])
-            #     A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
-            #         const2*(yN__1 - yi[i-1]) + _Ri
-
-            if i == 0:
-                A[i] = 3*const1*(2*yi[i+1] - 2*yi[i]) + _Ri
-            elif i > 0 and i < rNo-1:
-                A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
-                    const2*(yi[i+1] - yi[i-1]) + _Ri
-            elif i == rNo-1:
-                # const
-                alpha = rf/GaDii0
-                beta = MaTrCoi/DiCoi_DiLeVa
-                _DiLeNo = alpha*beta
-                # ghost point y[N+1]
-                _a1 = (2*dr)
-                _a2 = alpha*beta*(yi[i] - SpCoiBulk)
-                _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
-                yN__1 = -1*((2*dr)*alpha*beta*(yi[i] - SpCoiBulk) - yi[i-1])
-                A[i] = const1*(yi[i-1] - 2*yi[i] + yN__1) + \
-                    const2*(yN__1 - yi[i-1]) + _Ri
-
-        # flip
-        A_Flip = np.flip(A)
-
         # check
-        A_Res = A_Flip if mode == "default" else A
+        if fluxDir == "rl":
+            # y[i]: 0,1,...,N
+            # y[0]: center
+            # y[N]: gas-solid interface
+            # concentration
+            for i in range(rNo):
+                # dr distance
+                ri = 1 if i == 0 else i*dr
+
+                # constant
+                const1 = (DiCoi_DiLeVa/(dr**2))
+                const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
+
+                # reaction term
+                _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                if i == 0:
+                    y__1 = yi[i+1]
+                    A[i] = 3*const1*(2*y__1 - 2*yi[i]) + _Ri
+                elif i > 0 and i < rNo-1:
+                    A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
+                        const2*(yi[i+1] - yi[i-1]) + _Ri
+                elif i == rNo-1:
+                    # const
+                    alpha = rf/GaDii0
+                    beta = MaTrCoi/DiCoi_DiLeVa
+                    _DiLeNo = alpha*beta
+                    # ghost point y[N+1]
+                    _a1 = (2*dr)
+                    _a2 = alpha*beta*(yi[i] - SpCoiBulk)
+                    _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
+                    yN__1 = yi[i-1] + (2*dr)*_DiLeNo*(SpCoiBulk - yi[i])
+                    A[i] = const1*(yN__1 - 2*yi[i] + yi[i-1]) + \
+                        const2*(yN__1 - yi[i-1]) + _Ri
+            # flip
+            A_Flip = np.flip(A)
+            # check
+            A_Res = A_Flip if mode == "default" else A
+
+        elif fluxDir == "lr":
+            # y[i]: 0,1,...,N
+            # y[0]: gas-solid interface
+            # y[N]: center
+            # yi = np.flip(yi)
+            # Ri = np.flip(Ri)
+            # concentration
+            for i in range(rNo):
+                # dr distance
+                # ri = 1 if i == 0 else 1-i*dr
+                ri = 1 if i == 0 else i*dr
+
+                # constant
+                const1 = (DiCoi_DiLeVa/(dr**2))
+                const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
+
+                # reaction term
+                _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                if i == 0:
+                    y__1 = yi[i+1]
+                    A[i] = 3*const1*(2*y__1 - 2*yi[i]) + _Ri
+                elif i > 0 and i < rNo-1:
+                    A[i] = const1*(yi[i-1] - 2*yi[i] + yi[i+1]) + \
+                        const2*(yi[i+1] - yi[i-1]) + _Ri
+                elif i == rNo-1:
+                    # const
+                    alpha = rf/GaDii0
+                    beta = MaTrCoi/DiCoi_DiLeVa
+                    _DiLeNo = alpha*beta
+                    # ghost point y[N+1]
+                    _a1 = (2*dr)
+                    _a2 = alpha*beta*(yi[i] - SpCoiBulk)
+                    _a3 = (2*dr)*alpha*beta*(yi[i] - SpCoiBulk)
+                    yN_1 = yi[i-1] - (2*dr)*_DiLeNo*(yi[i] - SpCoiBulk)
+                    A[i] = const1*(yi[i-1] - 2*yi[i] + yN_1) + \
+                        const2*(yN_1 - yi[i-1]) + _Ri
+
+            # flip
+            A_Flip = np.flip(A)
+            # check
+            A_Res = A_Flip if mode == "default" else A
 
         # res
         return A_Res
@@ -475,8 +507,9 @@ def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
                 # const
                 alpha = rf/CaThCo
                 beta = -1*HeTrCo/CaThCo_DiLeVa
+                _DiLeNo = alpha*beta
                 # ghost point y[N+1]
-                yN__1 = (2*dr)*alpha*beta*(Ti[i] - TBulk) + Ti[i-1]
+                yN__1 = (2*dr)*_DiLeNo*(Ti[i] - TBulk) + Ti[i-1]
                 A[i] = const1*(Ti[i-1] - 2*Ti[i] + yN__1) + \
                     const2*(yN__1 - Ti[i-1]) + _dHRi
 

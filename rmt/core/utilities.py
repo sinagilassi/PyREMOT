@@ -29,8 +29,13 @@ def selectFromListByIndex(indices, refList):
         indices: list of index
         refList: 1D array
     '''
-    # select items
-    selected_elements = [refList[index] for index in indices]
+    # length
+    indexLength = len(indices)
+    if indexLength != 0:
+        # select items
+        selected_elements = [refList[index] for index in indices]
+    else:
+        selected_elements = refList
     return selected_elements
 
 

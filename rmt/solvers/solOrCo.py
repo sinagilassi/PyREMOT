@@ -36,6 +36,16 @@ class OrCoClass:
     x6 = 0.965245
     x7 = 1
 
+    # 6 points [planner shape]
+    # x1 = 0
+    # x1 = 0.11633
+    # x2 = 0.34272
+    # x3 = 0.55063
+    # x4 = 0.72886
+    # x5 = 0.86780
+    # x6 = 0.95993
+    # x7 = 1
+
     # initial boundary condition
     X0 = 0
     # last boundary condition

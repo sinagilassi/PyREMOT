@@ -111,8 +111,9 @@ def PreCorr3(t0, tn, n, y0, f, params):
 # paramsSet = (1.5, 1, 3, 1)
 # funSet = dFdtFun
 
-# # sol = RK4(t0, tn, n, y0, paramsSet)
+# sol = RK4(t0, tn, n, y0, paramsSet)
 # sol = AdBash3(t0, tn, n, y0, funSet, paramsSet)
+# sol = PreCorr3(t0, tn, n, y0, funSet, paramsSet)
 
 # z = sol
 # plt.plot(t, z[0, :], t, z[1, :])

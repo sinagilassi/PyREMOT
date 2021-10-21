@@ -25,7 +25,7 @@ class OrCoCatParticleClass:
         self.B = B
         self.odeNo = odeNo
 
-    def CalUpdateYnSolidGasInterface(self, yj, CTb, beta):
+    def CalUpdateYnSolidGasInterface(self, yj, CTb, beta, fluxDir="lr"):
         '''
         calculate concentration and temperature at the catalyst surface
             args:
@@ -46,22 +46,41 @@ class OrCoCatParticleClass:
             # flip
             yj_flip = np.flip(yj).reshape(_shape)
 
-            # concentration
-            # constant y[0 to N]*A[N+1,r]
-            _Ay_Selected = self.A[-1, :-1]
-            _yj_Selected = yj_flip[:-1, 0]
-            _Ay0 = np.dot(_Ay_Selected, _yj_Selected)
-            _Ay = _Ay_Selected*_yj_Selected
-            _alpha = np.sum(_Ay) + beta*CTb
-            # y[N+1] constant
-            _gamma = beta - self.A[-1, -1]
-            # updated concentration
-            yn = _alpha/_gamma
-            # update yj
-            yj_flip[-1][0] = yn
+            # yj shape
+            yj_Shape = yj.reshape(_shape)
+
+            if fluxDir == "rl":
+                # concentration
+                # constant y[0 to N]*A[N+1,r]
+                _Ay_Selected = self.A[-1, :-1]
+                _yj_Selected = yj_Shape[:-1, 0]
+                _Ay0 = np.dot(_Ay_Selected, _yj_Selected)
+                _Ay = _Ay_Selected*_yj_Selected
+                _alpha = np.sum(_Ay) + beta*CTb
+                # y[N+1] constant
+                _gamma = beta - self.A[-1, -1]
+                # updated concentration
+                yn = _alpha/_gamma
+                # update yj
+                yj_Shape[-1][0] = yn
+            elif fluxDir == "lr":
+                # concentration
+                # constant y[0 to N]*A[N+1,r]
+                _Ay_Selected = self.A[-1, :-1]
+                _yj_Selected = yj_Shape[:-1, 0]
+                _Ay0 = np.dot(_Ay_Selected, _yj_Selected)
+                _Ay = _Ay_Selected*_yj_Selected
+                _Ay_Sum = np.sum(_Ay)
+                _alpha = beta*CTb - _Ay_Sum
+                # y[N+1] constant
+                _gamma = beta + self.A[-1, -1]
+                # updated concentration
+                yn = _alpha/_gamma
+                # update yj
+                yj_Shape[-1][0] = yn
 
             # res
-            return yj_flip
+            return yj_Shape
         except Exception as e:
             raise
 
@@ -154,7 +173,7 @@ class OrCoCatParticleClass:
         except Exception as e:
             raise
 
-    def buildOrCoMatrix(self, yj, const1, const2):
+    def buildOrCoMatrix(self, yj, const1, const2, mode="default"):
         '''
         build main matrix used for df/dt
         args: 
@@ -181,7 +200,8 @@ class OrCoCatParticleClass:
             RYFMatrix = RYMatrix + fMatrix
 
             # should be flip C[n], C[n-1], ..., C[0]
-            RYFMatrix_flip = np.flipud(RYFMatrix)
+            RYFMatrix_flip = np.flipud(
+                RYFMatrix) if mode == "default" else RYFMatrix
 
             # res
             return RYFMatrix_flip

@@ -107,6 +107,8 @@ class rmtCoreClass():
             return self.M11Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['M12']['id']:
             return self.M12Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['M13']['id']:
+            return self.M13Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T1']['id']:
             return self.T1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T2']['id']:
@@ -327,8 +329,21 @@ class rmtCoreClass():
         res = reInit.runM8()
         return res
 
+    def M13Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        M12 model: steady-state Packed-bed Plug-flow reactor (heterogenous)
+        """
+        # init
+        reInit = pbHeterRec(self.modelInput, internalData,
+                            reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM2()
+        return res
+
+
 # NOTE
 # test models
+
     def T1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
         T1 model: dynamic model of catalyst diffusion-reaction

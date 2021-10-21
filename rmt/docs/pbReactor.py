@@ -5257,16 +5257,20 @@ class PackedBedReactorClass:
                 _Cs_r = CosSpi_r[:, i].flatten()
                 # Cs[0], Cs[1], ...
                 _Cs_r_Flip = np.flip(_Cs_r)
+                # reaction term
+                _ri_r = ri_r[:, i]
+                # flip
+                _ri_r_Flip = np.flip(_ri_r)
 
                 # dimensionless analysis
 
                 # loop
                 _dCsdtiVarLoop = (
-                    GaDii_DiLeVa[i], MaTrCo[i], ri_r[:, i], Ci_c, CaPo, SoMaDiTe0[i], GaDii0[i], rf)
+                    GaDii_DiLeVa[i], MaTrCo[i], _ri_r_Flip, Ci_c, CaPo, SoMaDiTe0[i], GaDii0[i], rf)
 
                 # dC/dt list
                 dCsdti = FiDiBuildCMatrix_DiLe(
-                    compNo, PaRa, rNo, _Cs_r_Flip, _dCsdtiVarLoop)
+                    compNo, PaRa, rNo, _Cs_r_Flip, _dCsdtiVarLoop, mode="default", fluxDir="rl")
 
                 # const
                 _const1 = CaPo*(rf**2/GaDii0[i])
@@ -5437,7 +5441,7 @@ class PackedBedReactorClass:
             # [J/s.m.K] => [kJ/s.m.K]
             SoThCoEff_Conv = CaPo*SoThCoMix0/1000
             # OvHeReT [kJ/m^3.s]
-            OvHeReT_Conv = -1*OvHeReT
+            OvHeReT_Conv = np.flip(-1*OvHeReT)
             # HeTrCo [J/m^2.s.K] => [kJ/m^2.s.K]
             HeTrCo_Conv = HeTrCo/1000
             # var loop

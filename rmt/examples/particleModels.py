@@ -188,6 +188,8 @@ class ParticleModelClass:
         noLayerT = 1 if processType != PROCESS_SETTING['ISO-THER']else 0
         # number of layers
         noLayer = noLayerC + noLayerT
+        # save all data
+        noLayerSave = noLayerC + 1
         # var no in each layer
         varNoLayer = zNo*(rNo+1)
         # total number of vars (Ci,T,Cci,Tci)
@@ -384,7 +386,7 @@ class ParticleModelClass:
 
         # build data list
         # over time
-        dataPacktime = np.zeros((noLayer, tNo, rNo))
+        dataPacktime = np.zeros((noLayerSave, tNo, rNo))
 
         # solver selection
         # BDF, Radau, LSODA
@@ -408,9 +410,10 @@ class ParticleModelClass:
             # ode call
             # ode call
             if solverIVP == "AM":
-                # sol = AdBash3(t[0], t[1], n, IV, funSet, paramsSet)
+                # adams moulton method
+                sol = AdBash3(t[0], t[1], n, IV, funSet, paramsSet)
                 # PreCorr3
-                sol = PreCorr3(t[0], t[1], n, IV, funSet, paramsSet)
+                # sol = PreCorr3(t[0], t[1], n, IV, funSet, paramsSet)
 
                 # ode result
                 successStatus = True
@@ -470,6 +473,9 @@ class ParticleModelClass:
             dataYs_Combine = np.concatenate(
                 (dataYs_Concentration_ReVa, dataYs_Temperature_ReVa), axis=0)
 
+            dataYs_Combine_2 = np.concatenate(
+                (dataYs_Concentration_DiLeVa, dataYs_Temperature_DiLeVa), axis=0)
+
             # save data
             dataPack.append({
                 "successStatus": successStatus,
@@ -488,7 +494,7 @@ class ParticleModelClass:
                 dataPacktime[m][i, :] = dataPack[i]['dataYCo_DiLe'][m, :]
 
             # temperature
-            dataPacktime[-1][i, :] = dataPack[i]['dataYT'][:]
+            dataPacktime[indexTemp][i, :] = dataPack[i]['dataYT_DiLe'][:]
 
             # update initial values [IV]
             IV = dataYs[:, -1]
@@ -515,11 +521,11 @@ class ParticleModelClass:
             # -> add label
             dataList = pltc.plots2DSetDataList(XYList, labelList)
             # datalists
-            # dataLists = [dataList[0:compNo], dataList[1], dataList[indexTemp]]
-            dataLists = [dataList[0], dataList[1],
-                         dataList[2], dataList[indexTemp]]
+            dataLists = [dataList[0:compNo], dataList[indexTemp]]
+            # dataLists = [dataList[0], dataList[1],
+            #              dataList[2], dataList[indexTemp]]
             # select datalist
-            _dataListsSelected = selectFromListByIndex([0, 1, 2, 3], dataLists)
+            _dataListsSelected = selectFromListByIndex([0, 1], dataLists)
             if i == tNo-1:
                 # subplot result
                 pltc.plots2DSub(_dataListsSelected, xLabelSet,
@@ -564,7 +570,7 @@ class ParticleModelClass:
 
         # select datalist
         _dataListsSelected = selectFromListByIndex(
-            [0, 1, 2, 3], _dataListsLoop)
+            [], _dataListsLoop)
 
         # subplot result
         pltc.plots2DSub(_dataListsSelected, "Dimensionless Particle Radius",
@@ -973,7 +979,10 @@ class ParticleModelClass:
             # [Cs[3], Cs[2], Cs[1], Cs[0]]
             _Cs_r = CosSpi_r[:, i].flatten()
             # Cs[0], Cs[1], ...
-            # _Cs_r_Flip = np.flip(_Cs_r)
+            _Cs_r_Flip = np.flip(_Cs_r)
+            # reaction term
+            _ri_r = ri_r[:, i]
+            _ri_r_Flip = np.flip(_ri_r)
 
             # dimensionless analysis
             if numericalMethod == "fdm":
@@ -981,26 +990,26 @@ class ParticleModelClass:
                 # updated concentration gas-solid interface
                 # loop var
                 _dCsdtiVarLoop = (
-                    SoDiiEff_DiLe[i], MaTrCo[i], (1 - CaPo)*ri_r[:, i], Ci_c, CaPo, SoMaDiTe0[i], SoDiiEff[i], rf)
+                    SoDiiEff_DiLe[i], MaTrCo[i], _ri_r, Ci_c, CaPo, SoMaDiTe0[i], SoDiiEff[i], rf)
 
                 # dC/dt list
                 dCsdti = FiDiBuildCMatrix_DiLe(
-                    compNo, PaRa, rNo, _Cs_r, _dCsdtiVarLoop, mode="test")
+                    compNo, PaRa, rNo, _Cs_r, _dCsdtiVarLoop, mode="test", fluxDir="lr")
             elif numericalMethod == "oc":
                 ### orthogonal collocation method ###
                 # updated concentration gas-solid interface
                 # const
                 _alpha = rf/GaDii0[i]
                 _beta = MaTrCo[i]/GaDii_DiLeVa[i]
-                _Cs_r_interface = _alpha*_beta
+                _DiLeNu = _alpha*_beta
                 _Ri = (1/SoMaDiTe0[i])*(1 - CaPo)*ri_r[:, i]
                 # shape(rNo,1)
                 _Cs_r_Updated = OrCoCatParticleClassSet.CalUpdateYnSolidGasInterface(
-                    _Cs_r, Ci_c, _Cs_r_interface)
+                    _Cs_r, Ci_c, _DiLeNu)
 
                 # dC/dt list
                 dCsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
-                    _Cs_r_Updated, SoDiiEff_DiLe[i], _Ri)
+                    _Cs_r_Updated, SoDiiEff_DiLe[i], _Ri, mode="test")
             else:
                 pass
 
@@ -1020,11 +1029,11 @@ class ParticleModelClass:
                 # Ts[0], Ts[1], Ts[2], ...
                 _Ts_r = Ts_r.flatten()
                 # T[n], T[n-1], ..., T[0]
-                _Ts_r_Flip = np.flip(_Ts_r)
+                # _Ts_r_Flip = np.flip(_Ts_r)
 
                 # convert
                 # [J/s.m.K] => [kJ/s.m.K]
-                SoThCoEff_Conv = CaPo*SoThCoMix0/1000
+                SoThCoEff_Conv = SoThCoMix0/1000
                 # OvHeReT [kJ/m^3.s]
                 OvHeReT_Conv = -1*OvHeReT
                 # HeTrCo [J/m^2.s.K] => [kJ/m^2.s.K]
@@ -1044,17 +1053,18 @@ class ParticleModelClass:
                     ### orthogonal collocation method ###
                     # loop vars
                     _alpha = rf/SoThCoEff_Conv
-                    _beta = -1*HeTrCo_Conv/SoThCoEff_DiLeVa
-                    _Ts_r_interfaceVar = _alpha*_beta
+                    # FIXME
+                    _beta = 1*HeTrCo_Conv/SoThCoEff_DiLeVa
+                    _DiLeNu = _alpha*_beta
                     _H = (1/SoHeDiTe0)*(1 - CaPo)*OvHeReT_Conv
                     # T[n], T[n-1], ..., T[0]
                     # updated temperature gas--solid interface
                     _Ts_r_Updated = OrCoCatParticleClassSet.CalUpdateYnSolidGasInterface(
-                        _Ts_r, Tb, _Ts_r_interfaceVar)
+                        _Ts_r, Tb, _DiLeNu)
 
                     # dTs/dt list
                     dTsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
-                        _Ts_r_Updated, SoThCoEff_DiLeVa, _H)
+                        _Ts_r_Updated, SoThCoEff_DiLeVa, _H, mode="test")
 
                 # const
                 _const1 = SoCpMeanMixEff_ReVa*Tf/SoHeDiTe0
