@@ -26,7 +26,7 @@ P = 3*1e5
 T = 973
 # operation period [s]
 # [h]
-opT = 1
+opT = 0.3
 
 # component all
 compList = ["CH4", "C2H4", "H2"]
@@ -169,6 +169,7 @@ reactionRateSet = {
 # T1: isothermal particle
 # T2: non-isothermal particle
 # M12: hetero orthogonal collocation method
+# M13: hetero model with ode ivp/bvp
 
 # model input - feed
 modelInput = {
@@ -215,11 +216,11 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "least_squares",
+        "root": "fsolve",
         "mesh": "normal"
     },
     "test-const": {
-        "numerical-method": "fdm",
+        "numerical-method": "oc",
         "Cbi": GaSpCoi,
         "Tb": T,
         "MaTrCo0": MaTrCo0,
@@ -227,6 +228,7 @@ modelInput = {
     }
 }
 
+# root
 # fsolve
 # least_squares
 # Radau

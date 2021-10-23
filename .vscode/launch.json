@@ -107,6 +107,14 @@
       "program": "${workspaceFolder}\\rmt\\solvers\\odeSolver.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "FEM Test",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}\\rmt\\testFiEl.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
     }
   ]
 }

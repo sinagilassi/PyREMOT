@@ -47,9 +47,9 @@ solverSetting = {
             "DoLeSe": 30,
             "MeReDe": 1.001
         },
-        "tNo": 20,
+        "tNo": 5,
         "timesNo": 5,
-        "zNo": 30,
+        "zNo": 10,
         "rNo": {
             "fdm": 7,
             "oc": 7

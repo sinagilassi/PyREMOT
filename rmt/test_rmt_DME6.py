@@ -232,12 +232,12 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T1",
+    "model": "T2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal",
+        "process-type": "non-iso-thermal",
         "numerical-method": "fdm"
     },
     "feed": {
@@ -275,7 +275,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "AM",
-        "root": "least_squares",
+        "root": "fsolve",
         "mesh": "refine"
     },
     "test-const": {

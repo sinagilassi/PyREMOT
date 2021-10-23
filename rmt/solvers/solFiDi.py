@@ -373,7 +373,8 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default", fluxDir
                 const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
 
                 # reaction term
-                _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                # _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                _Ri = Ri[i]
                 if i == 0:
                     y__1 = yi[i+1]
                     A[i] = 3*const1*(2*y__1 - 2*yi[i]) + _Ri
@@ -414,7 +415,8 @@ def FiDiBuildCMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default", fluxDir
                 const2 = 2*DiCoi_DiLeVa/(ri*2*dr)
 
                 # reaction term
-                _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                # _Ri = (1/SoMaDiTe0)*(1 - CaPo)*Ri[i]
+                _Ri = Ri[i]
                 if i == 0:
                     y__1 = yi[i+1]
                     A[i] = 3*const1*(2*y__1 - 2*yi[i]) + _Ri
@@ -496,7 +498,8 @@ def FiDiBuildTMatrix_DiLe(compNo, DoLe, rNo, yi, params, mode="default"):
             const2 = 2*CaThCo_DiLeVa/(ri*2*dr)
 
             # reaction term
-            _dHRi = (1/SoHeDiTe0)*(1 - CaPo)*OvHeReT[i]
+            # _dHRi = (1/SoHeDiTe0)*(1 - CaPo)*OvHeReT[i]
+            _dHRi = OvHeReT[i]
 
             if i == 0:
                 A[i] = 3*const1*(2*Ti[i+1] - 2*Ti[i]) + _dHRi

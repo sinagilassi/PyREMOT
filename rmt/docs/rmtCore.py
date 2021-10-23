@@ -344,9 +344,10 @@ class rmtCoreClass():
 # NOTE
 # test models
 
+
     def T1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        T1 model: dynamic model of catalyst diffusion-reaction
+        dynamic model of catalyst diffusion-reaction
         """
         # init reactor
         reInit = pMod(self.modelInput, internalData,
@@ -356,6 +357,17 @@ class rmtCoreClass():
         return res
 
     def T2Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        dynamic model of catalyst diffusion-reaction
+        """
+        # init reactor
+        reInit = pMod(self.modelInput, internalData,
+                      reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runT2()
+        return res
+
+    def T3Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
         model: homogenous model
         """

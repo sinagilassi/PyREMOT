@@ -88,26 +88,42 @@ class OrCoCatParticleClass:
     # first point is not BC1
     # last point is BC2
 
-    def fR(self, i, j, Aij, Bij, N, contCT):
+    def fR(self, i, j, Aij, Bij, N, contCT, constBeta=1):
         ''' 
         calculate element of R matrix
             args:
                 contCT: 
                     concentration: effective diffusivity coefficient
                     temperature: effective thermal conductivity
+                constBeta: 
+                    concentration: dimensionless number
+                    temperature: dimensionless number
         '''
-        if i < N:
+        if i < N-1:
+            # NOTE
+            # interior points
             F = contCT*Bij + contCT*(2/self.Xc[i])*Aij
+        elif i == N-1:
+            # NOTE
+            # BC2 point
+            if j < N-1:
+                F = Aij
+            elif j == N-1:
+                F = Aij + constBeta
 
         return F
 
-    def buildLhsMatrix(self, contCT):
+    def buildLhsMatrix(self, contCT, constCT2):
         '''
         build Lhs (R) matrix
         args: 
             contCT: 
                 concentration: effective diffusivity coefficient of component
                 temperature: effective thermal conductivity 
+            constCT2: 
+                concentration:
+                    Ci_c: bulk concentration 
+                    _DiLeNu: dimensionless number
         '''
         # Residual Formulation
         # ---------------------
@@ -131,49 +147,62 @@ class OrCoCatParticleClass:
             for i in range(self.N):
                 for j in range(self.N):
                     R[i][j] = self.fR(i, j, self.A[i][j],
-                                      self.B[i][j], self.N, contCT)
+                                      self.B[i][j], self.N, contCT, constCT2[1])
             # res
             return R
         except Exception as e:
             raise
 
-    def ff(self, i, N, contCT):
+    def ff(self, i, N, contCT, constBeta=[0, 0]):
         ''' 
         calculate element of f matrix
         args:
             contCT: 
                 concentration: reaction term
                 temperature: overall enthalpy of reaction
+            constBeta: 
+                concentration: dimensionless number x Cb[i]
+                temperature: dimensionless number x Tb
         '''
-        if i < N:
+        if i < N-1:
+            # NOTE
+            # interrior points
             F = contCT
+        elif i == N-1:
+            # NOTE
+            # BC2 point
+            F = -1*constBeta[0]*constBeta[1]
 
         return F
 
-    def buildRhsMatrix(self, contCT):
+    def buildRhsMatrix(self, contCT, constCT2):
         '''
         RHS of equation consisting nonlinear/linear term such as reaction
         args:
             contCT
                 concentration: list of reaction term
                 temperature: list of overall enthalpy of reaction
+            constCT2: 
+                concentration:
+                    Ci_c: bulk concentration 
+                    _DiLeNu: dimensionless number
         '''
         try:
             # f matrix - constant values matrix
             # rhs
-            rhsMatrixShape = (self.N, 1)
+            rhsMatrixShape = (self.N)
             # define f matrix
             f = np.zeros(rhsMatrixShape)
 
             for i in range(self.N):
-                f[i, 0] = self.ff(i, self.N, contCT[i])
+                f[i] = self.ff(i, self.N, contCT[i], constCT2)
 
             # res
             return f
         except Exception as e:
             raise
 
-    def buildOrCoMatrix(self, yj, const1, const2, mode="default"):
+    def buildOrCoMatrix(self, yj, const1, const2, const3=(), mode="default"):
         '''
         build main matrix used for df/dt
         args: 
@@ -184,14 +213,17 @@ class OrCoCatParticleClass:
             const2: 
                 concentration: reaction term
                 temperature: overall enthalpy of reaction
+            const3: 
+                concentration: bulk concentration & dimensionless number
+                temperature: bulk temperature & dimensionless number
         '''
         try:
             # # yj
             # y[0], y[1], ..., y[n]
             # R matrix
-            RMatrix = self.buildLhsMatrix(const1)
+            RMatrix = self.buildLhsMatrix(const1, const3)
             # f matrix
-            fMatrix = self.buildRhsMatrix(const2)
+            fMatrix = self.buildRhsMatrix(const2, const3)
 
             # [R][Y]=[RY]
             RYMatrix = np.matmul(RMatrix, yj)
@@ -208,3 +240,6 @@ class OrCoCatParticleClass:
 
         except Exception as e:
             raise
+
+# NOTE
+# steady-state OC
