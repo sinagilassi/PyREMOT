@@ -279,7 +279,7 @@ modelInput = {
         "mesh": "refine"
     },
     "test-const": {
-        "numerical-method": "fdm",
+        "numerical-method": "fem",
         "Cbi": GaSpCoi,
         "Tb": T,
         "MaTrCo0": MaTrCo0,
@@ -287,6 +287,10 @@ modelInput = {
     }
 }
 
+# NOTE
+# fsolve, then adjust initial guess 0.5, fdm
+# oc, initial guess would be dimensionless
+# root
 # fsolve
 # least_squares
 # Radau

@@ -79,6 +79,7 @@ solverSetting = {
             "fdm": 7,
             "oc": 7
         },
+        "NuEl": 6,
         "display": {
             "tNo": 3
         }

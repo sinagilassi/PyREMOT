@@ -173,7 +173,7 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "M13",
+    "model": "T2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -216,11 +216,11 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "fsolve",
+        "root": "root",
         "mesh": "normal"
     },
     "test-const": {
-        "numerical-method": "oc",
+        "numerical-method": "fem",
         "Cbi": GaSpCoi,
         "Tb": T,
         "MaTrCo0": MaTrCo0,

@@ -19,8 +19,10 @@ from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiBuildCMatrix
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from docs.rmtThermo import *
 from solvers.solOrCo import OrCoClass
+from solvers.solFiEl import FiElClass
 from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
 from solvers.solCatParticle import OrCoCatParticleClass
+from solvers.solCatParticle2 import FiElCatParticleClass
 from docs.gasTransPor import calTest
 from core.utilities import roundNum, selectFromListByIndex, selectRandomList
 from solvers.solResultAnalysis import sortResult2
@@ -1098,7 +1100,10 @@ class ParticleModelClass:
         steady state model
         unknowns: Cci, Tc (for catalyst)
             CT, GaDe = f(P, T, n)
-        numerical method: finite difference
+        numerical method: 
+            finite difference
+            orthogonal collocation
+            finite element
         """
         # start computation
         start = timer()
@@ -1202,10 +1207,8 @@ class ParticleModelClass:
         numericalMethod = self.modelInput['test-const']['numerical-method']
 
         # REVIEW
-        # solver setting
-        # orthogonal collocation method
-        OrCoClassSet = OrCoClass()
-        OrCoClassSetRes = OrCoClassSet.buildMatrix()
+        OrCoClassSetRes = []
+        FiElClassInitRes = []
 
         # NOTE
         # dimensionless length
@@ -1223,10 +1226,29 @@ class ParticleModelClass:
             # length list
             dataRs = np.linspace(0, DiLeLe, rNo)
         elif numericalMethod == "oc":
+            # REVIEW
+            # solver setting
+            # orthogonal collocation method
+            OrCoClassSet = OrCoClass()
+            OrCoClassSetRes = OrCoClassSet.buildMatrix()
             # orthogonal collocation points in the r direction
             rNo = solverSetting['ParticleModel']['rNo']['oc']
             # length list
             dataRs = OrCoClassSet.Xc
+        elif numericalMethod == "fem":
+            # number of finite elements in the r direction
+            NuEl = solverSetting['ParticleModel']['NuEl']
+            # REVIEW
+            # solver setting
+            # finite element method
+            # init finite element class
+            FiElClassInit = FiElClass(NuEl)
+            # res
+            FiElClassInitRes = FiElClassInit.initFiEl()
+            # orthogonal collocation points in the r direction
+            rNo = FiElClassInitRes['NuToCoPo']
+            # length list
+            dataRs = FiElClassInitRes['xi']
         else:
             raise
 
@@ -1361,7 +1383,8 @@ class ParticleModelClass:
                 "dz": dz,
             },
             "solverSetting": {
-                "OrCoClassSetRes": OrCoClassSetRes
+                "OrCoClassSetRes": OrCoClassSetRes,
+                "FiElClassInitRes": FiElClassInitRes
             },
             "reactionRateExpr": reactionRateExpr
         }
@@ -1581,7 +1604,7 @@ class ParticleModelClass:
         # datalists
         # dataLists = [dataList[0:compNo], dataList[indexTemp]]
         dataLists = [dataList[0], dataList[1],
-                     dataList[2], dataList[indexTemp]]
+                     dataList[2], dataList[3], dataList[4], dataList[5], dataList[indexTemp]]
         # select datalist
         _dataListsSelected = selectFromListByIndex([], dataLists)
         # subplot result
@@ -1637,6 +1660,7 @@ class ParticleModelClass:
                         rNo: number of orthogonal collocation points in r direction
                         dz: differential length [m]
                     solverSetting:
+                        FiElClassInitRes
                     reactionRateExpr: reaction rate expressions
                     DimensionlessAnalysisParams:
                     Cif: feed concentration [kmol/m^3]
@@ -1765,17 +1789,41 @@ class ParticleModelClass:
         dz = meshSetting['dz']
 
         # NOTE
+        # particle parameters
+        numericalMethod = ParticleParams['numericalMethod']
+        SoCpMeanMixEff = ParticleParams['SoCpMeanMixEff']
+        GaDii = ParticleParams['GaDii0']
+        Cbs = ParticleParams['Cbs']
+        Tb = ParticleParams['Tb']
+
+        # NOTE
         # solver setting
         solverSetting = FunParam['solverSetting']
-        # number of collocation points
-        ocN = solverSetting['OrCoClassSetRes']['N']
-        ocXc = solverSetting['OrCoClassSetRes']['Xc']
-        ocA = solverSetting['OrCoClassSetRes']['A']
-        ocB = solverSetting['OrCoClassSetRes']['B']
-        ocQ = solverSetting['OrCoClassSetRes']['Q']
-        # init OrCoCatParticle
-        OrCoCatParticleClassSet = OrCoCatParticleClass(
-            ocXc, ocN, ocQ, ocA, ocB, varNo)
+        if numericalMethod == "oc":
+            # number of collocation points
+            ocN = solverSetting['OrCoClassSetRes']['N']
+            ocXc = solverSetting['OrCoClassSetRes']['Xc']
+            ocA = solverSetting['OrCoClassSetRes']['A']
+            ocB = solverSetting['OrCoClassSetRes']['B']
+            ocQ = solverSetting['OrCoClassSetRes']['Q']
+            # init OrCoCatParticle
+            OrCoCatParticleClassSet = OrCoCatParticleClass(
+                ocXc, ocN, ocQ, ocA, ocB, varNo)
+        elif numericalMethod == "fem":
+            FiElClassInitRes = solverSetting['FiElClassInitRes']
+            NuEl = FiElClassInitRes['NuEl']
+            NuToCoPo = FiElClassInitRes['NuToCoPo']
+            hi = FiElClassInitRes['hi']
+            li = FiElClassInitRes['li']
+            xi = FiElClassInitRes['xi']
+            Xc = FiElClassInitRes['Xc']
+            N = FiElClassInitRes['N']
+            Q = FiElClassInitRes['Q']
+            A = FiElClassInitRes['A']
+            B = FiElClassInitRes['B']
+            # init FiElCatParticleClass
+            FiElCatParticleClassSet = FiElCatParticleClass(
+                NuEl, NuToCoPo, hi, li, Xc, N, Q, A, B, varNo)
 
         # NOTE
         # reaction rate expressions
@@ -1783,14 +1831,6 @@ class ParticleModelClass:
         # using equation
         varisSet = reactionRateExpr['VARS']
         ratesSet = reactionRateExpr['RATES']
-
-        # NOTE
-        # particle parameters
-        numericalMethod = ParticleParams['numericalMethod']
-        SoCpMeanMixEff = ParticleParams['SoCpMeanMixEff']
-        GaDii = ParticleParams['GaDii0']
-        Cbs = ParticleParams['Cbs']
-        Tb = ParticleParams['Tb']
 
         # NOTE
         # dimensionless analysis params
@@ -2021,6 +2061,18 @@ class ParticleModelClass:
                 # dC/dt list
                 dCsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
                     _Cs_r, SoDiiEff_DiLe[i], _Ri, _varLoop, mode="test")
+            elif numericalMethod == "fem":
+                ### finite element method ###
+                # const
+                _alpha = rf/GaDii0[i]
+                _beta = MaTrCo[i]/GaDii_DiLeVa[i]
+                _DiLeNu = _alpha*_beta*hi[-1]
+                # REVIEW
+                _varLoop = (Ci_c, _DiLeNu)
+
+                # dC/dt list
+                dCsdti = FiElCatParticleClassSet.buildMatrix(
+                    _Cs_r, SoDiiEff_DiLe[i], _Ri, _varLoop, mode="test")
             else:
                 raise
 
@@ -2077,6 +2129,24 @@ class ParticleModelClass:
                     # dTs/dt list
                     dTsdti = OrCoCatParticleClassSet.buildOrCoMatrix(
                         _Ts_r, SoThCoEff_DiLeVa, _dHRi, _varLoop, mode="test")
+                elif numericalMethod == "fem":
+                    ### finite element method ###
+                    # const
+                    # loop vars
+                    _alpha = rf/SoThCoEff_Conv
+                    # FIXME
+                    # ! outard flux
+                    _beta = 1*HeTrCo_Conv/SoThCoEff_DiLeVa
+                    _DiLeNu = _alpha*_beta*hi[-1]
+                    # _H = (1/SoHeDiTe0)*(1 - CaPo)*OvHeReT_Conv
+                    # T[n], T[n-1], ..., T[0]
+                    _varLoop = (Tb, _DiLeNu)
+
+                    # dTs/dt list
+                    dTsdti = FiElCatParticleClassSet.buildMatrix(
+                        _Ts_r, SoThCoEff_DiLeVa, _dHRi, _varLoop, mode="test")
+                else:
+                    raise
 
                 # const
                 _const1 = SoCpMeanMixEff_ReVa*Tf/SoHeDiTe0

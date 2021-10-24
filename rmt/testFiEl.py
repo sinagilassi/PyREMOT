@@ -5,7 +5,7 @@ from scipy import optimize
 import matplotlib.pyplot as plt
 # internals
 from solvers.solFiEl import FiElClass
-from solvers.solCatParticle2 import FiElCatParticleClass
+from solvers.solCatParticle3 import FiElCatParticleClass
 
 
 # number of elements

@@ -8,7 +8,7 @@ import numpy as np
 
 
 class FiElCatParticleClass:
-    def __init__(self, NuEl, NuToCoPo, hi, li, Xc, N, Q, A, B, odeNo):
+    def __init__(self, NuEl, NuToCoPo, hi, Xc, N, Q, A, B, odeNo):
         '''
         args:
             NuEl: number of elements
@@ -24,7 +24,6 @@ class FiElCatParticleClass:
         self.NuEl = NuEl
         self.NuToCoPo = NuToCoPo
         self.hi = hi
-        self.li = li
         self.Xc = Xc
         self.N = N
         self.Q = Q
@@ -34,7 +33,7 @@ class FiElCatParticleClass:
 
     # NOTE
     # BC1
-    def fRbc1(self, i, j, Aij, Bij, N, h, l, const1, const2, const3):
+    def fRbc1(self, i, j, Aij, Bij, N, h, const1, const2, const3):
         '''
         inlet boundary condition
         args:
@@ -49,18 +48,17 @@ class FiElCatParticleClass:
                 temperature: bulk temperature & dimensionless number
         '''
         if i == 0:
-            # bc1: real
+            # bc1
             F = (1/h)*Aij
-            f = 0
+            f = 6  # careful
         elif i > 0 and i < N-1:
             # interior points
-            _var0 = 1/(self.Xc[i]*h + l)
-            F = (const1/(h**2))*Bij + _var0*(2*const1/h)*Aij
-            f = const2
+            F = (1/6)*(1/(h**2))*Bij - (1/h)*Aij
+            f = 0  # *** maybe contains nonlinear term ***
         elif i == N-1:
-            # bc2: continuity
+            # continuity term
             F = (1/h)*Aij
-            f = 0
+            f = 0  # *** maybe contains nonlinear term ***
         else:
             raise
 
@@ -71,7 +69,7 @@ class FiElCatParticleClass:
 
     # NOTE
     # BC2
-    def fRbc2(self, i, j, Aij, Bij, N, h, l, const1, const2, const3):
+    def fRbc2(self, i, j, Aij, Bij, N, h, const1, const2, const3):
         '''
         outlet boundary condition
         args:
@@ -86,26 +84,17 @@ class FiElCatParticleClass:
                 temperature: bulk temperature & dimensionless number
         '''
         if i == 0:
-            # bc1: continuity
+            # bc1
             F = (1/h)*Aij
             f = 0
         elif i > 0 and i < N-1:
             # interior points
-            _var0 = 1/(self.Xc[i]*h + l)
-            F = (const1/(h**2))*Bij + _var0*(2*const1/h)*Aij
-            f = const2
+            F = (1/6)*(1/(h**2))*Bij - (1/h)*Aij
+            f = 0  # *** maybe contains nonlinear term ***
         elif i == N-1:
-            # bc2: real
-            # BC2 point
-            if j < N-1:
-                F = Aij
-                f = 0
-            elif j == N-1:
-                F = Aij + const3[1]
-                # FIXME
-                # ! move to the left side
-                f = -1*const3[0]*const3[1]
-
+            # continuity term
+            F = (1/h)*Aij
+            f = 0  # *** maybe contains nonlinear term ***
         else:
             raise
 
@@ -116,7 +105,7 @@ class FiElCatParticleClass:
 
     # NOTE
     # interrior elements
-    def fR(self, i, j, Aij, Bij, N, h, l, const1, const2, const3):
+    def fR(self, i, j, Aij, Bij, N, h, const1, const2, const3):
         '''
         interrior oc points
         args:
@@ -131,17 +120,17 @@ class FiElCatParticleClass:
                 temperature: bulk temperature & dimensionless number
         '''
         if i == 0:
-            # bc1: continuity
+            # bc1
             F = (1/h)*Aij
             f = 0
         elif i > 0 and i < N-1:
-            _var0 = 1/(self.Xc[i]*h + l)
-            F = (const1/(h**2))*Bij + _var0*(2*const1/h)*Aij
-            f = const2
+            # interior points
+            F = (1/6)*(1/(h**2))*Bij - (1/h)*Aij
+            f = 0  # *** maybe contains nonlinear term ***
         elif i == N-1:
-            # bc2: continuity
+            # continuity term
             F = (1/h)*Aij
-            f = 0
+            f = 0  # *** maybe contains nonlinear term ***
         else:
             raise
 
@@ -152,7 +141,7 @@ class FiElCatParticleClass:
 
     # NOTE
 
-    def fillElMat(self, k, h, l, const1, const2, const3):
+    def fillElMat(self, k, h, const1, const2, const3):
         '''
         fill element matrix
         args:
@@ -183,16 +172,16 @@ class FiElCatParticleClass:
                     if k == 0:
                         # first element
                         _loopVar = self.fRbc1(
-                            i, j, self.A[i, j], self.B[i, j], self.N, h, l, const1, const2[j], const3)
+                            i, j, self.A[i, j], self.B[i, j], self.N, h, const1, const2, const3)
 
                     elif k > 0 and k < self.NuEl-1:
                         # interrior elements
                         _loopVar = self.fR(
-                            i, j, self.A[i, j], self.B[i, j], self.N, h, l, const1, const2[j], const3)
+                            i, j, self.A[i, j], self.B[i, j], self.N, h, const1, const2, const3)
                     elif k == self.NuEl-1:
                         # last element
                         _loopVar = self.fRbc2(
-                            i, j, self.A[i, j], self.B[i, j], self.N, h, l, const1, const2[j], const3)
+                            i, j, self.A[i, j], self.B[i, j], self.N, h, const1, const2, const3)
                     else:
                         raise
 
@@ -307,8 +296,7 @@ class FiElCatParticleClass:
             for k in range(self.NuEl):
                 # set h
                 h = self.hi[k]
-                l = self.li[k]
-                _loopVar = self.fillElMat(k, h, l, const1, const2, const3)
+                _loopVar = self.fillElMat(k, h, const1, const2, const3)
                 # fill
                 Ri[k, :, :] = _loopVar['R']
                 fi[k, :, :] = _loopVar['f']
@@ -329,7 +317,7 @@ class FiElCatParticleClass:
         except Exception as e:
             raise
 
-    def buildMatrix(self, yj, const1, const2, const3, mode="default"):
+    def buildMatrix(self, yj, const1=(), const2=(), const3=(), mode="default"):
         '''
         build matrix
         args:
@@ -345,28 +333,8 @@ class FiElCatParticleClass:
                 temperature: bulk temperature & dimensionless number
         '''
         try:
-            # # yj
-            # y[0], y[1], ..., y[n]
             # run
             res = self.initMatrix(const1, const2, const3)
-            # R matrix
-            RMatrix = res['Ri']
-            # f matrix
-            fMatrix = res['fi']
-
-            # [R][Y]=[RY]
-            RYMatrix = np.matmul(RMatrix, yj)
-
-            # sum of R and F
-            RYFMatrix = RYMatrix + fMatrix.flatten()
-
-            # should be flip C[n], C[n-1], ..., C[0]
-            RYFMatrix_flip = np.flipud(
-                RYFMatrix) if mode == "default" else RYFMatrix
-
-            # res
-            return RYFMatrix_flip
-
             # return
             return res
         except Exception as e:
