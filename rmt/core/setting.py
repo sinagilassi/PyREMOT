@@ -72,6 +72,12 @@ modelTypes = {
             "dynamic heterogenous reactor [two time domain]",
         "numerical": "fdm"
     },
+    "M14": {
+        "id": "M14",
+        "des":
+            "steady-state heterogenous model",
+        "numerical": "fdm"
+    },
     "T1": {
         "id": "T1",
         "des":

@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 1
+opT = 0.5
 
 # set feed mole fraction
 # H2/COx ratio
@@ -232,12 +232,12 @@ reactionRateSet = {
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M14",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "non-iso-thermal",
+        "process-type": "iso-thermal",
         "numerical-method": "fdm"
     },
     "feed": {
@@ -274,9 +274,9 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "AM",
+        "ivp": "LSODA",
         "root": "fsolve",
-        "mesh": "refine"
+        "mesh": "normal"
     },
     "test-const": {
         "numerical-method": "fem",

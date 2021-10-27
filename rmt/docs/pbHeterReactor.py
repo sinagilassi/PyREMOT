@@ -720,7 +720,7 @@ class PackedBedHeteroReactorClass:
                     else:
                         # solid phase
                         # SpCoi0[m]/np.max(SpCoi0)  # SpCoi0[m]
-                        IV2D[m][j][i] = 1e-6
+                        IV2D[m][j][i] = 0.5
                         # set bounds
                         BUp2D[m][j-1][i] = 1
                         BLower2D[m][j-1][i] = 0
@@ -1148,22 +1148,6 @@ class PackedBedHeteroReactorClass:
         end = timer()
         elapsed = roundNum(end - start)
 
-        # NOTE
-        # steady-state result
-        # txt
-        # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
-        # binary
-        # ssModelingResult = np.load('ResM1.npy')
-        # ssdataXs = np.linspace(0, ReLe, zNo)
-        # ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
-        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
-        # datalists
-        # ssdataLists = [ssdataList[0:compNo],
-        #                ssdataList[indexTemp]]
-        # subplot result
-        # pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
-        #                 "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
-
         # plot info
         plotTitle = f"Dynamic Modeling for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
 
@@ -1184,7 +1168,7 @@ class PackedBedHeteroReactorClass:
             # dataLists = [dataList[0:compNo],
             #              dataList[indexTemp]]
             dataLists = [dataList[0], dataList[1],
-                         dataList[2], dataList[indexTemp]]
+                         dataList[2], dataList[3], dataList[indexTemp]]
 
             if i == tNo-1:
                 # subplot result

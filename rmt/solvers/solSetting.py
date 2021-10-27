@@ -41,6 +41,10 @@ solverSetting = {
     "S3": {
         "timesNo": 25
     },
+    "M9": {
+        "zNo": 20,
+        "rNo": 1,
+    },
     "T1": {
         "zMesh": {
             "zNoNo": [15, 10],

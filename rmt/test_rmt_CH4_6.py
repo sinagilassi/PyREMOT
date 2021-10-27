@@ -170,15 +170,16 @@ reactionRateSet = {
 # T2: non-isothermal particle
 # M12: hetero orthogonal collocation method
 # M13: hetero model with ode ivp/bvp
+# M14: hetero model (reaction occurs at the catalyst surface)
 
 # model input - feed
 modelInput = {
-    "model": "T2",
+    "model": "M14",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "non-iso-thermal",
+        "process-type": "iso-thermal",
         "numerical-method": "fdm"
     },
     "feed": {
@@ -216,7 +217,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "LSODA",
-        "root": "root",
+        "root": "fsolve",
         "mesh": "normal"
     },
     "test-const": {

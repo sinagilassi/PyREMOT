@@ -109,6 +109,8 @@ class rmtCoreClass():
             return self.M12Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['M13']['id']:
             return self.M13Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['M14']['id']:
+            return self.M14Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T1']['id']:
             return self.T1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T2']['id']:
@@ -340,10 +342,19 @@ class rmtCoreClass():
         res = reInit.runM2()
         return res
 
+    def M14Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        steady-state packed-bed reactor (heterogenous)
+        """
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM9()
+        return res
 
 # NOTE
 # test models
-
 
     def T1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
