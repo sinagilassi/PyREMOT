@@ -237,7 +237,7 @@ modelInput = {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal",
+        "process-type": "non-iso-thermal",
         "numerical-method": "fdm"
     },
     "feed": {

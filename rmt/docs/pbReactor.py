@@ -11,7 +11,7 @@ from timeit import default_timer as timer
 from scipy.optimize import fsolve
 from scipy import optimize
 # internal
-from .modelSetting import MODEL_SETTING
+from .modelSetting import MODEL_SETTING, PROCESS_SETTING
 from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 from .fluidFilm import *
@@ -29,6 +29,7 @@ from solvers.solCatParticle import OrCoCatParticleClass
 from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiSetMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
 from solvers.solFiDi import FiDiMeshGenerator, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
 from solvers.odeSolver import AdBash3, PreCorr3
+from solvers.solResultAnalysis import setOptimizeRootMethod, sortedResult3
 
 
 class PackedBedReactorClass:
@@ -5473,6 +5474,7 @@ class PackedBedReactorClass:
 
 # NOTE
 # dynamic heterogenous modeling
+
     def runM8(self):
         """
         modeling case (dimensionless)
@@ -7187,6 +7189,8 @@ class PackedBedReactorClass:
         T = self.modelInput['operating-conditions']['temperature']
         # operation time [s]
         opT = self.modelInput['operating-conditions']['period']
+        # process-type
+        processType = self.modelInput['operating-conditions']['process-type']
 
         # reaction list
         reactionDict = self.modelInput['reactions']
@@ -7198,15 +7202,22 @@ class PackedBedReactorClass:
         compList = self.modelInput['feed']['components']['shell']
 
         # graph label setting
-        labelList = compList.copy()
-        labelList.append("Temperature")
+        # labelList = compList.copy()
+        # labelList.append("Temperature")
         # labelList.append("Pressure")
+        labelList = pltc.makeLabels(
+            compList, ["Gas Temp"], compList, ["Solid Temp"])
 
         # component no
         compNo = len(compList)
         indexTemp = compNo
         indexPressure = indexTemp + 1
         indexVelocity = indexPressure + 1
+        # label id
+        labelIndex_ConcGasPhase = 0
+        labelIndex_TempGasPhase = compNo
+        labelIndex_ConcSolidPhase = labelIndex_TempGasPhase + 1
+        labelIndex_TempSolidPhase = labelIndex_ConcSolidPhase + compNo
 
         # reactor spec
         ReSpec = self.modelInput['reactor']
@@ -7279,7 +7290,7 @@ class PackedBedReactorClass:
             dz = zMeshRes['data5']
         else:
             # finite difference points in the z direction
-            zNo = solverSetting['T1']['zNo']
+            zNo = solverSetting['M9']['zNo']
             # length list [reactor length]
             dataXs = np.linspace(0, DoLe, zNo)
             # element size - dz [m]
@@ -7354,13 +7365,13 @@ class PackedBedReactorClass:
                     # separate phase
                     if j == 0:
                         # gas phase
-                        IV2D[m][j][i] = SpCoi0[m]/np.max(SpCoi0)  # SpCoi0[m]
+                        IV2D[m][j][i] = 0.5  # SpCoi0[m]/np.max(SpCoi0)
                         # set bounds
                         BUp2D[m][j][i] = 1
                         BLower2D[m][j][i] = 0
                     else:
                         # solid phase
-                        IV2D[m][j][i] = 0.5
+                        IV2D[m][j][i] = 0.5  # SpCoi0[m]/np.max(SpCoi0)
                         # set bounds
                         BUp2D[m][j][i] = 1
                         BLower2D[m][j][i] = 0
@@ -7549,20 +7560,8 @@ class PackedBedReactorClass:
             "SoHeDiTe0": SoHeDiTe0
         }
 
-        # time span
-        tNo = solverSetting['S2']['tNo']
-        opTSpan = np.linspace(0, opT, tNo + 1)
-
-        # save data
-        timesNo = solverSetting['S2']['timesNo']
-
         # result
         dataPack = []
-
-        # build data list
-        # over time
-        dataPacktime = np.zeros((varNo, tNo, zNo))
-        #
 
         # solver setting
         funSet = PackedBedReactorClass.modelEquationM9
@@ -7613,71 +7612,70 @@ class PackedBedReactorClass:
             dataYs_Reshaped = np.reshape(
                 dataYs, (noLayer, varNoRows, varNoColumns))
 
-            # # data
-            # # -> concentration
-            # dataYs_Concentration_DiLeVa = dataYs_Reshaped[:-1]
-            # # -> temperature
-            # dataYs_Temperature_DiLeVa = dataYs_Reshaped[-1] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
-            #     0, zNo).reshape((varNoRows, varNoColumns))
-
-            # # sort out
-            # params1 = (compNo, noLayer, varNoRows, varNoColumns)
-            # params2 = (Cif, Tf, processType)
-            # dataYs_Sorted = setOptimizeRootMethod(
-            #     dataYs_Reshaped, params1, params2)
-            # # component concentration [kmol/m^3]
-            # dataYs_Concentration_ReVa = dataYs_Sorted['data1']
-            # # temperature [K]
-            # dataYs_Temperature_ReVa = dataYs_Sorted['data2']
-
-            # # REVIEW
-            # # convert concentration to mole fraction
-            # dataYs1_Ctot = np.sum(dataYs_Concentration_ReVa, axis=0)
-            # dataYs1_MoFri = dataYs_Concentration_ReVa/dataYs1_Ctot
-
-            # # NOTE
-            # # end of computation
-            # end = timer()
-            # elapsed = roundNum(end - start)
-
-            # # FIXME
-            # # build matrix
-            # _dataYs = np.concatenate(
-            #     (dataYs1_MoFri, dataYs_Temperature_ReVa), axis=0)
-
-            # component concentration [kmol/m^3]
-            dataYs1_Reshaped = dataYs_Reshaped[:-1]
-
+            # -> concentration
+            dataYs_Concentration_DiLeVa = dataYs_Reshaped[:-1]
             # gas phase
-            dataYs1GasPhase = dataYs1_Reshaped[:, 0, :]
+            _ConcGasPhase_DiLeVa = dataYs_Concentration_DiLeVa[:, 0, :]
             # solid phase
-            dataYs1SolidPhase = dataYs1_Reshaped[:, 1:, :]
+            _ConcSolidPhase_DiLeVa = dataYs_Concentration_DiLeVa[:, 1:, :]
+
+            # -> temperature
+            dataYs_Temperature_DiLeVa = dataYs_Reshaped[-1] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+                [[0], [0]], zNo).reshape((varNoRows, varNoColumns))
+            # gas phase
+            _TempGasPhase_DiLeVa = dataYs_Temperature_DiLeVa[0, :].reshape(
+                (1, zNo))
+            # solid phase
+            _TempSolidPhase_DiLeVa = dataYs_Temperature_DiLeVa[1:, :]
+
+            # sort out
+            params1 = (compNo, noLayer, varNoRows, varNoColumns, rNo, zNo)
+            params2 = (Cif, Tf, processType)
+            dataYs_Sorted = sortedResult3(
+                _ConcGasPhase_DiLeVa, _TempGasPhase_DiLeVa, _ConcSolidPhase_DiLeVa, _TempSolidPhase_DiLeVa, params1, params2)
+            # gas phase
+            # component concentration [kmol/m^3]
+            _ConcGasPhase_ReVa = dataYs_Sorted['data1']
+            # temperature [K]
+            _TempGasPhase_ReVa = dataYs_Sorted['data2']
+            # solid phase
+            # component concentration [kmol/m^3]
+            _ConcSolidPhase_ReVa = dataYs_Sorted['data3']
+            # temperature [K]
+            _TempSolidPhase_ReVa = dataYs_Sorted['data4']
 
             # REVIEW
             # convert concentration to mole fraction
-            dataYs1_Ctot = np.sum(dataYs1GasPhase, axis=0)
-            dataYs1_MoFri = dataYs1GasPhase/dataYs1_Ctot
-
-            # temperature - 2d matrix
-            dataYs2_Reshaped = dataYs_Reshaped[indexTemp]
-            # gas phase
-            dataYs2GasPhase = dataYs2_Reshaped[0, :].reshape((1, zNo))
-            # solid phase
-            dataYs2SolidPhase = dataYs2_Reshaped[1:, :]
+            _ConcGasPhaseTot = np.sum(_ConcGasPhase_ReVa, axis=0)
+            _MoFriGasPhase = _ConcGasPhase_ReVa/_ConcGasPhaseTot
+            # convert concentration to mole fraction
+            _ConcSolidPhaseTot = np.sum(_ConcSolidPhase_ReVa, axis=0)
+            _MoFriSolidPhase = _ConcSolidPhase_ReVa/_ConcSolidPhaseTot
 
             # combine
+            # gas phase
+            _dataYs_GasPhase = np.concatenate(
+                (_MoFriGasPhase, _TempGasPhase_ReVa), axis=0)
+            # solid phase
+            _MoFriSolidPhase_Reshaped = np.zeros((compNo, varNoColumns))
+            for j in range(compNo):
+                _MoFriSolidPhase_Reshaped[j, :] = _MoFriSolidPhase[j]
+            # set
+            _dataYs_SolidPhase = np.concatenate(
+                (_MoFriSolidPhase_Reshaped, _TempSolidPhase_ReVa), axis=0)
+            #
             _dataYs = np.concatenate(
-                (dataYs1_MoFri, dataYs2GasPhase), axis=0)
+                (_dataYs_GasPhase, _dataYs_SolidPhase), axis=0)
 
             # save data
-            dataPack.append({
-                "successStatus": successStatus,
-                "dataYCon": dataYs1GasPhase,
-                "dataYTemp": dataYs2GasPhase,
-                "dataYs": _dataYs,
-                "dataYCons": dataYs1SolidPhase,
-                "dataYTemps": dataYs2SolidPhase,
-            })
+            # dataPack.append({
+            #     "successStatus": successStatus,
+            #     "dataYCon": dataYs1GasPhase,
+            #     "dataYTemp": dataYs2GasPhase,
+            #     "dataYs": _dataYs,
+            #     "dataYCons": dataYs1SolidPhase,
+            #     "dataYTemps": dataYs2SolidPhase,
+            # })
 
         # NOTE
         # end of computation
@@ -7686,21 +7684,20 @@ class PackedBedReactorClass:
 
         # plot info
         plotTitle = f"M14 Modeling for zNo: {zNo} within {elapsed} seconds"
+        xLabelSet = "Dimensionless Particle Radius"
+        yLabelSet = "Dimensionless Concentration"
 
         # REVIEW
         # *** post-processing results ***
-        # var list
-        _dataYs = dataPack[0]['dataYs']
         # plot setting: build (x,y) series
         XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
         # -> add label
         dataList = pltc.plots2DSetDataList(XYList, labelList)
         # datalists
-        dataLists = [dataList[0:compNo],
-                     dataList[indexTemp]]
+        dataLists = [dataList[0:compNo], dataList[indexTemp],
+                     dataList[labelIndex_ConcSolidPhase:labelIndex_ConcSolidPhase+compNo], dataList[labelIndex_TempSolidPhase]]
         # subplot result
-        pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                        "Concentration (mol/m^3)", plotTitle)
+        pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
 
         # return
         res = {
@@ -7711,6 +7708,2199 @@ class PackedBedReactorClass:
         return res
 
     def modelEquationM9(y, paramsSet):
+        """
+            model [static modeling]
+            mass, energy, and momentum balance equations
+            modelParameters:
+                reactionListSorted: reactant/product and coefficient lists
+                reactionStochCoeff: reaction stoichiometric coefficient
+                FunParam:
+                    compList: component list
+                    const
+                        CrSeAr: reactor cross sectional area [m^2]
+                        MoWei: component molecular weight [g/mol]
+                        StHeRe25: standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+                        GaMiVi: gas mixture viscosity [Pa.s]
+                        varNo: number of variables (Ci, CT, T)
+                        varNoT: number of variables in the domain (zNo*varNoT)
+                        reactionListNo: reaction list number
+                    ReSpec: reactor spec
+                    ExHe: exchange heat spec
+                        OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
+                        EfHeTrAr: effective heat transfer area [m^2]
+                        MeTe: medium temperature [K]
+                    constBC1:
+                        VoFlRa0: inlet volumetric flowrate [m^3/s],
+                        SpCoi0: species concentration [kmol/m^3],
+                        SpCo0: total concentration [kmol/m^3]
+                        P0: inlet pressure [Pa]
+                        T0: inlet temperature [K]
+                    meshSetting:
+                        solverMesh: mesh installment
+                        solverMeshSet: 
+                            true: normal
+                            false: mesh refinement
+                        noLayer: number of layers
+                        varNoLayer: var no in each layer
+                        varNoLayerT: total number of vars (Ci,T,Cci,Tci)
+                        varNoRows: number of var rows [j]
+                        varNoColumns: number of var columns [i]
+                        zNo: number of finite difference in z direction
+                        rNo: number of orthogonal collocation points in r direction
+                        dz: differential length [m]
+                        dzs: differential length list [-]
+                        zR: z ratio
+                        zNoNo: number of nodes in the dense and normal sections
+                    solverSetting:
+                        OrCoClassSetRes: constants of OC methods
+                    reactionRateExpr: reaction rate expressions
+                DimensionlessAnalysisParams:
+                    Cif: feed concentration [kmol/m^3]
+                    Tf: feed temperature
+                    vf: feed superficial velocity [m/s]
+                    zf: domain length [m]
+                    Dif: diffusivity coefficient of component [m^2/s]
+                    Cpif: feed heat capacity at constat pressure [kJ/kmol.K] | [J/mol.K]
+                    rf: particle radius [m]
+                    GaMaCoTe0: feed mass convective term of gas phase [kmol/m^3.s]
+                    GaMaDiTe0: feed mass diffusive term of gas phase [kmol/m^3.s]
+                    GaHeCoTe0: feed heat convective term of gas phase [kJ/m^3.s]
+                    GaHeDiTe0, feed heat diffusive term of gas phase [kJ/m^3.s]
+                    SoMaDiTe0: feed mass diffusive term of solid phase [kmol/m^3.s]
+                    SoHeDiTe0: feed heat diffusive term of solid phase [kJ/m^3.s]
+                    ReNu0: Reynolds number
+                    ScNu0: Schmidt number
+                    ShNu0: Sherwood number
+                    PrNu0: Prandtl number
+                    PeNuMa0: mass Peclet number
+                    PeNuHe0: heat Peclet number 
+                    MaTrCo: mass transfer coefficient - gas/solid [m/s]
+                    HeTrCo: heat transfer coefficient - gas/solid [J/m^2.s.K]
+        """
+        # parameters
+        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams = paramsSet
+        # fun params
+        # component symbol list
+        comList = FunParam['compList']
+        # const ->
+        const = FunParam['const']
+        # cross-sectional area [m^2]
+        CrSeAr = const['CrSeAr']
+        # component molecular weight [g/mol]
+        MoWei = const['MoWei']
+        # standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+        StHeRe25 = const['StHeRe25']
+        # gas viscosity [Pa.s]
+        GaMiVi = const['GaMiVi']
+        # reaction no
+        reactionListNo = const['reactionListNo']
+
+        # reactor spec ->
+        ReSpec = FunParam['ReSpec']
+        # particle diameter [m]
+        PaDi = ReSpec['PaDi']
+        # bed void fraction - porosity
+        BeVoFr = ReSpec['BeVoFr']
+        # bulk density (catalyst bed density)
+        CaBeDe = ReSpec['CaBeDe']
+        # catalyst density [kgcat/m^3 of particle]
+        CaDe = ReSpec['CaDe']
+        # catalyst heat capacity at constant pressure [kJ/kg.K]
+        CaSpHeCa = ReSpec['CaSpHeCa']
+        # catalyst porosity
+        CaPo = ReSpec['CaPo']
+        # catalyst tortuosity
+        CaTo = ReSpec['CaTo']
+        # catalyst thermal conductivity [J/K.m.s]
+        CaThCo = ReSpec['CaThCo']
+
+        # exchange heat spec ->
+        ExHe = FunParam['ExHe']
+        # var no. (concentration, temperature)
+        varNo = const['varNo']
+        # var no. in the domain
+        varNoT = const['varNoT']
+
+        # boundary conditions constants
+        constBC1 = FunParam['constBC1']
+        ## inlet values ##
+        # inlet volumetric flowrate at T,P [m^3/s]
+        VoFlRa0 = constBC1['VoFlRa0']
+        # inlet species concentration [kmol/m^3]
+        SpCoi0 = constBC1['SpCoi0']
+        # inlet total concentration [kmol/m^3]
+        SpCo0 = constBC1['SpCo0']
+        # inlet pressure [Pa]
+        P0 = constBC1['P0']
+        # inlet temperature [K]
+        T0 = constBC1['T0']
+        # inlet superficial velocity [m/s]
+        # SuGaVe0 = constBC1['SuGaVe0']
+        # inlet diffusivity coefficient [m^2]
+        GaDii0 = constBC1['GaDii0']
+        # inlet gas thermal conductivity [J/s.m.K]
+        GaThCoi0 = constBC1['GaThCoi0']
+        # gas viscosity
+        GaVii0 = constBC1['GaVii0']
+        # gas density [kg/m^3]
+        GaDe0 = constBC1['GaDe0']
+        # heat capacity at constant pressure [kJ/kmol.K] | [J/mol.K]
+        GaCpMeanMix0 = constBC1['GaCpMeanMix0']
+        # gas thermal conductivity [J/s.m.K]
+        GaThCoMix0 = constBC1['GaThCoMix0']
+
+        # mesh setting
+        meshSetting = FunParam['meshSetting']
+        # mesh installment
+        solverMesh = meshSetting['solverMesh']
+        # mesh refinement
+        solverMeshSet = meshSetting['solverMeshSet']
+        # number of layers
+        noLayer = meshSetting['noLayer']
+        # var no in each layer
+        varNoLayer = meshSetting['varNoLayer']
+        # total number of vars (Ci,T,Cci,Tci)
+        varNoLayerT = meshSetting['varNoLayerT']
+        # number of var rows [j]
+        varNoRows = meshSetting['varNoRows']
+        # number of var columns [i]
+        varNoColumns = meshSetting['varNoColumns']
+        # rNo
+        rNo = meshSetting['rNo']
+        # zNo
+        zNo = meshSetting['zNo']
+        # dz [m]
+        dz = meshSetting['dz']
+        # dzs [m]/[-]
+        dzs = meshSetting['dzs']
+        # R ratio
+        zR = meshSetting['zR']
+        # number of nodes in the dense and normal sections
+        zNoNo = meshSetting['zNoNo']
+        # dense
+        zNoNoDense = zNoNo[0]
+        # normal
+        zNoNoNormal = zNoNo[1]
+
+        # solver setting
+        solverSetting = FunParam['solverSetting']
+        # mass balance equation
+        DIFF1_C_SET = solverSetting['dFdz']
+        DIFF2_C_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        DIFF2_C_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        DIFF2_C_SET_G = solverSetting['d2Fdz2']['G']
+        # energy balance equation
+        DIFF1_T_SET = solverSetting['dTdz']
+        DIFF2_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        DIFF2_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        DIFF2_T_SET_G = solverSetting['d2Tdz2']['G']
+        # number of collocation points
+        ocN = solverSetting['OrCoClassSetRes']['N']
+        ocXc = solverSetting['OrCoClassSetRes']['Xc']
+        ocA = solverSetting['OrCoClassSetRes']['A']
+        ocB = solverSetting['OrCoClassSetRes']['B']
+        ocQ = solverSetting['OrCoClassSetRes']['Q']
+
+        # init OrCoCatParticle
+        OrCoCatParticleClassSet = OrCoCatParticleClass(
+            ocXc, ocN, ocQ, ocA, ocB, varNo)
+
+        # reaction rate expressions
+        reactionRateExpr = FunParam['reactionRateExpr']
+        # using equation
+        varisSet = reactionRateExpr['VARS']
+        ratesSet = reactionRateExpr['RATES']
+
+        # dimensionless analysis params
+
+        #  feed concentration [kmol/m^3]
+        Cif = DimensionlessAnalysisParams['Cif']
+        # feed temperature
+        Tf = DimensionlessAnalysisParams['Tf']
+        # feed superficial velocity [m/s]
+        vf = DimensionlessAnalysisParams['vf']
+        # domain length [m]
+        zf = DimensionlessAnalysisParams['zf']
+        # particle radius [m]
+        rf = DimensionlessAnalysisParams['rf']
+        # diffusivity coefficient of component [m^2/s]
+        Dif = DimensionlessAnalysisParams['Dif']
+        # feed heat capacity at constat pressure
+        Cpif = DimensionlessAnalysisParams['Cpif']
+        # feed mass convective term of gas phase [kmol/m^3.s]
+        GaMaCoTe0 = DimensionlessAnalysisParams['GaMaCoTe0']
+        # feed mass diffusive term of gas phase [kmol/m^3.s]
+        GaMaDiTe0 = DimensionlessAnalysisParams['GaMaDiTe0']
+        # feed heat convective term of gas phase [kJ/m^3.s]
+        GaHeCoTe0 = DimensionlessAnalysisParams['GaHeCoTe0']
+        # feed heat diffusive term of gas phase [kJ/m^3.s]
+        GaHeDiTe0 = DimensionlessAnalysisParams['GaHeDiTe0']
+        # feed mass diffusive term of solid phase [kmol/m^3.s]
+        SoMaDiTe0 = DimensionlessAnalysisParams['SoMaDiTe0']
+        # feed heat diffusive term of solid phase [kJ/m^3.s]
+        SoHeDiTe0 = DimensionlessAnalysisParams['SoHeDiTe0']
+        # Reynolds number
+        ReNu = DimensionlessAnalysisParams['ReNu0']
+        # Schmidt number
+        ScNu = DimensionlessAnalysisParams['ScNu0']
+        # Sherwood number
+        ShNu = DimensionlessAnalysisParams['ShNu0']
+        # Prandtl number
+        PrNu = DimensionlessAnalysisParams['PrNu0']
+        # mass Peclet number
+        PeNuMa0 = DimensionlessAnalysisParams['PeNuMa0']
+        # heat Peclet number
+        PeNuHe0 = DimensionlessAnalysisParams['PeNuHe0']
+        # mass transfer coefficient - gas/solid [m/s]
+        MaTrCo = DimensionlessAnalysisParams['MaTrCo']
+        # heat transfer coefficient - gas/solid [J/m^2.s.K]
+        HeTrCo = DimensionlessAnalysisParams['HeTrCo']
+
+        # components no
+        # y: component molar flowrate, total molar flux, temperature, pressure
+        compNo = len(comList)
+        indexT = compNo
+        indexP = indexT + 1
+        indexV = indexP + 1
+
+        # calculate
+        # particle radius
+        PaRa = PaDi/2
+        # specific surface area exposed to the free fluid [m^2/m^3]
+        SpSuAr = (3/PaRa)*(1 - BeVoFr)
+
+        # molar flowrate [kmol/s]
+        MoFlRa0 = SpCo0*VoFlRa0
+        # superficial gas velocity [m/s]
+        InGaVe0 = VoFlRa0/(CrSeAr*BeVoFr)
+        # interstitial gas velocity [m/s]
+        SuGaVe0 = InGaVe0*BeVoFr
+
+        # interstitial gas velocity [m/s]
+        InGaVeList_z = np.zeros(zNo)
+        InGaVeList_z[0] = InGaVe0
+
+        # total molar flux [kmol/m^2.s]
+        MoFl_z = np.zeros(zNo)
+        MoFl_z[0] = MoFlRa0
+
+        # reaction rate in the solid phase
+        Ri_z = np.zeros((zNo, reactionListNo))
+        Ri_zr = np.zeros((zNo, rNo, reactionListNo))
+        Ri_r = np.zeros((rNo, reactionListNo))
+        # reaction rate
+        # ri = np.zeros(compNo) # deprecate
+        # ri0 = np.zeros(compNo) # deprecate
+        # solid phase
+        ri_r = np.zeros((rNo, compNo))
+        # overall reaction
+        OvR = np.zeros(rNo)
+        # overall enthalpy
+        OvHeReT = np.zeros(rNo)
+        # heat capacity at constant pressure
+        SoCpMeanMix = np.zeros(rNo)
+        # effective heat capacity at constant pressure
+        SoCpMeanMixEff = np.zeros(rNo)
+        # dimensionless analysis
+        SoCpMeanMixEff_ReVa = np.zeros(rNo)
+
+        # pressure [Pa]
+        P_z = np.zeros(zNo + 1)
+        P_z[0] = P0
+
+        # superficial gas velocity [m/s]
+        v_z = np.zeros(zNo + 1)
+        v_z[0] = SuGaVe0
+
+        # NOTE
+        # distribute y[i] value through the reactor length
+        # reshape
+        yLoop = np.reshape(y, (noLayer, varNoRows, varNoColumns))
+
+        # all species concentration in gas & solid phase
+        SpCo_mz = np.zeros((noLayer - 1, varNoRows, varNoColumns))
+        # all species concentration in gas phase [kmol/m^3]
+        SpCoi_z = np.zeros((compNo, zNo))
+        # all species concentration in solid phase (catalyst) [kmol/m^3]
+        SpCosi_mzr = np.zeros((compNo, rNo, zNo))
+        # layer
+        for m in range(compNo):
+            # -> concentration [mol/m^3]
+            _SpCoi = yLoop[m]
+            SpCo_mz[m] = _SpCoi
+        # concentration in the gas phase [kmol/m^3]
+        for m in range(compNo):
+            for j in range(varNoRows):
+                if j == 0:
+                    # gas phase
+                    SpCoi_z[m, :] = SpCo_mz[m, j, :]
+                else:
+                    # solid phase
+                    SpCosi_mzr[m, j-1, :] = SpCo_mz[m, j, :]
+
+        # species concentration in gas phase [kmol/m^3]
+        CoSpi = np.zeros(compNo)
+        # dimensionless analysis
+        CoSpi_ReVa = np.zeros(compNo)
+        # total concentration [kmol/m^3]
+        CoSp = 0
+        # species concentration in solid phase (catalyst) [kmol/m^3]
+        # shape
+        CosSpiMatShape = (rNo, compNo)
+        CosSpi_r = np.zeros(CosSpiMatShape)
+        # dimensionless analysis
+        CosSpi_r_ReVa = np.zeros(CosSpiMatShape)
+        # total concentration in the solid phase [kmol/m^3]
+        CosSp_r = np.zeros(rNo)
+
+        # flux
+        MoFli_z = np.zeros(compNo)
+
+        # NOTE
+        # temperature [K]
+        T_mz = np.zeros((varNoRows, varNoColumns))
+        T_mz = yLoop[noLayer - 1]
+        # temperature in the gas phase
+        T_z = np.zeros(zNo)
+        T_z = T_mz[0, :]
+        # temperature in solid phase
+        Ts_z = np.zeros((rNo, zNo))
+        Ts_z = T_mz[1:]
+        # temperature in the solid phase
+        Ts_r = np.zeros(rNo)
+
+        # diff/dt
+        # dxdt = []
+        # matrix
+        # dxdtMat = np.zeros((varNo, zNo))
+        dxdtMat = np.zeros((noLayer, varNoRows, varNoColumns))
+
+        # NOTE
+        # FIXME
+        # define ode equations for each finite difference [zNo]
+        for z in range(varNoColumns):
+            ## block ##
+            # concentration species in the gas phase [kmol/m^3]
+            for i in range(compNo):
+                _SpCoi_z = SpCoi_z[i][z]
+                CoSpi[i] = _SpCoi_z  # max(_SpCoi_z, CONST.EPS_CONST)
+                # REVIEW
+                # dimensionless analysis: real value
+                SpCoi0_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(
+                    CoSpi[i], SpCoi0_Set)
+
+            # total concentration [kmol/m^3]
+            CoSp = np.sum(CoSpi)
+            # dimensionless analysis: real value
+            CoSp_ReVa = np.sum(CoSpi_ReVa)
+
+            # FIXME
+            # concentration species in the solid phase [kmol/m^3]
+            # display concentration list in each oc point (rNo)
+            for i in range(compNo):
+                for r in range(rNo):
+                    _CosSpi_z = SpCosi_mzr[i][r][z]
+                    # max(_CosSpi_z, CONST.EPS_CONST)
+                    CosSpi_r[r][i] = _CosSpi_z
+                    # REVIEW
+                    # dimensionless analysis: real value
+                    SpCoi0_r_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                        SpCoi0)
+                    CosSpi_r_ReVa[r][i] = rmtUtil.calRealDiLessValue(
+                        CosSpi_r[r][i], SpCoi0_r_Set)
+
+            # total concentration in the solid phase [kmol/m^3]
+            CosSp_r = np.sum(CosSpi_r, axis=1).reshape((rNo, 1))
+            # dimensionless analysis: real value
+            CosSp_r_ReVa = np.sum(CosSpi_r_ReVa, axis=1).reshape((rNo, 1))
+
+            # concentration in the outer surface of the catalyst [kmol/m^3]
+            CosSpi_cat = CosSpi_r[0]
+            # dimensionless analysis
+            CosSpi_cat_DiLeVa = CosSpi_r[0, :]
+
+            # temperature [K]
+            T = T_z[z]
+            T_ReVa = rmtUtil.calRealDiLessValue(T, T0, "TEMP")
+            # temperature in the solid phase (for each point)
+            # Ts[3], Ts[2], Ts[1], Ts[0]
+            Ts_r = Ts_z[:, z]
+            Ts_r_ReVa = rmtUtil.calRealDiLessValue(Ts_r, T0, "TEMP")
+
+            # pressure [Pa]
+            P = P_z[z]
+
+            # FIXME
+            # velocity
+            # dimensionless value
+            # v = v_z[z]
+            v = 1
+
+            ## calculate ##
+            # mole fraction in the gas phase
+            MoFri = np.array(
+                rmtUtil.moleFractionFromConcentrationSpecies(CoSpi_ReVa))
+
+            # mole fraction in the solid phase
+            # MoFrsi_r0 = CosSpi_r/CosSp_r
+            MoFrsi_r = rmtUtil.moleFractionFromConcentrationSpeciesMat(
+                CosSpi_r_ReVa)
+
+            # TODO
+            # dv/dz
+            # gas velocity based on interstitial velocity [m/s]
+            # InGaVe = rmtUtil.calGaVeFromEOS(InGaVe0, SpCo0, CoSp, P0, P)
+            # superficial gas velocity [m/s]
+            # SuGaVe = InGaVe*BeVoFr
+            # from ode eq. dv/dz
+            SuGaVe = v
+            # dimensionless analysis
+            SuGaVe_ReVa = rmtUtil.calRealDiLessValue(SuGaVe, SuGaVe0)
+
+            # total flowrate [kmol/s]
+            # [kmol/m^3]*[m/s]*[m^2]
+            MoFlRa = calMolarFlowRate(CoSp_ReVa, SuGaVe_ReVa, CrSeAr)
+            # molar flowrate list [kmol/s]
+            MoFlRai = MoFlRa*MoFri
+            # convert to [mol/s]
+            MoFlRai_Con1 = 1000*MoFlRai
+
+            # molar flux [kmol/m^2.s]
+            MoFl = MoFlRa/CrSeAr
+
+            # volumetric flowrate [m^3/s]
+            VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai_Con1)
+
+            # mixture molecular weight [kg/mol]
+            MiMoWe = rmtUtil.mixtureMolecularWeight(MoFri, MoWei, "kg/mol")
+
+            # gas density [kg/m^3]
+            GaDe = calDensityIG(MiMoWe, CoSp_ReVa*1000)
+            # GaDeEOS = calDensityIGFromEOS(P, T, MiMoWe)
+            # dimensionless value
+            GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDe, GaDe0)
+
+            # NOTE
+            # ergun equation
+            ergA = 150*GaMiVi*SuGaVe_ReVa/(PaDi**2)
+            ergB = ((1-BeVoFr)**2)/(BeVoFr**3)
+            ergC = 1.75*GaDe*(SuGaVe_ReVa**2)/PaDi
+            ergD = (1-BeVoFr)/(BeVoFr**3)
+            RHS_ergun = -1*(ergA*ergB + ergC*ergD)
+
+            # momentum balance (ergun equation)
+            dxdt_P = RHS_ergun
+            # dxdt.append(dxdt_P)
+            P_z[z+1] = dxdt_P*dz + P_z[z]
+
+            # REVIEW
+            # FIXME
+            # viscosity in the gas phase [Pa.s] | [kg/m.s]
+            GaVii = GaVii0 if MODEL_SETTING['GaVii'] == "FIX" else calTest()
+            # mixture viscosity in the gas phase [Pa.s] | [kg/m.s]
+            # FIXME
+            GaViMix = 2.5e-5  # f(yi,GaVi,MWs);
+            # kinematic viscosity in the gas phase [m^2/s]
+            GaKiViMix = GaViMix/GaDe
+
+            # REVIEW
+            # FIXME
+            # solid gas thermal conductivity
+            SoThCoMix0 = GaThCoMix0
+            # add loop for each r point/constant
+            # catalyst thermal conductivity [J/s.m.K]
+            # CaThCo
+            # membrane wall thermal conductivity [J/s.m.K]
+            MeThCo = 1
+            # thermal conductivity - gas phase [J/s.m.K]
+            # GaThCoi = np.zeros(compNo)  # f(T);
+            GaThCoi = GaThCoi0 if MODEL_SETTING['GaThCoi'] == "FIX" else calTest(
+            )
+            # dimensionless
+            GaThCoi_DiLe = GaThCoi/GaThCoi0
+            # FIXME
+            # mixture thermal conductivity - gas phase [J/s.m.K]
+            GaThCoMix = GaThCoMix0
+            # dimensionless analysis
+            GaThCoMix_DiLeVa = GaThCoMix/GaThCoMix0
+            # thermal conductivity - solid phase [J/s.m.K]
+            # assume the same as gas phase
+            # SoThCoi = np.zeros(compNo)  # f(T);
+            SoThCoi = GaThCoi
+            # mixture thermal conductivity - solid phase [J/s.m.K]
+            SoThCoMix = GaThCoMix0
+            # dimensionless analysis
+            SoThCoMix_DiLeVa = SoThCoMix/SoThCoMix0
+            # effective thermal conductivity - gas phase [J/s.m.K]
+            # GaThCoEff = BeVoFr*GaThCoMix + (1 - BeVoFr)*CaThCo
+            GaThCoEff = BeVoFr*GaThCoMix
+            # dimensionless analysis
+            GaThCoEff_DiLeVa = BeVoFr*GaThCoMix_DiLeVa
+            # FIXME
+            # effective thermal conductivity - solid phase [J/s.m.K]
+            # assume identical to gas phase
+            # SoThCoEff0 = CaPo*SoThCoMix + (1 - CaPo)*CaThCo
+            # SoThCoEff = SoThCoMix*((1 - CaPo)/CaTo)
+            SoThCoEff = CaPo*SoThCoMix
+            # dimensionless analysis
+            # SoThCoEff_DiLeVa = GaThCoMix_DiLeVa*((1 - CaPo)/CaTo)
+            SoThCoEff_DiLeVa = CaPo*SoThCoMix_DiLeVa
+
+            # REVIEW
+            # diffusivity coefficient - gas phase [m^2/s]
+            GaDii = GaDii0 if MODEL_SETTING['GaDii'] == "FIX" else calTest()
+            # dimensionless analysis
+            GaDii_DiLeVa = GaDii/GaDii0
+            # effective diffusivity coefficient - gas phase
+            GaDiiEff = GaDii*BeVoFr
+            # dimensionless analysis
+            GaDiiEff_DiLeVa = GaDiiEff/GaDii0
+            # effective diffusivity - solid phase [m^2/s]
+            SoDiiEff = (CaPo/CaTo)*GaDii
+            # dimensionless analysis
+            SoDiiEff_DiLe = (CaPo/CaTo)*GaDii_DiLeVa
+
+            # REVIEW
+            if MODEL_SETTING['MaTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Re Number
+                ReNu = calReNoEq1(GaDe, SuGaVe, PaDi, GaViMix)
+                # Sc Number
+                ScNu = calScNoEq1(GaDe, GaViMix, GaDii)
+                # Sh Number (choose method)
+                ShNu = calShNoEq1(ScNu, ReNu, CONST_EQ_Sh['Frossling'])
+
+                # mass transfer coefficient - gas/solid [m/s]
+                MaTrCo = calMassTransferCoefficientEq1(ShNu, GaDii, PaDi)
+
+            # NOTE
+            ## kinetics ##
+            # net reaction rate expression [kmol/m^3.s]
+            # rf[kmol/kgcat.s]*CaDe[kgcat/m^3]
+            for r in range(rNo):
+                # loop
+                loopVars0 = (Ts_r_ReVa[r], P_z[z],
+                             MoFrsi_r[r], CosSpi_r_ReVa[r])
+
+                # component formation rate [mol/m^3.s]
+                # check unit
+                r0 = np.array(reactionRateExe(
+                    loopVars0, varisSet, ratesSet))
+
+                # loop
+                Ri_zr[z, r, :] = r0
+                Ri_r[r, :] = r0
+
+                # component formation rate [kmol/m^3.s]
+                ri_r[r] = componentFormationRate(
+                    compNo, comList, reactionStochCoeff, Ri_r[r])
+
+                # overall formation rate [kmol/m^3.s]
+                OvR[r] = np.sum(ri_r[r])
+
+            # NOTE
+            ### enthalpy calculation ###
+            # gas phase
+            # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+            # Cp mean list
+            GaCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                comList, T_ReVa)
+            # Cp mixture
+            GaCpMeanMix = calMixtureHeatCapacityAtConstantPressure(
+                MoFri, GaCpMeanList)
+            # dimensionless analysis
+            GaCpMeanMix_DiLeVa = rmtUtil.calDiLessValue(
+                GaCpMeanMix, GaCpMeanMix0)
+            # effective heat capacity - gas phase [kJ/kmol.K] | [J/mol.K]
+            GaCpMeanMixEff = GaCpMeanMix*BeVoFr
+            # dimensionless analysis
+            GaCpMeanMixEff_DiLeVa = GaCpMeanMix_DiLeVa*BeVoFr
+
+            # solid phase
+            for r in range(rNo):
+                # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+                # Cp mean list
+                SoCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                    comList, Ts_r[r])
+                # Cp mixture
+                SoCpMeanMix[r] = calMixtureHeatCapacityAtConstantPressure(
+                    MoFrsi_r[r], SoCpMeanList)
+
+                # effective heat capacity - solid phase [kJ/m^3.K]
+                SoCpMeanMixEff_ReVa[r] = CosSp_r_ReVa[r] * \
+                    SoCpMeanMix[r]*CaPo + (1-CaPo)*CaDe*CaSpHeCa
+
+                # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
+                # enthalpy change
+                EnChList = np.array(
+                    calEnthalpyChangeOfReaction(reactionListSorted, Ts_r[r]))
+                # heat of reaction at T [kJ/kmol] | [J/mol]
+                HeReT = np.array(EnChList + StHeRe25)
+                # overall heat of reaction [kJ/m^3.s]
+                # exothermic reaction (negative sign)
+                # endothermic sign (positive sign)
+                OvHeReT[r] = np.dot(Ri_r[r, :], HeReT)
+
+            # REVIEW
+            if MODEL_SETTING['HeTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Prandtl Number
+                # MW kg/mol -> g/mol
+                # MiMoWe_Conv = 1000*MiMoWe
+                PrNu = calPrNoEq1(
+                    GaCpMeanMix, GaViMix, GaThCoMix, MiMoWe)
+                # Nu number
+                NuNu = calNuNoEq1(PrNu, ReNu)
+                # heat transfer coefficient - gas/solid [J/m^2.s.K]
+                HeTrCo = calHeatTransferCoefficientEq1(NuNu, GaThCoMix, PaDi)
+
+            # REVIEW
+            # heat transfer coefficient - medium side [J/m2.s.K]
+            # hs = heat_transfer_coefficient_shell(T,Tv,Pv,Pa);
+            # overall heat transfer coefficient [J/m2.s.K]
+            # U = overall_heat_transfer_coefficient(hfs,kwall,do,di,L);
+            # heat transfer coefficient - permeate side [J/m2.s.K]
+
+            # NOTE
+            # cooling temperature [K]
+            Tm = ExHe['MeTe']
+            # overall heat transfer coefficient [J/s.m2.K]
+            U = ExHe['OvHeTrCo']
+            # heat transfer area over volume [m^2/m^3]
+            a = ExHe['EfHeTrAr']
+            # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
+            # Ua = U*a
+            # external heat [kJ/m^3.s]
+            Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
+                Tm, T_ReVa, U, a, 'kJ/m^3.s')
+
+            # NOTE
+            # # mass transfer between
+            # for i in range(compNo):
+            #     ### gas phase ###
+            #     # mass balance (forward difference)
+            #     # concentration [kmol/m^3]
+            #     # central
+            #     Ci_c = SpCoi_z[i][z]
+            #     # concentration in the catalyst surface [kmol/m^3]
+            #     # CosSpi_cat
+            #     # dimensionless analysis: real value
+            #     Ci_f = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+            #         SpCoi0)
+            #     # inward flux [kmol/m^2.s]
+            #     MoFli_z[i] = MaTrCo[i]*Ci_f*(Ci_c - CosSpi_cat_DiLeVa[i])
+
+            # # total mass transfer between gas and solid phases [kmol/m^3]
+            # ToMaTrBeGaSo_z = np.sum(MoFli_z)*SpSuAr
+
+            # NOTE
+            # velocity from global concentration
+            # check BC
+            # if z == 0:
+            #     # BC1
+            #     constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
+            #     # next node
+            #     T_f = T_z[z+1]
+            #     # previous node
+            #     T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+            # elif z == zNo - 1:
+            #     # BC2
+            #     # previous node
+            #     T_b = T_z[z - 1]
+            #     # next node
+            #     T_f = 0
+            # else:
+            #     # interior nodes
+            #     T_b = T_z[z-1]
+            #     # next node
+            #     T_f = T_z[z+1]
+
+            # dxdt_v_T = (T_z[z] - T_b)/dz
+            # # CoSp x 1000
+            # # OvR x 1000
+            # dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
+            #                           ((1/T_z[z])*dxdt_P - (P_z[z]/T_z[z]**2)*dxdt_v_T) - ToMaTrBeGaSo_z*1000)
+            # velocity [forward value] is updated
+            # backward value of temp is taken
+            # dT/dt will update the old value
+            # FIXME
+            # v_z[z+1] = dxdt_v*dz + v_z[z]
+            # v_z[z+1] = v
+            # FIXME
+            v_z[z+1] = v_z[z]
+            # dimensionless analysis
+            v_z_DiLeVa = rmtUtil.calDiLessValue(v_z[z+1], vf)
+
+            # NOTE
+            # diff/dt
+            # dxdt = []
+            # matrix
+            # dxdtMat = np.zeros((varNo, zNo))
+
+            # bulk temperature [K]
+            T_c = T_z[z]
+
+            # REVIEW
+            # gas-solid interface BC
+            # concentration [m/s]*[m^2/s]=[1/m]
+            # betaC = PaRa*(MaTrCo/SoDiiEff)
+            # temperature
+            # betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
+
+            # universal index [j,i]
+            # UISet = z*(rNo + 1)
+
+            # NOTE
+            for i in range(compNo):
+                # concentration []
+                # bulk species
+                Ci_c = SpCoi_z[i][z]
+                # species concentration at different points of particle radius [rNo]
+                # [Cs[3], Cs[2], Cs[1], Cs[0]]
+                _Cs_r = CosSpi_r[:, i].flatten()
+
+                # REVIEW
+                ### gas phase ###
+                # check BC
+                if z == 0 and solverMeshSet is True:
+                    # NOTE
+                    # BC1 (normal)
+                    BC1_C_1 = PeNuMa0[i]*dz
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC1)
+                elif z == 0 and solverMeshSet is False:
+                    # NOTE
+                    # BC1 (dense)
+                    # i=0 is discretized based on inlet
+                    # i=1
+                    BC1_C_1 = PeNuMa0[i]*dzs[z]
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dzs[z], DIFF1_C_SET)
+                    # d2Fdz2
+                    # d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1)
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = 0
+                    _zR_c = dzs[z]/dzs[z-1]
+                    # dCdz = FiDiNonUniformDerivative1(
+                    #     dFdz_C, dzs[z], DIFF1_C_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1, _zR_c)
+                elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                    # NOTE
+                    # dense section
+                    # i=2,...,zNoNoDense-1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = dzs[z-2]/dzs[z-1]
+                    _zR_c = dzs[z]/dzs[z-1]
+                    #
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dzs[z], DIFF1_C_SET, _zR_b)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_G, _zR_c)
+                elif z == zNo - 1:
+                    # NOTE
+                    # BC2
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # forward difference
+                    Ci_f = Ci_b
+                    Ci_ff = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC2)
+                else:
+                    # NOTE
+                    # normal sections
+                    # interior nodes
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2] if z < zNo-2 else 0
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_G)
+
+                # REVIEW
+                # *** convective flux between fluid-solid ***
+                # concentration
+                # Ci_c = SpCoi_z[i][z]
+                # concentration in the catalyst surface [kmol/m^3]
+                CosSpi_cat_gas = _Cs_r[0]
+                # dimensionless analysis: real value
+                Ci_f = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                # inward flux [kmol/m^2.s]
+                MoFli_z[i] = MaTrCo[i]*Ci_f*(Ci_c - CosSpi_cat_gas)
+
+                # REVIEW
+                # cal differentiate
+                # backward difference
+                # dCdz = (Ci_c - Ci_b)/(1*dz)
+                # convective term
+                _convectiveTerm = -1*v_z_DiLeVa*dCdz
+                # central difference for dispersion
+                # d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
+                # dispersion term [kmol/m^3.s]
+                _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
+                # concentration in the catalyst surface [kmol/m^3]
+                # CosSpi_cat
+                # inward flux [kmol/m^2.s]
+                # MoFli_z[i] = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
+                _inwardFlux = (1/GaMaCoTe0[i])*MoFli_z[i]*SpSuAr
+                # mass balance
+                # convective, dispersion, inward flux
+
+                # steady-state
+                dxdt_F = _convectiveTerm + _dispersionFluxC - _inwardFlux
+                dxdtMat[i][0][z] = dxdt_F
+
+                # REVIEW
+                ### solid phase ###
+                # transfer from gas to solid surface and then reaction
+                # dimensionless analysis
+                # beta
+                # const
+                _alpha = rf/GaDii0[i]
+                _beta = MaTrCo[i]/GaDii_DiLeVa[i]
+                _DiLe = _alpha*_beta
+                _Ri = ri_r[:, i]
+
+                dxdtMat[i][1][z] = MoFli_z[i]*SpSuAr + _Ri
+
+            # NOTE
+            # energy balance
+            # bulk temperature [K]
+            # T_c
+            # T_c = T_z[z]
+            # REVIEW
+            ### solid phase ###
+            # temperature at different points of particle radius [rNo]
+            # Ts[3], Ts[2], Ts[1], Ts[0]
+            _Ts_r = Ts_r.flatten()
+            # _Ts_r
+            # updated temperature in the gas-solid interface
+            Ts_r_cat_gas = _Ts_r[0]
+
+            # REVIEW
+            ### gas phase ###
+            # check BC
+            if z == 0 and solverMeshSet is True:
+                # BC1
+                BC1_T_1 = PeNuHe0*dz
+                BC1_T_2 = 1/BC1_T_1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC1)
+            elif z == 0 and solverMeshSet is False:
+                # BC1
+                BC1_T_1 = PeNuHe0*dzs[z]
+                BC1_T_2 = 1/BC1_T_1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dzs[z], DIFF1_T_SET)
+                # d2Fdz2
+                # d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = 0
+                _zR_c = dzs[z]/dzs[z-1]
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+            elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                # NOTE
+                # dense section
+                # i=2,...,zNoNoDense-1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_bb, T_b, T_c, T_f, T_ff]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = dzs[z-2]/dzs[z-1]
+                _zR_c = dzs[z]/dzs[z-1]
+                #
+                dTdz = FiDiNonUniformDerivative1(
+                    dFdz_T, dzs[z], DIFF1_T_SET, _zR_b)
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+            elif z == zNo - 1:
+                # BC2
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # forward
+                T_f = T_b
+                T_ff = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC2)
+            else:
+                # interior nodes
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2] if z < zNo-2 else 0
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_G)
+
+            # REVIEW
+            # cal differentiate
+            # backward difference
+            # dTdz = (T_c - T_b)/(1*dz)
+            # convective term
+            _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
+            # central difference
+            # d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
+            # dispersion flux [kJ/m^3.s]
+            # _dispersionFluxT = (GaThCoEff*d2Tdz2)*1e-3
+            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1
+            # temperature in the catalyst surface [K]
+            # Ts_cat
+            # outward flux [kJ/m^2.s]
+            _inwardFluxT = HeTrCo*SpSuAr*Tf*(Ts_r_cat_gas - T_c)*1e-3
+            # total heat transfer between gas and solid [kJ/m^3.s]
+            _heTrBeGaSoTerm = (1/GaHeCoTe0)*_inwardFluxT
+            # heat exchange term [kJ/m^3.s] -> [no unit]
+            _heatExchangeTerm = (1/GaHeCoTe0)*Qm
+            # convective flux, diffusive flux, enthalpy of reaction, cooling heat
+
+            # steady-state
+            dxdt_T = _convectiveTerm + _dispersionFluxT + _heTrBeGaSoTerm + _heatExchangeTerm
+            dxdtMat[indexT][0][z] = dxdt_T
+
+            # dC/dt list
+            # convert
+            # [J/s.m.K] => [kJ/s.m.K]
+            SoThCoEff_Conv = CaPo*SoThCoMix0/1000
+            # OvHeReT [kJ/m^3.s]
+            OvHeReT_Conv = -1*OvHeReT
+            # HeTrCo [J/m^2.s.K] => [kJ/m^2.s.K]
+            HeTrCo_Conv = HeTrCo/1000
+
+            # loop vars
+            _alpha = rf/SoThCoEff_Conv
+            _beta = -1*HeTrCo_Conv/SoThCoEff_DiLeVa
+            _DiLe = _alpha*_beta
+            _H = (1-BeVoFr)*OvHeReT_Conv
+
+            # set
+            dxdtMat[indexT][1][z] = _H - _inwardFluxT
+
+        # NOTE
+        # flat
+        dxdt = dxdtMat.flatten().tolist()
+
+        return dxdt
+
+    def modelEquationM91(y, paramsSet):
+        """
+            model [static modeling]
+            mass, energy, and momentum balance equations
+            modelParameters:
+                reactionListSorted: reactant/product and coefficient lists
+                reactionStochCoeff: reaction stoichiometric coefficient
+                FunParam:
+                    compList: component list
+                    const
+                        CrSeAr: reactor cross sectional area [m^2]
+                        MoWei: component molecular weight [g/mol]
+                        StHeRe25: standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+                        GaMiVi: gas mixture viscosity [Pa.s]
+                        varNo: number of variables (Ci, CT, T)
+                        varNoT: number of variables in the domain (zNo*varNoT)
+                        reactionListNo: reaction list number
+                    ReSpec: reactor spec
+                    ExHe: exchange heat spec
+                        OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
+                        EfHeTrAr: effective heat transfer area [m^2]
+                        MeTe: medium temperature [K]
+                    constBC1:
+                        VoFlRa0: inlet volumetric flowrate [m^3/s],
+                        SpCoi0: species concentration [kmol/m^3],
+                        SpCo0: total concentration [kmol/m^3]
+                        P0: inlet pressure [Pa]
+                        T0: inlet temperature [K]
+                    meshSetting:
+                        solverMesh: mesh installment
+                        solverMeshSet: 
+                            true: normal
+                            false: mesh refinement
+                        noLayer: number of layers
+                        varNoLayer: var no in each layer
+                        varNoLayerT: total number of vars (Ci,T,Cci,Tci)
+                        varNoRows: number of var rows [j]
+                        varNoColumns: number of var columns [i]
+                        zNo: number of finite difference in z direction
+                        rNo: number of orthogonal collocation points in r direction
+                        dz: differential length [m]
+                        dzs: differential length list [-]
+                        zR: z ratio
+                        zNoNo: number of nodes in the dense and normal sections
+                    solverSetting:
+                        OrCoClassSetRes: constants of OC methods
+                    reactionRateExpr: reaction rate expressions
+                DimensionlessAnalysisParams:
+                    Cif: feed concentration [kmol/m^3]
+                    Tf: feed temperature
+                    vf: feed superficial velocity [m/s]
+                    zf: domain length [m]
+                    Dif: diffusivity coefficient of component [m^2/s]
+                    Cpif: feed heat capacity at constat pressure [kJ/kmol.K] | [J/mol.K]
+                    rf: particle radius [m]
+                    GaMaCoTe0: feed mass convective term of gas phase [kmol/m^3.s]
+                    GaMaDiTe0: feed mass diffusive term of gas phase [kmol/m^3.s]
+                    GaHeCoTe0: feed heat convective term of gas phase [kJ/m^3.s]
+                    GaHeDiTe0, feed heat diffusive term of gas phase [kJ/m^3.s]
+                    SoMaDiTe0: feed mass diffusive term of solid phase [kmol/m^3.s]
+                    SoHeDiTe0: feed heat diffusive term of solid phase [kJ/m^3.s]
+                    ReNu0: Reynolds number
+                    ScNu0: Schmidt number
+                    ShNu0: Sherwood number
+                    PrNu0: Prandtl number
+                    PeNuMa0: mass Peclet number
+                    PeNuHe0: heat Peclet number 
+                    MaTrCo: mass transfer coefficient - gas/solid [m/s]
+                    HeTrCo: heat transfer coefficient - gas/solid [J/m^2.s.K]
+        """
+        # parameters
+        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, InterfaceParams = paramsSet
+        # fun params
+        # component symbol list
+        comList = FunParam['compList']
+        # const ->
+        const = FunParam['const']
+        # cross-sectional area [m^2]
+        CrSeAr = const['CrSeAr']
+        # component molecular weight [g/mol]
+        MoWei = const['MoWei']
+        # standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+        StHeRe25 = const['StHeRe25']
+        # gas viscosity [Pa.s]
+        GaMiVi = const['GaMiVi']
+        # reaction no
+        reactionListNo = const['reactionListNo']
+
+        # reactor spec ->
+        ReSpec = FunParam['ReSpec']
+        # particle diameter [m]
+        PaDi = ReSpec['PaDi']
+        # bed void fraction - porosity
+        BeVoFr = ReSpec['BeVoFr']
+        # bulk density (catalyst bed density)
+        CaBeDe = ReSpec['CaBeDe']
+        # catalyst density [kgcat/m^3 of particle]
+        CaDe = ReSpec['CaDe']
+        # catalyst heat capacity at constant pressure [kJ/kg.K]
+        CaSpHeCa = ReSpec['CaSpHeCa']
+        # catalyst porosity
+        CaPo = ReSpec['CaPo']
+        # catalyst tortuosity
+        CaTo = ReSpec['CaTo']
+        # catalyst thermal conductivity [J/K.m.s]
+        CaThCo = ReSpec['CaThCo']
+
+        # exchange heat spec ->
+        ExHe = FunParam['ExHe']
+        # var no. (concentration, temperature)
+        varNo = const['varNo']
+        # var no. in the domain
+        varNoT = const['varNoT']
+
+        # boundary conditions constants
+        constBC1 = FunParam['constBC1']
+        ## inlet values ##
+        # inlet volumetric flowrate at T,P [m^3/s]
+        VoFlRa0 = constBC1['VoFlRa0']
+        # inlet species concentration [kmol/m^3]
+        SpCoi0 = constBC1['SpCoi0']
+        # inlet total concentration [kmol/m^3]
+        SpCo0 = constBC1['SpCo0']
+        # inlet pressure [Pa]
+        P0 = constBC1['P0']
+        # inlet temperature [K]
+        T0 = constBC1['T0']
+        # inlet superficial velocity [m/s]
+        # SuGaVe0 = constBC1['SuGaVe0']
+        # inlet diffusivity coefficient [m^2]
+        GaDii0 = constBC1['GaDii0']
+        # inlet gas thermal conductivity [J/s.m.K]
+        GaThCoi0 = constBC1['GaThCoi0']
+        # gas viscosity
+        GaVii0 = constBC1['GaVii0']
+        # gas density [kg/m^3]
+        GaDe0 = constBC1['GaDe0']
+        # heat capacity at constant pressure [kJ/kmol.K] | [J/mol.K]
+        GaCpMeanMix0 = constBC1['GaCpMeanMix0']
+        # gas thermal conductivity [J/s.m.K]
+        GaThCoMix0 = constBC1['GaThCoMix0']
+
+        # mesh setting
+        meshSetting = FunParam['meshSetting']
+        # mesh installment
+        solverMesh = meshSetting['solverMesh']
+        # mesh refinement
+        solverMeshSet = meshSetting['solverMeshSet']
+        # number of layers
+        noLayer = meshSetting['noLayer']
+        # var no in each layer
+        varNoLayer = meshSetting['varNoLayer']
+        # total number of vars (Ci,T,Cci,Tci)
+        varNoLayerT = meshSetting['varNoLayerT']
+        # number of var rows [j]
+        varNoRows = meshSetting['varNoRows']
+        # number of var columns [i]
+        varNoColumns = meshSetting['varNoColumns']
+        # rNo
+        rNo = meshSetting['rNo']
+        # zNo
+        zNo = meshSetting['zNo']
+        # dz [m]
+        dz = meshSetting['dz']
+        # dzs [m]/[-]
+        dzs = meshSetting['dzs']
+        # R ratio
+        zR = meshSetting['zR']
+        # number of nodes in the dense and normal sections
+        zNoNo = meshSetting['zNoNo']
+        # dense
+        zNoNoDense = zNoNo[0]
+        # normal
+        zNoNoNormal = zNoNo[1]
+
+        # solver setting
+        solverSetting = FunParam['solverSetting']
+        # mass balance equation
+        DIFF1_C_SET = solverSetting['dFdz']
+        DIFF2_C_SET_BC1 = solverSetting['d2Fdz2']['BC1']
+        DIFF2_C_SET_BC2 = solverSetting['d2Fdz2']['BC2']
+        DIFF2_C_SET_G = solverSetting['d2Fdz2']['G']
+        # energy balance equation
+        DIFF1_T_SET = solverSetting['dTdz']
+        DIFF2_T_SET_BC1 = solverSetting['d2Tdz2']['BC1']
+        DIFF2_T_SET_BC2 = solverSetting['d2Tdz2']['BC2']
+        DIFF2_T_SET_G = solverSetting['d2Tdz2']['G']
+        # number of collocation points
+        ocN = solverSetting['OrCoClassSetRes']['N']
+        ocXc = solverSetting['OrCoClassSetRes']['Xc']
+        ocA = solverSetting['OrCoClassSetRes']['A']
+        ocB = solverSetting['OrCoClassSetRes']['B']
+        ocQ = solverSetting['OrCoClassSetRes']['Q']
+
+        # init OrCoCatParticle
+        OrCoCatParticleClassSet = OrCoCatParticleClass(
+            ocXc, ocN, ocQ, ocA, ocB, varNo)
+
+        # reaction rate expressions
+        reactionRateExpr = FunParam['reactionRateExpr']
+        # using equation
+        varisSet = reactionRateExpr['VARS']
+        ratesSet = reactionRateExpr['RATES']
+
+        # dimensionless analysis params
+        #  feed concentration [kmol/m^3]
+        Cif = DimensionlessAnalysisParams['Cif']
+        # feed temperature
+        Tf = DimensionlessAnalysisParams['Tf']
+        # feed superficial velocity [m/s]
+        vf = DimensionlessAnalysisParams['vf']
+        # domain length [m]
+        zf = DimensionlessAnalysisParams['zf']
+        # particle radius [m]
+        rf = DimensionlessAnalysisParams['rf']
+        # diffusivity coefficient of component [m^2/s]
+        Dif = DimensionlessAnalysisParams['Dif']
+        # feed heat capacity at constat pressure
+        Cpif = DimensionlessAnalysisParams['Cpif']
+        # feed mass convective term of gas phase [kmol/m^3.s]
+        GaMaCoTe0 = DimensionlessAnalysisParams['GaMaCoTe0']
+        # feed mass diffusive term of gas phase [kmol/m^3.s]
+        GaMaDiTe0 = DimensionlessAnalysisParams['GaMaDiTe0']
+        # feed heat convective term of gas phase [kJ/m^3.s]
+        GaHeCoTe0 = DimensionlessAnalysisParams['GaHeCoTe0']
+        # feed heat diffusive term of gas phase [kJ/m^3.s]
+        GaHeDiTe0 = DimensionlessAnalysisParams['GaHeDiTe0']
+        # feed mass diffusive term of solid phase [kmol/m^3.s]
+        SoMaDiTe0 = DimensionlessAnalysisParams['SoMaDiTe0']
+        # feed heat diffusive term of solid phase [kJ/m^3.s]
+        SoHeDiTe0 = DimensionlessAnalysisParams['SoHeDiTe0']
+        # Reynolds number
+        ReNu = DimensionlessAnalysisParams['ReNu0']
+        # Schmidt number
+        ScNu = DimensionlessAnalysisParams['ScNu0']
+        # Sherwood number
+        ShNu = DimensionlessAnalysisParams['ShNu0']
+        # Prandtl number
+        PrNu = DimensionlessAnalysisParams['PrNu0']
+        # mass Peclet number
+        PeNuMa0 = DimensionlessAnalysisParams['PeNuMa0']
+        # heat Peclet number
+        PeNuHe0 = DimensionlessAnalysisParams['PeNuHe0']
+        # mass transfer coefficient - gas/solid [m/s]
+        MaTrCo = DimensionlessAnalysisParams['MaTrCo']
+        # heat transfer coefficient - gas/solid [J/m^2.s.K]
+        HeTrCo = DimensionlessAnalysisParams['HeTrCo']
+
+        # interface
+        # concentration
+        SpCosi_zi = InterfaceParams['SpCosi_zi']
+        # temperature
+        Ts_zi = InterfaceParams['Ts_zi']
+
+        # components no
+        # y: component molar flowrate, total molar flux, temperature, pressure
+        compNo = len(comList)
+        indexT = compNo
+        indexP = indexT + 1
+        indexV = indexP + 1
+
+        # calculate
+        # particle radius
+        PaRa = PaDi/2
+        # specific surface area exposed to the free fluid [m^2/m^3]
+        SpSuAr = (3/PaRa)*(1 - BeVoFr)
+
+        # molar flowrate [kmol/s]
+        MoFlRa0 = SpCo0*VoFlRa0
+        # superficial gas velocity [m/s]
+        InGaVe0 = VoFlRa0/(CrSeAr*BeVoFr)
+        # interstitial gas velocity [m/s]
+        SuGaVe0 = InGaVe0*BeVoFr
+
+        # interstitial gas velocity [m/s]
+        InGaVeList_z = np.zeros(zNo)
+        InGaVeList_z[0] = InGaVe0
+
+        # total molar flux [kmol/m^2.s]
+        MoFl_z = np.zeros(zNo)
+        MoFl_z[0] = MoFlRa0
+
+        # reaction rate in the solid phase
+        Ri_z = np.zeros((zNo, reactionListNo))
+        Ri_zr = np.zeros((zNo, rNo, reactionListNo))
+        Ri_r = np.zeros((rNo, reactionListNo))
+        # reaction rate
+        # ri = np.zeros(compNo) # deprecate
+        # ri0 = np.zeros(compNo) # deprecate
+        # solid phase
+        ri_r = np.zeros((rNo, compNo))
+        # overall reaction
+        OvR = np.zeros(rNo)
+        # overall enthalpy
+        OvHeReT = np.zeros(rNo)
+        # heat capacity at constant pressure
+        SoCpMeanMix = np.zeros(rNo)
+        # effective heat capacity at constant pressure
+        SoCpMeanMixEff = np.zeros(rNo)
+        # dimensionless analysis
+        SoCpMeanMixEff_ReVa = np.zeros(rNo)
+
+        # pressure [Pa]
+        P_z = np.zeros(zNo + 1)
+        P_z[0] = P0
+
+        # superficial gas velocity [m/s]
+        v_z = np.zeros(zNo + 1)
+        v_z[0] = SuGaVe0
+
+        # NOTE
+        # distribute y[i] value through the reactor length
+        # reshape
+        yLoop = np.reshape(y, (noLayer, varNoRows, varNoColumns))
+
+        # all species concentration in gas & solid phase
+        SpCo_mz = np.zeros((noLayer - 1, varNoRows, varNoColumns))
+        # all species concentration in gas phase [kmol/m^3]
+        SpCoi_z = np.zeros((compNo, zNo))
+        # all species concentration in solid phase (catalyst) [kmol/m^3]
+        SpCosi_mzr = np.zeros((compNo, rNo, zNo))
+        # layer
+        for m in range(compNo):
+            # -> concentration [mol/m^3]
+            _SpCoi = yLoop[m]
+            SpCo_mz[m] = _SpCoi
+        # concentration in the gas phase [kmol/m^3]
+        for m in range(compNo):
+            for j in range(varNoRows):
+                if j == 0:
+                    # gas phase
+                    SpCoi_z[m, :] = SpCo_mz[m, j, :]
+                else:
+                    # solid phase
+                    SpCosi_mzr[m, j-1, :] = SpCo_mz[m, j, :]
+
+        # species concentration in gas phase [kmol/m^3]
+        CoSpi = np.zeros(compNo)
+        # dimensionless analysis
+        CoSpi_ReVa = np.zeros(compNo)
+        # total concentration [kmol/m^3]
+        CoSp = 0
+        # species concentration in solid phase (catalyst) [kmol/m^3]
+        # shape
+        CosSpiMatShape = (rNo, compNo)
+        CosSpi_r = np.zeros(CosSpiMatShape)
+        # dimensionless analysis
+        CosSpi_r_ReVa = np.zeros(CosSpiMatShape)
+        # total concentration in the solid phase [kmol/m^3]
+        CosSp_r = np.zeros(rNo)
+
+        # flux
+        MoFli_z = np.zeros(compNo)
+
+        # NOTE
+        # temperature [K]
+        T_mz = np.zeros((varNoRows, varNoColumns))
+        T_mz = yLoop[noLayer - 1]
+        # temperature in the gas phase
+        T_z = np.zeros(zNo)
+        T_z = T_mz[0, :]
+        # temperature in solid phase
+        Ts_z = np.zeros((rNo, zNo))
+        Ts_z = T_mz[1:]
+        # temperature in the solid phase
+        Ts_r = np.zeros(rNo)
+
+        # diff/dt
+        # dxdt = []
+        # matrix
+        # dxdtMat = np.zeros((varNo, zNo))
+        dxdtMat = np.zeros((noLayer, varNoRows, varNoColumns))
+
+        # NOTE
+        # FIXME
+        # define ode equations for each finite difference [zNo]
+        for z in range(varNoColumns):
+            ## block ##
+            # concentration species in the gas phase [kmol/m^3]
+            for i in range(compNo):
+                _SpCoi_z = SpCoi_z[i][z]
+                CoSpi[i] = _SpCoi_z  # max(_SpCoi_z, CONST.EPS_CONST)
+                # REVIEW
+                # dimensionless analysis: real value
+                SpCoi0_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(
+                    CoSpi[i], SpCoi0_Set)
+
+            # total concentration [kmol/m^3]
+            CoSp = np.sum(CoSpi)
+            # dimensionless analysis: real value
+            CoSp_ReVa = np.sum(CoSpi_ReVa)
+
+            # FIXME
+            # concentration species in the solid phase [kmol/m^3]
+            # display concentration list in each oc point (rNo)
+            for i in range(compNo):
+                for r in range(rNo):
+                    _CosSpi_z = SpCosi_mzr[i][r][z]
+                    # max(_CosSpi_z, CONST.EPS_CONST)
+                    CosSpi_r[r][i] = _CosSpi_z
+                    # REVIEW
+                    # dimensionless analysis: real value
+                    SpCoi0_r_Set = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                        SpCoi0)
+                    CosSpi_r_ReVa[r][i] = rmtUtil.calRealDiLessValue(
+                        CosSpi_r[r][i], SpCoi0_r_Set)
+
+            # total concentration in the solid phase [kmol/m^3]
+            CosSp_r = np.sum(CosSpi_r, axis=1).reshape((rNo, 1))
+            # dimensionless analysis: real value
+            CosSp_r_ReVa = np.sum(CosSpi_r_ReVa, axis=1).reshape((rNo, 1))
+
+            # concentration in the outer surface of the catalyst [kmol/m^3]
+            CosSpi_cat = CosSpi_r[0]
+            # dimensionless analysis
+            CosSpi_cat_DiLeVa = CosSpi_r[0, :]
+
+            # temperature [K]
+            T = T_z[z]
+            T_ReVa = rmtUtil.calRealDiLessValue(T, T0, "TEMP")
+            # temperature in the solid phase (for each point)
+            # Ts[3], Ts[2], Ts[1], Ts[0]
+            Ts_r = Ts_z[:, z]
+            Ts_r_ReVa = rmtUtil.calRealDiLessValue(Ts_r, T0, "TEMP")
+
+            # pressure [Pa]
+            P = P_z[z]
+
+            # FIXME
+            # velocity
+            # dimensionless value
+            # v = v_z[z]
+            v = 1
+
+            ## calculate ##
+            # mole fraction in the gas phase
+            MoFri = np.array(
+                rmtUtil.moleFractionFromConcentrationSpecies(CoSpi_ReVa))
+
+            # mole fraction in the solid phase
+            # MoFrsi_r0 = CosSpi_r/CosSp_r
+            MoFrsi_r = rmtUtil.moleFractionFromConcentrationSpeciesMat(
+                CosSpi_r_ReVa)
+
+            # TODO
+            # dv/dz
+            # gas velocity based on interstitial velocity [m/s]
+            # InGaVe = rmtUtil.calGaVeFromEOS(InGaVe0, SpCo0, CoSp, P0, P)
+            # superficial gas velocity [m/s]
+            # SuGaVe = InGaVe*BeVoFr
+            # from ode eq. dv/dz
+            SuGaVe = v
+            # dimensionless analysis
+            SuGaVe_ReVa = rmtUtil.calRealDiLessValue(SuGaVe, SuGaVe0)
+
+            # total flowrate [kmol/s]
+            # [kmol/m^3]*[m/s]*[m^2]
+            MoFlRa = calMolarFlowRate(CoSp_ReVa, SuGaVe_ReVa, CrSeAr)
+            # molar flowrate list [kmol/s]
+            MoFlRai = MoFlRa*MoFri
+            # convert to [mol/s]
+            MoFlRai_Con1 = 1000*MoFlRai
+
+            # molar flux [kmol/m^2.s]
+            MoFl = MoFlRa/CrSeAr
+
+            # volumetric flowrate [m^3/s]
+            VoFlRai = calVolumetricFlowrateIG(P, T, MoFlRai_Con1)
+
+            # mixture molecular weight [kg/mol]
+            MiMoWe = rmtUtil.mixtureMolecularWeight(MoFri, MoWei, "kg/mol")
+
+            # gas density [kg/m^3]
+            GaDe = calDensityIG(MiMoWe, CoSp_ReVa*1000)
+            # GaDeEOS = calDensityIGFromEOS(P, T, MiMoWe)
+            # dimensionless value
+            GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDe, GaDe0)
+
+            # NOTE
+            # ergun equation
+            ergA = 150*GaMiVi*SuGaVe_ReVa/(PaDi**2)
+            ergB = ((1-BeVoFr)**2)/(BeVoFr**3)
+            ergC = 1.75*GaDe*(SuGaVe_ReVa**2)/PaDi
+            ergD = (1-BeVoFr)/(BeVoFr**3)
+            RHS_ergun = -1*(ergA*ergB + ergC*ergD)
+
+            # momentum balance (ergun equation)
+            dxdt_P = RHS_ergun
+            # dxdt.append(dxdt_P)
+            P_z[z+1] = dxdt_P*dz + P_z[z]
+
+            # REVIEW
+            # FIXME
+            # viscosity in the gas phase [Pa.s] | [kg/m.s]
+            GaVii = GaVii0 if MODEL_SETTING['GaVii'] == "FIX" else calTest()
+            # mixture viscosity in the gas phase [Pa.s] | [kg/m.s]
+            # FIXME
+            GaViMix = 2.5e-5  # f(yi,GaVi,MWs);
+            # kinematic viscosity in the gas phase [m^2/s]
+            GaKiViMix = GaViMix/GaDe
+
+            # REVIEW
+            # FIXME
+            # solid gas thermal conductivity
+            SoThCoMix0 = GaThCoMix0
+            # add loop for each r point/constant
+            # catalyst thermal conductivity [J/s.m.K]
+            # CaThCo
+            # membrane wall thermal conductivity [J/s.m.K]
+            MeThCo = 1
+            # thermal conductivity - gas phase [J/s.m.K]
+            # GaThCoi = np.zeros(compNo)  # f(T);
+            GaThCoi = GaThCoi0 if MODEL_SETTING['GaThCoi'] == "FIX" else calTest(
+            )
+            # dimensionless
+            GaThCoi_DiLe = GaThCoi/GaThCoi0
+            # FIXME
+            # mixture thermal conductivity - gas phase [J/s.m.K]
+            GaThCoMix = GaThCoMix0
+            # dimensionless analysis
+            GaThCoMix_DiLeVa = GaThCoMix/GaThCoMix0
+            # thermal conductivity - solid phase [J/s.m.K]
+            # assume the same as gas phase
+            # SoThCoi = np.zeros(compNo)  # f(T);
+            SoThCoi = GaThCoi
+            # mixture thermal conductivity - solid phase [J/s.m.K]
+            SoThCoMix = GaThCoMix0
+            # dimensionless analysis
+            SoThCoMix_DiLeVa = SoThCoMix/SoThCoMix0
+            # effective thermal conductivity - gas phase [J/s.m.K]
+            # GaThCoEff = BeVoFr*GaThCoMix + (1 - BeVoFr)*CaThCo
+            GaThCoEff = BeVoFr*GaThCoMix
+            # dimensionless analysis
+            GaThCoEff_DiLeVa = BeVoFr*GaThCoMix_DiLeVa
+            # FIXME
+            # effective thermal conductivity - solid phase [J/s.m.K]
+            # assume identical to gas phase
+            # SoThCoEff0 = CaPo*SoThCoMix + (1 - CaPo)*CaThCo
+            # SoThCoEff = SoThCoMix*((1 - CaPo)/CaTo)
+            SoThCoEff = CaPo*SoThCoMix
+            # dimensionless analysis
+            # SoThCoEff_DiLeVa = GaThCoMix_DiLeVa*((1 - CaPo)/CaTo)
+            SoThCoEff_DiLeVa = CaPo*SoThCoMix_DiLeVa
+
+            # REVIEW
+            # diffusivity coefficient - gas phase [m^2/s]
+            GaDii = GaDii0 if MODEL_SETTING['GaDii'] == "FIX" else calTest()
+            # dimensionless analysis
+            GaDii_DiLeVa = GaDii/GaDii0
+            # effective diffusivity coefficient - gas phase
+            GaDiiEff = GaDii*BeVoFr
+            # dimensionless analysis
+            GaDiiEff_DiLeVa = GaDiiEff/GaDii0
+            # effective diffusivity - solid phase [m^2/s]
+            SoDiiEff = (CaPo/CaTo)*GaDii
+            # dimensionless analysis
+            SoDiiEff_DiLe = (CaPo/CaTo)*GaDii_DiLeVa
+
+            # REVIEW
+            if MODEL_SETTING['MaTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Re Number
+                ReNu = calReNoEq1(GaDe, SuGaVe, PaDi, GaViMix)
+                # Sc Number
+                ScNu = calScNoEq1(GaDe, GaViMix, GaDii)
+                # Sh Number (choose method)
+                ShNu = calShNoEq1(ScNu, ReNu, CONST_EQ_Sh['Frossling'])
+
+                # mass transfer coefficient - gas/solid [m/s]
+                MaTrCo = calMassTransferCoefficientEq1(ShNu, GaDii, PaDi)
+
+            # NOTE
+            ## kinetics ##
+            # net reaction rate expression [kmol/m^3.s]
+            # rf[kmol/kgcat.s]*CaDe[kgcat/m^3]
+            for r in range(rNo):
+                # loop
+                loopVars0 = (Ts_r_ReVa[r], P_z[z],
+                             MoFrsi_r[r], CosSpi_r_ReVa[r])
+
+                # component formation rate [mol/m^3.s]
+                # check unit
+                r0 = np.array(reactionRateExe(
+                    loopVars0, varisSet, ratesSet))
+
+                # loop
+                Ri_zr[z, r, :] = r0
+                Ri_r[r, :] = r0
+
+                # component formation rate [kmol/m^3.s]
+                ri_r[r] = componentFormationRate(
+                    compNo, comList, reactionStochCoeff, Ri_r[r])
+
+                # overall formation rate [kmol/m^3.s]
+                OvR[r] = np.sum(ri_r[r])
+
+            # NOTE
+            ### enthalpy calculation ###
+            # gas phase
+            # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+            # Cp mean list
+            GaCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                comList, T_ReVa)
+            # Cp mixture
+            GaCpMeanMix = calMixtureHeatCapacityAtConstantPressure(
+                MoFri, GaCpMeanList)
+            # dimensionless analysis
+            GaCpMeanMix_DiLeVa = rmtUtil.calDiLessValue(
+                GaCpMeanMix, GaCpMeanMix0)
+            # effective heat capacity - gas phase [kJ/kmol.K] | [J/mol.K]
+            GaCpMeanMixEff = GaCpMeanMix*BeVoFr
+            # dimensionless analysis
+            GaCpMeanMixEff_DiLeVa = GaCpMeanMix_DiLeVa*BeVoFr
+
+            # solid phase
+            for r in range(rNo):
+                # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
+                # Cp mean list
+                SoCpMeanList = calMeanHeatCapacityAtConstantPressure(
+                    comList, Ts_r[r])
+                # Cp mixture
+                SoCpMeanMix[r] = calMixtureHeatCapacityAtConstantPressure(
+                    MoFrsi_r[r], SoCpMeanList)
+
+                # effective heat capacity - solid phase [kJ/m^3.K]
+                SoCpMeanMixEff_ReVa[r] = CosSp_r_ReVa[r] * \
+                    SoCpMeanMix[r]*CaPo + (1-CaPo)*CaDe*CaSpHeCa
+
+                # enthalpy change from Tref to T [kJ/kmol] | [J/mol]
+                # enthalpy change
+                EnChList = np.array(
+                    calEnthalpyChangeOfReaction(reactionListSorted, Ts_r[r]))
+                # heat of reaction at T [kJ/kmol] | [J/mol]
+                HeReT = np.array(EnChList + StHeRe25)
+                # overall heat of reaction [kJ/m^3.s]
+                # exothermic reaction (negative sign)
+                # endothermic sign (positive sign)
+                OvHeReT[r] = np.dot(Ri_r[r, :], HeReT)
+
+            # REVIEW
+            if MODEL_SETTING['HeTrCo'] != "FIX":
+                ### dimensionless numbers ###
+                # Prandtl Number
+                # MW kg/mol -> g/mol
+                # MiMoWe_Conv = 1000*MiMoWe
+                PrNu = calPrNoEq1(
+                    GaCpMeanMix, GaViMix, GaThCoMix, MiMoWe)
+                # Nu number
+                NuNu = calNuNoEq1(PrNu, ReNu)
+                # heat transfer coefficient - gas/solid [J/m^2.s.K]
+                HeTrCo = calHeatTransferCoefficientEq1(NuNu, GaThCoMix, PaDi)
+
+            # REVIEW
+            # heat transfer coefficient - medium side [J/m2.s.K]
+            # hs = heat_transfer_coefficient_shell(T,Tv,Pv,Pa);
+            # overall heat transfer coefficient [J/m2.s.K]
+            # U = overall_heat_transfer_coefficient(hfs,kwall,do,di,L);
+            # heat transfer coefficient - permeate side [J/m2.s.K]
+
+            # NOTE
+            # cooling temperature [K]
+            Tm = ExHe['MeTe']
+            # overall heat transfer coefficient [J/s.m2.K]
+            U = ExHe['OvHeTrCo']
+            # heat transfer area over volume [m^2/m^3]
+            a = ExHe['EfHeTrAr']
+            # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
+            # Ua = U*a
+            # external heat [kJ/m^3.s]
+            Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
+                Tm, T_ReVa, U, a, 'kJ/m^3.s')
+
+            # NOTE
+            # # mass transfer between
+            # for i in range(compNo):
+            #     ### gas phase ###
+            #     # mass balance (forward difference)
+            #     # concentration [kmol/m^3]
+            #     # central
+            #     Ci_c = SpCoi_z[i][z]
+            #     # concentration in the catalyst surface [kmol/m^3]
+            #     # CosSpi_cat
+            #     # dimensionless analysis: real value
+            #     Ci_f = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+            #         SpCoi0)
+            #     # inward flux [kmol/m^2.s]
+            #     MoFli_z[i] = MaTrCo[i]*Ci_f*(Ci_c - CosSpi_cat_DiLeVa[i])
+
+            # # total mass transfer between gas and solid phases [kmol/m^3]
+            # ToMaTrBeGaSo_z = np.sum(MoFli_z)*SpSuAr
+
+            # NOTE
+            # velocity from global concentration
+            # check BC
+            # if z == 0:
+            #     # BC1
+            #     constT_BC1 = (GaThCoEff)/(MoFl*GaCpMeanMix/1000)
+            #     # next node
+            #     T_f = T_z[z+1]
+            #     # previous node
+            #     T_b = (T0*dz + constT_BC1*T_f)/(dz + constT_BC1)
+            # elif z == zNo - 1:
+            #     # BC2
+            #     # previous node
+            #     T_b = T_z[z - 1]
+            #     # next node
+            #     T_f = 0
+            # else:
+            #     # interior nodes
+            #     T_b = T_z[z-1]
+            #     # next node
+            #     T_f = T_z[z+1]
+
+            # dxdt_v_T = (T_z[z] - T_b)/dz
+            # # CoSp x 1000
+            # # OvR x 1000
+            # dxdt_v = (1/(CoSp*1000))*((-SuGaVe/CONST.R_CONST) *
+            #                           ((1/T_z[z])*dxdt_P - (P_z[z]/T_z[z]**2)*dxdt_v_T) - ToMaTrBeGaSo_z*1000)
+            # velocity [forward value] is updated
+            # backward value of temp is taken
+            # dT/dt will update the old value
+            # FIXME
+            # v_z[z+1] = dxdt_v*dz + v_z[z]
+            # v_z[z+1] = v
+            # FIXME
+            v_z[z+1] = v_z[z]
+            # dimensionless analysis
+            v_z_DiLeVa = rmtUtil.calDiLessValue(v_z[z+1], vf)
+
+            # NOTE
+            # diff/dt
+            # dxdt = []
+            # matrix
+            # dxdtMat = np.zeros((varNo, zNo))
+
+            # bulk temperature [K]
+            T_c = T_z[z]
+
+            # REVIEW
+            # gas-solid interface BC
+            # concentration [m/s]*[m^2/s]=[1/m]
+            # betaC = PaRa*(MaTrCo/SoDiiEff)
+            # temperature
+            # betaT = -1*((HeTrCo*PaRa)/SoThCoEff)
+
+            # universal index [j,i]
+            # UISet = z*(rNo + 1)
+
+            # NOTE
+            for i in range(compNo):
+                # concentration []
+                # bulk species
+                Ci_c = SpCoi_z[i][z]
+                # species concentration at different points of particle radius [rNo]
+                # [Cs[3], Cs[2], Cs[1], Cs[0]]
+                _Cs_r = CosSpi_r[:, i].flatten()
+
+                # REVIEW
+                ### gas phase ###
+                # check BC
+                if z == 0 and solverMeshSet is True:
+                    # NOTE
+                    # BC1 (normal)
+                    BC1_C_1 = PeNuMa0[i]*dz
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC1)
+                elif z == 0 and solverMeshSet is False:
+                    # NOTE
+                    # BC1 (dense)
+                    # i=0 is discretized based on inlet
+                    # i=1
+                    BC1_C_1 = PeNuMa0[i]*dzs[z]
+                    BC1_C_2 = 1/BC1_C_1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    # GaDii_DiLeVa = 1
+                    Ci_0 = 1 if MODEL_SETTING['GaMaCoTe0'] != "MAX" else SpCoi0[i]/np.max(
+                        SpCoi0)
+                    Ci_b = (Ci_0 + BC1_C_2*Ci_f)/(BC1_C_2 + 1)
+                    Ci_bb = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dzs[z], DIFF1_C_SET)
+                    # d2Fdz2
+                    # d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1)
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = 0
+                    _zR_c = dzs[z]/dzs[z-1]
+                    # dCdz = FiDiNonUniformDerivative1(
+                    #     dFdz_C, dzs[z], DIFF1_C_SET, zR[z])
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_BC1, _zR_c)
+                elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                    # NOTE
+                    # dense section
+                    # i=2,...,zNoNoDense-1
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2]
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### non-uniform nodes ###
+                    # R value
+                    _zR_b = dzs[z-2]/dzs[z-1]
+                    _zR_c = dzs[z]/dzs[z-1]
+                    #
+                    dCdz = FiDiNonUniformDerivative1(
+                        dFdz_C, dzs[z], DIFF1_C_SET, _zR_b)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiNonUniformDerivative2(
+                        d2Fdz2_C, dzs[z], DIFF2_C_SET_G, _zR_c)
+                elif z == zNo - 1:
+                    # NOTE
+                    # BC2
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # forward difference
+                    Ci_f = Ci_b
+                    Ci_ff = 0
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_BC2)
+                else:
+                    # NOTE
+                    # normal sections
+                    # interior nodes
+                    # forward
+                    Ci_f = SpCoi_z[i][z+1]
+                    Ci_ff = SpCoi_z[i][z+2] if z < zNo-2 else 0
+                    # backward
+                    Ci_b = SpCoi_z[i][z-1]
+                    Ci_bb = SpCoi_z[i][z-2]
+                    # function value
+                    dFdz_C = [Ci_b, Ci_c, Ci_f]
+                    d2Fdz2_C = [Ci_bb, Ci_b, Ci_c, Ci_f, Ci_ff]
+                    # REVIEW
+                    ### uniform nodes ###
+                    # dFdz
+                    dCdz = FiDiDerivative1(dFdz_C, dz, DIFF1_C_SET)
+                    # d2Fdz2
+                    d2Cdz2 = FiDiDerivative2(d2Fdz2_C, dz, DIFF2_C_SET_G)
+
+                # REVIEW
+                # *** convective flux between fluid-solid ***
+                # concentration
+                # Ci_c = SpCoi_z[i][z]
+                # concentration in the catalyst surface [kmol/m^3]
+                CosSpi_cat_gas = _Cs_r[0]
+                # dimensionless analysis: real value
+                Ci_f = SpCoi0[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                    SpCoi0)
+                # inward flux [kmol/m^2.s]
+                MoFli_z[i] = MaTrCo[i]*Ci_f*(Ci_c - CosSpi_cat_gas)
+
+                # REVIEW
+                # cal differentiate
+                # backward difference
+                # dCdz = (Ci_c - Ci_b)/(1*dz)
+                # convective term
+                _convectiveTerm = -1*v_z_DiLeVa*dCdz
+                # central difference for dispersion
+                # d2Cdz2 = (Ci_b - 2*Ci_c + Ci_f)/(dz**2)
+                # dispersion term [kmol/m^3.s]
+                _dispersionFluxC = (BeVoFr*GaDii_DiLeVa[i]/PeNuMa0[i])*d2Cdz2
+                # concentration in the catalyst surface [kmol/m^3]
+                # CosSpi_cat
+                # inward flux [kmol/m^2.s]
+                # MoFli_z[i] = MaTrCo[i]*(Ci_c - CosSpi_cat[i])
+                _inwardFlux = (1/GaMaCoTe0[i])*MoFli_z[i]*SpSuAr
+                # mass balance
+                # convective, dispersion, inward flux
+
+                # steady-state
+                dxdt_F = _convectiveTerm + _dispersionFluxC - _inwardFlux
+                dxdtMat[i][0][z] = dxdt_F
+
+                # REVIEW
+                ### solid phase ###
+                # transfer from gas to solid surface and then reaction
+                # dimensionless analysis
+                # beta
+                # const
+                _alpha = rf/GaDii0[i]
+                _beta = MaTrCo[i]/GaDii_DiLeVa[i]
+                _DiLe = _alpha*_beta
+                _Ri = ri_r[:, i]
+
+                dxdtMat[i][1][z] = MoFli_z[i]*SpSuAr + _Ri
+
+            # NOTE
+            # energy balance
+            # bulk temperature [K]
+            # T_c
+            # T_c = T_z[z]
+            # REVIEW
+            ### solid phase ###
+            # temperature at different points of particle radius [rNo]
+            # Ts[3], Ts[2], Ts[1], Ts[0]
+            _Ts_r = Ts_r.flatten()
+            # _Ts_r
+            # updated temperature in the gas-solid interface
+            Ts_r_cat_gas = _Ts_r[0]
+
+            # REVIEW
+            ### gas phase ###
+            # check BC
+            if z == 0 and solverMeshSet is True:
+                # BC1
+                BC1_T_1 = PeNuHe0*dz
+                BC1_T_2 = 1/BC1_T_1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC1)
+            elif z == 0 and solverMeshSet is False:
+                # BC1
+                BC1_T_1 = PeNuHe0*dzs[z]
+                BC1_T_2 = 1/BC1_T_1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                # GaDe_DiLeVa, GaCpMeanMix_DiLeVa, v_z_DiLeVa = 1
+                # T*[0] = (T0 - Tf)/Tf
+                T_0 = 0
+                T_b = (T_0 + BC1_T_2*T_f)/(BC1_T_2 + 1)
+                T_bb = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dzs[z], DIFF1_T_SET)
+                # d2Fdz2
+                # d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF_T_SET_BC1)
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = 0
+                _zR_c = dzs[z]/dzs[z-1]
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+            elif (z > 0 and z < zNoNoDense) and solverMeshSet is False:
+                # NOTE
+                # dense section
+                # i=2,...,zNoNoDense-1
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2]
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_bb, T_b, T_c, T_f, T_ff]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### non-uniform nodes ###
+                # R value
+                _zR_b = dzs[z-2]/dzs[z-1]
+                _zR_c = dzs[z]/dzs[z-1]
+                #
+                dTdz = FiDiNonUniformDerivative1(
+                    dFdz_T, dzs[z], DIFF1_T_SET, _zR_b)
+                # d2Fdz2
+                d2Tdz2 = FiDiNonUniformDerivative2(
+                    d2Fdz2_T, dzs[z], DIFF2_T_SET_G, _zR_c)
+            elif z == zNo - 1:
+                # BC2
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # forward
+                T_f = T_b
+                T_ff = 0
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_BC2)
+            else:
+                # interior nodes
+                # forward
+                T_f = T_z[z+1]
+                T_ff = T_z[z+2] if z < zNo-2 else 0
+                # backward
+                T_b = T_z[z-1]
+                T_bb = T_z[z-2]
+                # function value
+                dFdz_T = [T_b, T_c, T_f]
+                d2Fdz2_T = [T_bb, T_b, T_c, T_f, T_ff]
+                # REVIEW
+                ### uniform nodes ###
+                # dFdz
+                dTdz = FiDiDerivative1(dFdz_T, dz, DIFF1_T_SET)
+                # d2Fdz2
+                d2Tdz2 = FiDiDerivative2(d2Fdz2_T, dz, DIFF2_T_SET_G)
+
+            # REVIEW
+            # cal differentiate
+            # backward difference
+            # dTdz = (T_c - T_b)/(1*dz)
+            # convective term
+            _convectiveTerm = -1*v_z_DiLeVa*GaDe_DiLeVa*GaCpMeanMix_DiLeVa*dTdz
+            # central difference
+            # d2Tdz2 = (T_b - 2*T_c + T_f)/(dz**2)
+            # dispersion flux [kJ/m^3.s]
+            # _dispersionFluxT = (GaThCoEff*d2Tdz2)*1e-3
+            _dispersionFluxT = ((1/PeNuHe0)*GaThCoEff_DiLeVa*d2Tdz2)*1
+            # temperature in the catalyst surface [K]
+            # Ts_cat
+            # outward flux [kJ/m^2.s]
+            _inwardFluxT = HeTrCo*SpSuAr*Tf*(Ts_r_cat_gas - T_c)*1e-3
+            # total heat transfer between gas and solid [kJ/m^3.s]
+            _heTrBeGaSoTerm = (1/GaHeCoTe0)*_inwardFluxT
+            # heat exchange term [kJ/m^3.s] -> [no unit]
+            _heatExchangeTerm = (1/GaHeCoTe0)*Qm
+            # convective flux, diffusive flux, enthalpy of reaction, cooling heat
+
+            # steady-state
+            dxdt_T = _convectiveTerm + _dispersionFluxT + _heTrBeGaSoTerm + _heatExchangeTerm
+            dxdtMat[indexT][0][z] = dxdt_T
+
+            # dC/dt list
+            # convert
+            # [J/s.m.K] => [kJ/s.m.K]
+            SoThCoEff_Conv = CaPo*SoThCoMix0/1000
+            # OvHeReT [kJ/m^3.s]
+            OvHeReT_Conv = -1*OvHeReT
+            # HeTrCo [J/m^2.s.K] => [kJ/m^2.s.K]
+            HeTrCo_Conv = HeTrCo/1000
+
+            # loop vars
+            _alpha = rf/SoThCoEff_Conv
+            _beta = -1*HeTrCo_Conv/SoThCoEff_DiLeVa
+            _DiLe = _alpha*_beta
+            _H = (1-BeVoFr)*OvHeReT_Conv
+
+            # set
+            dxdtMat[indexT][1][z] = _H - _inwardFluxT
+
+        # NOTE
+        # flat
+        dxdt = dxdtMat.flatten().tolist()
+
+        return dxdt
+
+    def modelEquationM92(y, paramsSet):
         """
             model [static modeling]
             mass, energy, and momentum balance equations
@@ -8462,8 +10652,6 @@ class PackedBedReactorClass:
                 # species concentration at different points of particle radius [rNo]
                 # [Cs[3], Cs[2], Cs[1], Cs[0]]
                 _Cs_r = CosSpi_r[:, i].flatten()
-                # Cs[0], Cs[1], ...
-                _Cs_r_Flip = np.flip(_Cs_r)
 
                 # REVIEW
                 ### gas phase ###
@@ -8612,25 +10800,23 @@ class PackedBedReactorClass:
                 _inwardFlux = (1/GaMaCoTe0[i])*MoFli_z[i]*SpSuAr
                 # mass balance
                 # convective, dispersion, inward flux
-                # const
-                _const1 = BeVoFr*(zf/vf)
-                _const2 = 1/_const1
-                #
-                dxdt_F = _const2*(_convectiveTerm +
-                                  _dispersionFluxC - _inwardFlux)
+
+                # steady-state
+                dxdt_F = _convectiveTerm + _dispersionFluxC - _inwardFlux
                 dxdtMat[i][0][z] = dxdt_F
 
                 # REVIEW
                 ### solid phase ###
+                # transfer from gas to solid surface and then reaction
                 # dimensionless analysis
                 # beta
                 # const
                 _alpha = rf/GaDii0[i]
                 _beta = MaTrCo[i]/GaDii_DiLeVa[i]
                 _DiLe = _alpha*_beta
-                _Ri = (1 - BeVoFr)*ri_r[:, i]
+                _Ri = ri_r[:, i]
 
-                dxdtMat[i][1][z] = _Ri - MoFli_z[i]*SpSuAr
+                dxdtMat[i][1][z] = MoFli_z[i]*SpSuAr + _Ri
 
             # NOTE
             # energy balance
@@ -8643,9 +10829,6 @@ class PackedBedReactorClass:
             # Ts[3], Ts[2], Ts[1], Ts[0]
             _Ts_r = Ts_r.flatten()
             # _Ts_r
-            # T[n], T[n-1], ..., T[0] => T[0],T[1], ...
-            _Ts_r_Flip = np.flip(_Ts_r)
-
             # updated temperature in the gas-solid interface
             Ts_r_cat_gas = _Ts_r[0]
 
@@ -8781,12 +10964,9 @@ class PackedBedReactorClass:
             # heat exchange term [kJ/m^3.s] -> [no unit]
             _heatExchangeTerm = (1/GaHeCoTe0)*Qm
             # convective flux, diffusive flux, enthalpy of reaction, cooling heat
-            # const
-            _const1 = GaDe_DiLeVa*GaCpMeanMix_DiLeVa*BeVoFr*(zf/vf)
-            _const2 = 1/_const1
-            #
-            dxdt_T = _const2*(_convectiveTerm + _dispersionFluxT +
-                              _heTrBeGaSoTerm + _heatExchangeTerm)
+
+            # steady-state
+            dxdt_T = _convectiveTerm + _dispersionFluxT + _heTrBeGaSoTerm + _heatExchangeTerm
             dxdtMat[indexT][0][z] = dxdt_T
 
             # dC/dt list
@@ -8815,6 +10995,7 @@ class PackedBedReactorClass:
 
 
 # FIXME
+
 
     def modelReactions(P, T, y, CaBeDe):
         ''' 

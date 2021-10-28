@@ -8,7 +8,7 @@ from docs.rmtUtility import rmtUtilityClass as rmtUtil
 from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
 
 
-def setOptimizeRootMethod(y, params1, params2):
+def setOptimizeRootMethod(y, params1, params2, param3=0):
     """
     set results of optimize.root function
     args:
@@ -32,7 +32,7 @@ def setOptimizeRootMethod(y, params1, params2):
                                         1] if processType != PROCESS_SETTING['ISO-THER'] else y[:]
         # temperature
         dataYs_Temperature_DiLeVa = y[-1] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
-            0, varNoColumns).reshape((varNoRows, varNoColumns))
+            param3, varNoColumns).reshape((varNoRows, varNoColumns))
 
         # convert to real value
         # concentration
@@ -123,6 +123,8 @@ def sortedResult3(yC_DiLeVa, yT_DiLeVa, yCs_DiLeVa, yTs_DiLeVa, params1, params2
             noLayer: number of var layers
             varNoRows: 1
             varNoColumns: number of finite nodes in the z direction
+            rNo: number of finite nodes in the r directions
+            zNo: the same as varNoColumns
         params2: 
             Cif: species concentration of feed gas
             Tf: feed temperature
@@ -164,11 +166,16 @@ def sortedResult3(yC_DiLeVa, yT_DiLeVa, yCs_DiLeVa, yTs_DiLeVa, params1, params2
                 Cif)
             SpCosi_mzr_ReVa[i] = rmtUtil.calRealDiLessValue(
                 yCs_DiLeVa[i, :], Cif_Set)
+        # temperature
+        Ts_mzr_ReVa[0, :] = rmtUtil.calRealDiLessValue(
+            yTs_DiLeVa[0:, :], Tf, mode="TEMP")
 
         # result
         res = {
             "data1": SpCo_mz_ReVa,
-            "data2": T_mz_ReVa
+            "data2": T_mz_ReVa,
+            "data3": SpCosi_mzr_ReVa,
+            "data4": Ts_mzr_ReVa
         }
         # return
         return res

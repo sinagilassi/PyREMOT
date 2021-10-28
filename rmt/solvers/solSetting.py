@@ -42,8 +42,13 @@ solverSetting = {
         "timesNo": 25
     },
     "M9": {
-        "zNo": 20,
+        "zNo": 30,
         "rNo": 1,
+        "zMesh": {
+            "zNoNo": [15, 10],
+            "DoLeSe": 30,
+            "MeReDe": 1.001
+        },
     },
     "T1": {
         "zMesh": {

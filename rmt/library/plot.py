@@ -200,5 +200,19 @@ class plotClass:
         # display
         plt.show()
 
-    # @staticmethod
-    # def plot2DSubRun(dataX, dataYs, labelList)
+    @staticmethod
+    def makeLabels(*kid):
+        """
+        make label list
+        args:
+            kid: keys
+        """
+        try:
+            # list
+            _labelList = []
+            _kidLen = len(kid)
+            for i in range(_kidLen):
+                _labelList.extend(kid[i])
+            return _labelList
+        except Exception as e:
+            raise
