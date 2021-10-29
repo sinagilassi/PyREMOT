@@ -49,6 +49,7 @@ solverSetting = {
             "DoLeSe": 30,
             "MeReDe": 1.001
         },
+        "rampList": [1]
     },
     "T1": {
         "zMesh": {

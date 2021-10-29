@@ -349,8 +349,10 @@ class rmtCoreClass():
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
                        reactionListSorted, reactionStochCoeffList)
+        # build initial guess
+        resIniGuess = reInit.runM3()
         # run algorithm
-        res = reInit.runM9()
+        res = reInit.runM9(resIniGuess)
         return res
 
 # NOTE

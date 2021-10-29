@@ -154,6 +154,8 @@ varis0 = {
     # T,P,NoFri
     #  mole fraction
     "CaDe": CaDe,
+    # catalyst bed dencity
+    "CaBeDe": bulk_rho,
     # catalyst porosity
     "CaPo": CaPo,
     # vars key/value
@@ -213,9 +215,9 @@ varis0 = {
 
 # reaction rates
 rates0 = {
-    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaDe'],
-    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaDe'],
-    "r3": lambda x: x['K3']*x['ra5']*x['CaDe']
+    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
+    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
+    "r3": lambda x: x['K3']*x['ra5']*x['CaBeDe']
 }
 
 # reaction rate
@@ -229,6 +231,8 @@ reactionRateSet = {
 # M11
 # T1, T2
 # M12
+
+# M1
 
 # model input - feed
 modelInput = {
