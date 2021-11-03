@@ -204,10 +204,12 @@ reactionRateSet = {
     "RATES": rates0
 }
 
+# model: M2
+# model: N2
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -239,7 +241,7 @@ modelInput = {
         "CaSpHeCa": CaSpHeCa
     },
     "solver-config": {
-        "ivp": "Radau"
+        "ivp": "default"
     }
 }
 
@@ -254,7 +256,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-ssModelingData = res['resModel']['dataYs']
+# ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -263,7 +265,7 @@ ssModelingData = res['resModel']['dataYs']
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-np.save('ResM1.npy', ssModelingData)
+# np.save('ResM1.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)

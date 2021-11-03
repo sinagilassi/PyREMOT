@@ -169,7 +169,12 @@ modelInput = {
         "CaPo": CaPo,
         "CaTo": CaTo,
         "CaThCo": CaThCo
-    }
+    },
+    "solver-config": {
+        "ivp": "LSODA",
+        "root": "fsolve",
+        "mesh": "normal"
+    },
 }
 
 # run exe

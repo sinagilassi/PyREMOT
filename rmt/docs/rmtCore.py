@@ -10,6 +10,7 @@ from docs.pbReactor import PackedBedReactorClass as pbRec
 from docs.batchReactor import batchReactorClass as bRec
 from docs.pfReactor import PlugFlowReactorClass as pfRec
 from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
+from docs.pbHomoReactor import PackedBedHomoReactorClass as pbHomoRec
 from data.componentData import componentDataStore
 from examples.particleModels import ParticleModelClass as pMod
 from examples.homoModels import HomoModelClass as hMod
@@ -83,10 +84,12 @@ class rmtCoreClass():
 
         # select model type
         modelMode = self.modelMode
-        if modelMode == M1:
+        if modelMode == modelTypes['M0']['id']:
+            return self.M0Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['M1']['id']:
             return self.M1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
-        elif modelMode == M2:
-            return self.M2Init()
+        elif modelMode == modelTypes['M2']['id']:
+            return self.M2Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M3:
             return self.M3Init()
         elif modelMode == M4:
@@ -94,7 +97,7 @@ class rmtCoreClass():
         elif modelMode == M5:
             return self.M5Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M6:
-            return self.M6Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+            return self.M6Init()
         elif modelMode == M7:
             return self.M7Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == M8:
@@ -115,6 +118,8 @@ class rmtCoreClass():
             return self.T1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['T2']['id']:
             return self.T2Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['N1']['id']:
+            return self.N1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -203,9 +208,21 @@ class rmtCoreClass():
 # NOTE
 # main algorithms
 
+    def M0Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        Plug-flow Reactor
+        """
+        # init plug-flow reactor
+        pfRecInit = pfRec(self.modelInput, internalData,
+                          reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = pfRecInit.runM1()
+        # result
+        return res
+
     def M1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M1 model: Packed-bed Plug-flow reactor
+        steady-state Packed-bed Plug-flow reactor
         """
         # init PBPR
         pbRecInit = pbRec(self.modelInput, internalData,
@@ -214,16 +231,15 @@ class rmtCoreClass():
         res = pbRecInit.runM1()
         return res
 
-    def M2Init(self):
+    def M2Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-            M1 model
-            more info, check --help M1
+        dynamic Packed-bed Plug-flow reactor (homogenous)
         """
-        # class init
-        # modelInput = self.modelInput
-
-        # start cal
-        res = self.runM2()
+        # init reactor
+        reInit = pbRec(self.modelInput, internalData,
+                       reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = reInit.runM2()
         return res
 
     def M3Init(self):
@@ -255,19 +271,29 @@ class rmtCoreClass():
         return res
 
     def M6Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        # """
+        # M6 model: dynamic Packed-bed Plug-flow reactor (homogenous)
+        # """
+        # # init reactor
+        # reInit = pbRec(self.modelInput, internalData,
+        #                reactionListSorted, reactionStochCoeffList)
+        # # run algorithm
+        # res = reInit.runM2()
+        # return res
         """
-        M6 model: dynamic Packed-bed Plug-flow reactor (homogenous)
+            M1 model
+            more info, check --help M1
         """
-        # init reactor
-        reInit = pbRec(self.modelInput, internalData,
-                       reactionListSorted, reactionStochCoeffList)
-        # run algorithm
-        res = reInit.runM2()
+        # class init
+        # modelInput = self.modelInput
+
+        # start cal
+        res = self.runM2()
         return res
 
     def M7Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M7 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        steady-state Packed-bed Plug-flow reactor (homogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -278,7 +304,7 @@ class rmtCoreClass():
 
     def M8Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M8 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        steady-state Packed-bed Plug-flow reactor (homogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -289,7 +315,7 @@ class rmtCoreClass():
 
     def M9Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M8 model: steady-state Packed-bed Plug-flow reactor (homogenous)
+        dynamic Packed-bed Plug-flow reactor (homogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -300,7 +326,7 @@ class rmtCoreClass():
 
     def M10Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M10 model: dynamic Packed-bed Plug-flow reactor (heterogenous)
+        dynamic Packed-bed Plug-flow reactor (heterogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -311,7 +337,7 @@ class rmtCoreClass():
 
     def M11Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M11 model: dynamic Packed-bed Plug-flow reactor (heterogenous)
+        dynamic Packed-bed Plug-flow reactor (heterogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -322,7 +348,7 @@ class rmtCoreClass():
 
     def M12Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M12 model: steady-state Packed-bed Plug-flow reactor (heterogenous)
+        steady-state Packed-bed Plug-flow reactor (heterogenous)
         """
         # init reactor
         reInit = pbRec(self.modelInput, internalData,
@@ -333,7 +359,7 @@ class rmtCoreClass():
 
     def M13Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        M12 model: steady-state Packed-bed Plug-flow reactor (heterogenous)
+        steady-state Packed-bed Plug-flow reactor (heterogenous)
         """
         # init
         reInit = pbHeterRec(self.modelInput, internalData,
@@ -353,6 +379,20 @@ class rmtCoreClass():
         resIniGuess = reInit.runM3()
         # run algorithm
         res = reInit.runM9(resIniGuess)
+        return res
+
+# NOTE
+# homogenous modeling
+
+    def N1Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        steady-state Packed-bed Plug-flow reactor
+        """
+        # init PBPR
+        pbRecInit = pbHomoRec(self.modelInput, internalData,
+                              reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = pbRecInit.runN1()
         return res
 
 # NOTE

@@ -12,7 +12,11 @@ def reactionRateExe(loopVars, varDict, rateDict):
     """
     execute reaction rate expressions
     args:
-        loopVars: main variables as: T, P, and MoFri, SpCoi (mol/m^3)
+        loopVars: main variables as: 
+            T: temperature [K]
+            P: pressure [Pa] 
+            MoFri: mole fraction 
+            SpCoi: species concentration [mol/m^3]
         varDict: defined variables by users
             _dict = {"key1": fun1, "key2": fun2, ...}
         rateDict: defined variables by users

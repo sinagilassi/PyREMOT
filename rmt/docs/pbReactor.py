@@ -199,6 +199,12 @@ class PackedBedReactorClass:
 
         # external heat
         ExHe = self.modelInput['external-heat']
+        # cooling temperature [K]
+        Tm = ExHe['MeTe']
+        # overall heat transfer coefficient [J/s.m2.K]
+        U = ExHe['OvHeTrCo']
+        # heat transfer area over volume [m2/m3]
+        a = 4/ReInDi  # ExHe['EfHeTrAr']
 
         # gas mixture viscosity [Pa.s]
         GaMiVi = self.modelInput['feed']['mixture-viscosity']
@@ -237,7 +243,11 @@ class PackedBedReactorClass:
                 "GaMiVi": GaMiVi
             },
             "ReSpec": ReSpec,
-            "ExHe": ExHe,
+            "ExHe": {
+                "OvHeTrCo": U,
+                "EfHeTrAr": a,
+                "MeTe": Tm
+            },
             "reactionRateExpr": reactionRateExpr
         }
 
@@ -294,7 +304,7 @@ class PackedBedReactorClass:
         elapsed = roundNum(end - start)
 
         # plot info
-        plotTitle = f"Steady-State Modeling with timesNo: {timesNo} within {elapsed} seconds"
+        plotTitle = f"Steady-State Modeling [M1] with timesNo: {timesNo} within {elapsed} seconds"
 
         # check
         if successStatus is True:
@@ -385,6 +395,9 @@ class PackedBedReactorClass:
         ExHe = FunParam['ExHe']
         # reaction rate expressions
         reactionRateExpr = FunParam['reactionRateExpr']
+        # using equation
+        varisSet = reactionRateExpr['VARS']
+        ratesSet = reactionRateExpr['RATES']
 
         # components no
         # y: component molar flowrate, total molar flux, temperature, pressure
@@ -447,10 +460,6 @@ class PackedBedReactorClass:
         # loop
         loopVars0 = (T, P, MoFri, CoSpi)
 
-        # using equation
-        varisSet = reactionRateExpr['VARS']
-        ratesSet = reactionRateExpr['RATES']
-
         # component formation rate [mol/m^3.s]
         # check unit
         RiLoop = np.array(reactionRateExe(
@@ -503,15 +512,6 @@ class PackedBedReactorClass:
         # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
         Ua = U*a
         # external heat [J/m^3.s]
-        # if Tm == 0:
-        #     # adiabatic
-        #     Qm0 = 0
-        # else:
-        #     # heat added/removed from the reactor
-        #     # Tm > T: heat is added (positive sign)
-        #     # T > Tm: heat removed (negative sign)
-        #     Qm0 = Ua*(Tm - T)
-
         Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
             Tm, T, U, a, 'J/m^3.s')
 
@@ -551,6 +551,13 @@ class PackedBedReactorClass:
         dynamic model
         unknowns: Ci, T (dynamic), P (static)
         """
+        # NOTE
+        # start computation
+        start = timer()
+
+        # solver setting
+        solverConfig = self.modelInput['solver-config']
+        solverIVPSet = solverConfig['ivp']
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -563,6 +570,9 @@ class PackedBedReactorClass:
         reactionList = rmtUtil.buildReactionList(reactionDict)
         # number of reactions
         reactionListNo = len(reactionList)
+
+        # reaction rate expression
+        reactionRateExpr = self.modelInput['reaction-rates']
 
         # component list
         compList = self.modelInput['feed']['components']['shell']
@@ -666,6 +676,7 @@ class PackedBedReactorClass:
             },
             "ReSpec": ReSpec,
             "ExHe": ExHe,
+            "reactionRateExpr": reactionRateExpr,
             "constBC1": {
                 "VoFlRa0": VoFlRa0,
                 "SpCoi0": SpCoi0,
@@ -673,7 +684,6 @@ class PackedBedReactorClass:
                 "P0": P,
                 "T0": T
             }
-
         }
 
         # time span
@@ -689,17 +699,21 @@ class PackedBedReactorClass:
         # build data list
         # over time
         dataPacktime = np.zeros((varNo, tNo, zNo))
-        #
+
+        # solver selection
+        # BDF, Radau, LSODA
+        solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
 
         # time loop
         for i in range(tNo):
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
             times = np.linspace(t[0], t[1], timesNo)
+            print(f"time: {t} seconds")
 
             # ode call
             sol = solve_ivp(PackedBedReactorClass.modelEquationM2,
-                            t, IV, method="BDF", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
+                            t, IV, method=solverIVP, t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
             # ode result
             successStatus = sol.success
@@ -743,23 +757,28 @@ class PackedBedReactorClass:
             IV = dataYs[:, -1]
 
         # NOTE
+        # end of computation
+        end = timer()
+        elapsed = roundNum(end - start)
+
+        # NOTE
         # steady-state result
         # txt
         # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
         # binary
-        ssModelingResult = np.load('ResM1.npy')
+        # ssModelingResult = np.load('ResM1.npy')
         # ssdataXs = np.linspace(0, ReLe, zNo)
-        ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
-        ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
+        # ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
+        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
         # datalists
-        ssdataLists = [ssdataList[0:compNo],
-                       ssdataList[indexTemp]]
+        # ssdataLists = [ssdataList[0:compNo],
+        #                ssdataList[indexTemp]]
         # subplot result
         # pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
         #                 "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
 
         # plot info
-        plotTitle = f"Dynamic Modeling for opT: {opT} with zNo: {zNo}, tNo: {tNo}"
+        plotTitle = f"Dynamic Modeling [M2] for opT: {opT} with zNo: {zNo}, tNo: {tNo}"
 
         # REVIEW
         # display result at specific time
@@ -776,7 +795,7 @@ class PackedBedReactorClass:
             if i == tNo-1:
                 # subplot result
                 pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                                "Concentration (mol/m^3)", plotTitle, ssdataLists)
+                                "Concentration (mol/m^3)", plotTitle)
 
         # REVIEW
         # display result within time span
@@ -843,6 +862,7 @@ class PackedBedReactorClass:
                         OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
                         EfHeTrAr: effective heat transfer area [m^2]
                         MeTe: medium temperature [K]
+                    reactionRateExpr: reaction rate expression
                     constBC1:
                         VoFlRa0: inlet volumetric flowrate [m^3/s],
                         SpCoi0: species concentration [kmol/m^3],
@@ -883,6 +903,13 @@ class PackedBedReactorClass:
 
         # exchange heat spec ->
         ExHe = FunParam['ExHe']
+
+        # reaction rate expressions
+        reactionRateExpr = FunParam['reactionRateExpr']
+        # using equation
+        varisSet = reactionRateExpr['VARS']
+        ratesSet = reactionRateExpr['RATES']
+
         # zNo
         zNo = const['zNo']
         # var no.
@@ -938,7 +965,6 @@ class PackedBedReactorClass:
 
         # reaction rate
         ri = np.zeros(compNo)
-        ri0 = np.zeros(compNo)
 
         # NOTE
         # distribute y[i] value through the reactor length
@@ -1025,50 +1051,23 @@ class PackedBedReactorClass:
             P_z[z+1] = dxdt_P*dz + P_z[z]
 
             # NOTE
+            # REVIEW
             ## kinetics ##
             # net reaction rate expression [kmol/m^3.s]
             # rf[kmol/kgcat.s]*CaBeDe[kgcat/m^3]
-            r0 = np.array(PackedBedReactorClass.modelReactions(
-                P_z[z], T_z[z], MoFri, CaBeDe))
+            # SpCoi conversion
+            _SpCoi = 1e3*CoSpi
             # loop
-            Ri_z[z, :] = r0
-
-            # FIXME
-            #  H2
-            # R_H2 = -(3*r0[0]-r0[1])
-            # ri0[0] = R_H2
-            # # CO2
-            # R_CO2 = -(r0[0]-r0[1])
-            # ri0[1] = R_CO2
-            # # H2O
-            # R_H2O = (r0[0]-r0[1]+r0[2])
-            # ri0[2] = R_H2O
-            # # CO
-            # R_CO = -(r0[1])
-            # ri0[3] = R_CO
-            # # CH3OH
-            # R_CH3OH = -(2*r0[2]-r0[0])
-            # ri0[4] = R_CH3OH
-            # # DME
-            # R_DME = (r0[2])
-            # ri0[5] = R_DME
-            # # total
-            # R_T = -(2*r0[0])
+            loopVars0 = (T, P, MoFri, _SpCoi)
+            # check unit
+            RiLoop = 1e-3*np.array(reactionRateExe(
+                loopVars0, varisSet, ratesSet))
+            Ri_z[z, :] = RiLoop
 
             # REVIEW
             # component formation rate [kmol/m^3.s]
-            # ri = np.zeros(compNo)
-            for k in range(compNo):
-                # reset
-                _riLoop = 0
-                # number of reactions
-                for m in range(len(reactionStochCoeff)):
-                    # number of components in each reaction
-                    for n in range(len(reactionStochCoeff[m])):
-                        # check component id
-                        if comList[k] == reactionStochCoeff[m][n][0]:
-                            _riLoop += reactionStochCoeff[m][n][1]*Ri_z[z][m]
-                    ri[k] = _riLoop
+            ri = componentFormationRate(
+                compNo, comList, reactionStochCoeff, Ri_z[z, :])
 
             # overall formation rate [kmol/m^3.s]
             OvR = np.sum(ri)
@@ -1105,14 +1104,8 @@ class PackedBedReactorClass:
             # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
             Ua = U*a
             # external heat [kJ/m^3.s]
-            if Tm == 0:
-                # adiabatic
-                Qm = 0
-            else:
-                # heat added/removed from the reactor
-                # Tm > T: heat is added (positive sign)
-                # T > Tm: heat removed (negative sign)
-                Qm = (Ua*(Tm - T))*1e-3
+            Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
+                Tm, T, U, a, 'kJ/m^3.s')
 
             # NOTE
             # diff/dt
@@ -1126,7 +1119,6 @@ class PackedBedReactorClass:
             const_T2 = 1/(CoSp*CpMeanMixture*BeVoFr + (1-BeVoFr)*CaDe*CaSpHeCa)
 
             # NOTE
-
             # concentration [mol/m^3]
             for i in range(compNo):
                 # mass balance (forward difference)
@@ -1165,6 +1157,7 @@ class PackedBedReactorClass:
         # flat
         dxdt = dxdtMat.flatten().tolist()
 
+        print("time: ", t)
         return dxdt
 
 # NOTE
@@ -1178,6 +1171,14 @@ class PackedBedReactorClass:
         unknowns: Ci, T, P
             velocity is calculated from EOS consiering feed Tf, Pf, Cf
         """
+        # NOTE
+        # start computation
+        start = timer()
+
+        # solver setting
+        solverConfig = self.modelInput['solver-config']
+        solverIVPSet = solverConfig['ivp']
+
         # model info
         modelId = self.modelInput['model']
         # operating conditions
@@ -1217,9 +1218,10 @@ class PackedBedReactorClass:
         ## inlet values ##
         # inlet volumetric flowrate at T,P [m^3/s]
         VoFlRa0 = self.modelInput['feed']['volumetric-flowrate']
-        # inlet species concentration [kmol/m^3]
-        SpCoi0 = 1e3*np.array(self.modelInput['feed']['concentration'])
-        # inlet total concentration [kmol/m^3]
+        # REVIEW
+        # inlet species concentration [mol/m^3]
+        SpCoi0 = 1*np.array(self.modelInput['feed']['concentration'])
+        # inlet total concentration [mol/m^3]
         SpCo0 = np.sum(SpCoi0)
 
         # component molecular weight [g/mol]
@@ -1283,9 +1285,13 @@ class PackedBedReactorClass:
         times = np.linspace(t_span[0], t_span[1], timesNo)
         # tSpan = np.linspace(0, rea_L, 25)
 
+        # solver selection
+        # BDF, Radau, LSODA
+        solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
+
         # ode call
         sol = solve_ivp(PackedBedReactorClass.modelEquationM3,
-                        t, IV, method="LSODA", t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
+                        t, IV, method=solverIVP, t_eval=times, args=(reactionListSorted, reactionStochCoeff, FunParam))
 
         # ode result
         successStatus = sol.success
@@ -1311,8 +1317,13 @@ class PackedBedReactorClass:
         _dataYs = np.concatenate(
             (dataYs1_MoFri, [dataYs2]), axis=0)
 
+        # NOTE
+        # end of computation
+        end = timer()
+        elapsed = roundNum(end - start)
+
         # plot info
-        plotTitle = f"Steady-State Modeling {modelId} with timesNo: {timesNo}"
+        plotTitle = f"Steady-State Modeling {modelId} with timesNo: {timesNo} within {elapsed}"
 
         # check
         if successStatus is True:
@@ -1326,8 +1337,8 @@ class PackedBedReactorClass:
             # select datalist
             _dataListsSelected = selectFromListByIndex([0, -1], dataLists)
             # subplot result
-            # pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
-            #                 "Concentration (mol/m^3)", plotTitle)
+            pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
+                            "Concentration (mol/m^3)", plotTitle)
 
             # plot result
             # pltc.plots2D(dataList[0:compNo], "Reactor Length (m)",
@@ -1355,24 +1366,24 @@ class PackedBedReactorClass:
 
     def modelEquationM3(t, y, reactionListSorted, reactionStochCoeff, FunParam):
         """
-            M3 model
-            mass, energy, and momentum balance equations
-            modelParameters:
-                reactionListSorted: reactant/product and coefficient lists
-                reactionStochCoeff: reaction stoichiometric coefficient
-                FunParam:
-                    compList: component list
-                    const
-                        CrSeAr: reactor cross sectional area [m^2]
-                        MoWei: component molecular weight [g/mol]
-                        StHeRe25: standard heat of reaction at 25C [kJ/kmol] | [J/mol]
-                        GaMiVi: gas mixture viscosity [Pa.s]
-                    ReSpec: reactor spec
-                    ExHe: exchange heat spec
-                        OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
-                        EfHeTrAr: effective heat transfer area [m^2]
-                        MeTe: medium temperature [K]
-                reactionRateExpr: reaction rate expressions
+        M3 model
+        mass, energy, and momentum balance equations
+        modelParameters:
+            reactionListSorted: reactant/product and coefficient lists
+            reactionStochCoeff: reaction stoichiometric coefficient
+            FunParam:
+                compList: component list
+                const
+                    CrSeAr: reactor cross sectional area [m^2]
+                    MoWei: component molecular weight [g/mol]
+                    StHeRe25: standard heat of reaction at 25C [kJ/kmol] | [J/mol]
+                    GaMiVi: gas mixture viscosity [Pa.s]
+                ReSpec: reactor spec
+                ExHe: exchange heat spec
+                    OvHeTrCo: overall heat transfer coefficient [J/m^2.s.K]
+                    EfHeTrAr: effective heat transfer area [m^2]
+                    MeTe: medium temperature [K]
+            reactionRateExpr: reaction rate expressions
         """
         # fun params
         # component symbol list
@@ -1403,9 +1414,9 @@ class PackedBedReactorClass:
         ## inlet values ##
         # inlet volumetric flowrate at T,P [m^3/s]
         VoFlRa0 = constBC1['VoFlRa0']
-        # inlet species concentration [kmol/m^3]
+        # inlet species concentration [mol/m^3]
         SpCoi0 = constBC1['SpCoi0']
-        # inlet total concentration [kmol/m^3]
+        # inlet total concentration [mol/m^3]
         SpCo0 = constBC1['SpCo0']
         # inlet pressure [Pa]
         P0 = constBC1['P0']
@@ -1495,20 +1506,10 @@ class PackedBedReactorClass:
             loopVars0, varisSet, ratesSet))
 
         # loop
-        Ri = 1000*r0
+        Ri = r0
 
         # component formation rate [mol/m^3.s]
         # rf[mol/kgcat.s]*CaBeDe[kgcat/m^3]
-        # ri = np.zeros(compNo)
-        # for k in range(compNo):
-        #     # reset
-        #     _riLoop = 0
-        #     for m in range(len(reactionStochCoeff)):
-        #         for n in range(len(reactionStochCoeff[m])):
-        #             if comList[k] == reactionStochCoeff[m][n][0]:
-        #                 _riLoop += reactionStochCoeff[m][n][1]*Ri[m]
-        #         ri[k] = _riLoop
-
         # call [mol/m^3.s]
         ri = componentFormationRate(
             compNo, comList, reactionStochCoeff, Ri)
@@ -1729,17 +1730,17 @@ class PackedBedReactorClass:
         plotTitle = f"Steady-State Modeling [M4] with timesNo: {timesNo}"
 
         # NOTE
-        # steady-state result
-        # txt
-        # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
-        # binary
-        ssModelingResult = np.load('ResM1.npy')
-        # ssdataXs = np.linspace(0, ReLe, zNo)
-        ssXYList = pltc.plots2DSetXYList(dataX, ssModelingResult)
-        ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
-        # datalists
-        ssdataLists = [ssdataList[0:compNo],
-                       ssdataList[indexTemp]]
+        # # steady-state result
+        # # txt
+        # # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
+        # # binary
+        # ssModelingResult = np.load('ResM1.npy')
+        # # ssdataXs = np.linspace(0, ReLe, zNo)
+        # ssXYList = pltc.plots2DSetXYList(dataX, ssModelingResult)
+        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
+        # # datalists
+        # ssdataLists = [ssdataList[0:compNo],
+        #                ssdataList[indexTemp]]
 
         # check
         if successStatus is True:
@@ -1754,7 +1755,7 @@ class PackedBedReactorClass:
             _dataListsSelected = selectFromListByIndex([0, -3], dataLists)
             # subplot result
             pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
-                            "Concentration (mol/m^3)", plotTitle, ssdataLists)
+                            "Concentration (mol/m^3)", plotTitle)
 
         else:
             _dataYs = []
@@ -2159,6 +2160,7 @@ class PackedBedReactorClass:
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
             times = np.linspace(t[0], t[1], timesNo)
+            print(f"time: {t} seconds")
 
             # ode call
             sol = solve_ivp(PackedBedReactorClass.modelEquationM5,
@@ -2215,13 +2217,13 @@ class PackedBedReactorClass:
         # txt
         # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
         # binary
-        ssModelingResult = np.load('ResM1.npy')
+        # ssModelingResult = np.load('ResM1.npy')
         # ssdataXs = np.linspace(0, ReLe, zNo)
-        ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
-        ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
+        # ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
+        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
         # datalists
-        ssdataLists = [ssdataList[0:compNo],
-                       ssdataList[indexTemp]]
+        # ssdataLists = [ssdataList[0:compNo],
+        #                ssdataList[indexTemp]]
         # subplot result
         # pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
         #                 "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
@@ -2244,7 +2246,7 @@ class PackedBedReactorClass:
             if i == tNo-1:
                 # subplot result
                 pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                                "Concentration (mol/m^3)", plotTitle, ssdataLists)
+                                "Concentration (mol/m^3)", plotTitle)
 
         # REVIEW
         # display result within time span
@@ -2289,7 +2291,7 @@ class PackedBedReactorClass:
 
     def modelEquationM5(t, y, reactionListSorted, reactionStochCoeff, FunParam):
         """
-            M2 model [dynamic modeling]
+            [dynamic modeling]
             mass, energy, and momentum balance equations
             modelParameters:
                 reactionListSorted: reactant/product and coefficient lists
@@ -2531,20 +2533,7 @@ class PackedBedReactorClass:
 
             # REVIEW
             # component formation rate [kmol/m^3.s]
-            # ri = np.zeros(compNo)
-            # for k in range(compNo):
-            #     # reset
-            #     _riLoop = 0
-            #     # number of reactions
-            #     for m in range(len(reactionStochCoeff)):
-            #         # number of components in each reaction
-            #         for n in range(len(reactionStochCoeff[m])):
-            #             # check component id
-            #             if comList[k] == reactionStochCoeff[m][n][0]:
-            #                 _riLoop += reactionStochCoeff[m][n][1]*Ri_z[z][m]
-            #         ri[k] = _riLoop
-
-            # call [mol/m^3.s]
+            # call
             ri = componentFormationRate(
                 compNo, comList, reactionStochCoeff, Ri_z[z, :])
 
@@ -2583,14 +2572,14 @@ class PackedBedReactorClass:
             # heat transfer parameter [W/m^3.K] | [J/s.m^3.K]
             Ua = U*a
             # external heat [kJ/m^3.s]
-            if Tm == 0:
-                # adiabatic
-                Qm0 = 0
-            else:
-                # heat added/removed from the reactor
-                # Tm > T: heat is added (positive sign)
-                # T > Tm: heat removed (negative sign)
-                Qm0 = (Ua*(Tm - T))*1e-3
+            # if Tm == 0:
+            #     # adiabatic
+            #     Qm0 = 0
+            # else:
+            #     # heat added/removed from the reactor
+            #     # Tm > T: heat is added (positive sign)
+            #     # T > Tm: heat removed (negative sign)
+            #     Qm0 = (Ua*(Tm - T))*1e-3
 
             Qm = rmtUtil.calHeatExchangeBetweenReactorMedium(
                 Tm, T, U, a, 'kJ/m^3.s')
@@ -2665,11 +2654,12 @@ class PackedBedReactorClass:
 
         # flat
         dxdt = dxdtMat.flatten().tolist()
+        print("time: ", t)
 
         return dxdt
 
 # NOTE
-# dynamic heterogenous modeling
+#! dynamic heterogenous modeling
 
     def runM6(self):
         """
@@ -5507,6 +5497,7 @@ class PackedBedReactorClass:
             CT, GaDe = f(P, T, n)
         numerical method: finite difference
         """
+        # NOTE
         # start computation
         start = timer()
 
@@ -7796,7 +7787,7 @@ class PackedBedReactorClass:
                         zNoNo: number of nodes in the dense and normal sections
                     solverSetting:
                         OrCoClassSetRes: constants of OC methods
-                    reactionRateExpr: reaction rate expressions
+                    reactionRateExpr: reaction rate expressions []
                 DimensionlessAnalysisParams:
                     Cif: feed concentration [kmol/m^3]
                     Tf: feed temperature

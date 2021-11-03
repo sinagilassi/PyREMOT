@@ -160,7 +160,7 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates
+# reaction rates [kmol/m^3.s]
 rates0 = {
     "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
     "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
@@ -180,7 +180,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 523
+Tm = T
 # Ua
 Ua = U*a
 #
@@ -234,6 +234,9 @@ modelInput = {
         "ivp": "Radau"
     }
 }
+
+# solver selection
+# BDF, Radau, LSODA
 
 # run exe
 res = rmtExe(modelInput)

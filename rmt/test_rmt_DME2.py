@@ -181,7 +181,7 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates
+# reaction rates [mol/m^3.s]
 rates0 = {
     "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
     "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
@@ -194,15 +194,16 @@ reactionRateSet = {
     "RATES": rates0
 }
 
+# M0: plug-flow reactor
+# M1/M2: packed-bed reactor
 
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "M1",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
-        "temperature": T,
-        "period": opT
+        "temperature": T
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -245,7 +246,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-ssModelingData = res['resModel']['dataYs']
+# ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -254,7 +255,7 @@ ssModelingData = res['resModel']['dataYs']
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-np.save('ResM1.npy', ssModelingData)
+# np.save('ResM1.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)

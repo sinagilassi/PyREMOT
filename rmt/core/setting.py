@@ -3,6 +3,11 @@
 # define all constants used in this app
 
 modelTypes = {
+    "M0": {
+        "id": "M0",
+        "des":
+        "plug-flow reactor"
+    },
     "M1": {
         "id": "M1",
         "des":
@@ -11,7 +16,7 @@ modelTypes = {
     "M2": {
         "id": "M2",
         "des":
-            "packed bed reactor, non-isothermal, plug-flow, no pressure drop"
+            "dynamic plug-flow homogenous reactor"
     },
     "M3": {
         "id": "M3",
@@ -89,6 +94,11 @@ modelTypes = {
         "des":
             "homogenous reactor model",
         "numerical": ""
+    },
+    "N1": {
+        "id": "N1",
+        "des":
+            "homogenous packed bed reactor non-isothermal plug-flow"
     },
 }
 

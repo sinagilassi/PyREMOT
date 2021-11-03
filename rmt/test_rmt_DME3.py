@@ -185,11 +185,11 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates
+# reaction rates [mol/m^3.s]
 rates0 = {
-    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
-    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
-    "r3": lambda x: x['K3']*x['ra5']*x['CaBeDe']
+    "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
+    "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
+    "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
 }
 
 # reaction rate
@@ -231,7 +231,7 @@ modelInput = {
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0,
+        "concentration": ct0*1000,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
@@ -250,6 +250,9 @@ modelInput = {
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
         "CaSpHeCa": CaSpHeCa
+    },
+    "solver-config": {
+        "ivp": "default"
     }
 }
 
