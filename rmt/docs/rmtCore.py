@@ -120,6 +120,8 @@ class rmtCoreClass():
             return self.T2Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['N1']['id']:
             return self.N1Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
+        elif modelMode == modelTypes['N2']['id']:
+            return self.N2Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
 
     def initComponentData(self, compList):
         """
@@ -393,6 +395,17 @@ class rmtCoreClass():
                               reactionListSorted, reactionStochCoeffList)
         # run algorithm
         res = pbRecInit.runN1()
+        return res
+
+    def N2Init(self, internalData, reactionListSorted, reactionStochCoeffList):
+        """
+        dynamic Packed-bed Plug-flow reactor
+        """
+        # init PBPR
+        pbRecInit = pbHomoRec(self.modelInput, internalData,
+                              reactionListSorted, reactionStochCoeffList)
+        # run algorithm
+        res = pbRecInit.runN2()
         return res
 
 # NOTE

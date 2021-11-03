@@ -205,7 +205,7 @@ class HomoModelClass:
         # number of concentration layers
         noLayerC = compNo
         # number of temperature layers
-        noLayerT = 1 if processType != PROCESS_SETTING['ISO-THER']else 0
+        noLayerT = 1 if processType != PROCESS_SETTING['ISO-THER'] else 0
         # number of layers
         noLayer = noLayerC + noLayerT
         # var no in each layer

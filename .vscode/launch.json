@@ -115,6 +115,22 @@
       "program": "${workspaceFolder}\\rmt\\testFiEl.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Static Modeling [N1] CH4 ",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_N2_CH4.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Static Modeling [N1] DME ",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_rmt_N1_DME.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
     }
   ]
 }

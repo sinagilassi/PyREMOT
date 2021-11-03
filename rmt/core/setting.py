@@ -98,7 +98,12 @@ modelTypes = {
     "N1": {
         "id": "N1",
         "des":
-            "homogenous packed bed reactor non-isothermal plug-flow"
+            "steady-state homogenous packed bed reactor non-isothermal plug-flow"
+    },
+    "N2": {
+        "id": "N2",
+        "des":
+            "dynamic homogenous packed bed reactor non-isothermal plug-flow"
     },
 }
 
