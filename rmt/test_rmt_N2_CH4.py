@@ -139,7 +139,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 0  # T
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -190,7 +190,7 @@ varis0 = {
     # T,P,NoFri,SpCoi
     # other vars
     # [m^3/(mol*s)]
-    "k0": 0.0072,
+    "k0": 0.0072*1e-1,
     "y_CH4": lambda x: x['MoFri'][0],
     "C_CH4": lambda x: x['SpCoi'][0]
 }
@@ -216,7 +216,8 @@ modelInput = {
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
-        "period": opT
+        "period": opT,
+        "process-type": "non-iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,

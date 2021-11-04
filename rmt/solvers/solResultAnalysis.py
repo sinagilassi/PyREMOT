@@ -181,3 +181,119 @@ def sortedResult3(yC_DiLeVa, yT_DiLeVa, yCs_DiLeVa, yTs_DiLeVa, params1, params2
         return res
     except Exception as e:
         raise
+
+# NOTE
+# homogenous modeling results
+
+
+def sortResult4(y, params1, params2):
+    """
+    sort result of homogenous modeling 
+    args:
+        params1:
+            compNo: component number
+            noLayer: number of var layers
+            varNoRows: 1
+            varNoColumns: number of finite nodes in the z direction
+        params2: 
+            Cif: species concentration of feed gas
+            Tf: feed temperature
+    """
+    # distribute y[i] value through the reactor length
+    #  try/except
+    try:
+        compNo, varNoRows, varNoColumns = params1
+        Cif, Tf, Pf, processType = params2
+
+        # concentration
+        dataYs_Concentration_DiLeVa = y[:-
+                                        2] if processType != PROCESS_SETTING['ISO-THER'] else y[:-1]
+        # pressure
+        dataYs_Pressure_DiLeVa = y[-2].reshape(
+            (1, varNoColumns)) if processType != PROCESS_SETTING['ISO-THER'] else y[-1].reshape((1, varNoColumns))
+        # temperature
+        dataYs_Temperature_DiLeVa = y[-1].reshape((1, varNoColumns)) if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+            0, varNoColumns).reshape((1, varNoColumns))
+
+        # convert to real value
+        # concentration
+        SpCo_mz_ReVa = np.zeros((compNo, varNoColumns))
+        T_mz_ReVa = np.zeros((1, varNoColumns))
+        P_mz_ReVa = np.zeros((1, varNoColumns))
+        # concentration
+        for i in range(compNo):
+            # dimensionless analysis: real value
+            Cif_Set = Cif[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                Cif)
+            SpCo_mz_ReVa[i, :] = rmtUtil.calRealDiLessValue(
+                dataYs_Concentration_DiLeVa[i, :], Cif_Set)
+
+        # pressure
+        P_mz_ReVa[0, :] = rmtUtil.calRealDiLessValue(
+            dataYs_Pressure_DiLeVa[0, :], Pf)
+        # temperature
+        T_mz_ReVa[0, :] = rmtUtil.calRealDiLessValue(
+            dataYs_Temperature_DiLeVa[0, :], Tf, mode="TEMP")
+
+        # result
+        res = {
+            "data1": SpCo_mz_ReVa,
+            "data2": P_mz_ReVa,
+            "data3": T_mz_ReVa
+        }
+        # return
+        return res
+    except Exception as e:
+        raise
+
+
+def sortResult5(y, params1, params2):
+    """
+    sort result of homogenous modeling 
+    args:
+        params1:
+            compNo: component number
+            noLayer: number of var layers
+            varNoRows: 1
+            varNoColumns: number of finite nodes in the r direction
+        params2: 
+            Cif: species concentration of feed gas
+            Tf: feed temperature
+    """
+    # distribute y[i] value through the reactor length
+    #  try/except
+    try:
+        compNo, varNoRows, varNoColumns = params1
+        Cif, Tf, processType = params2
+
+        # concentration
+        dataYs_Concentration_DiLeVa = y[:-
+                                        1] if processType != PROCESS_SETTING['ISO-THER'] else y[:]
+        # temperature
+        dataYs_Temperature_DiLeVa = y[-1, :].reshape((1, varNoColumns)) if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+            0, varNoColumns).reshape((1, varNoColumns))
+
+        # convert to real value
+        # concentration
+        SpCo_mz_ReVa = np.zeros((compNo, varNoColumns))
+        T_mz_ReVa = np.zeros((1, varNoColumns))
+        # concentration
+        for i in range(compNo):
+            # dimensionless analysis: real value
+            Cif_Set = Cif[i] if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.max(
+                Cif)
+            SpCo_mz_ReVa[i, :] = rmtUtil.calRealDiLessValue(
+                dataYs_Concentration_DiLeVa[i, :], Cif_Set)
+        # temperature
+        T_mz_ReVa[0, :] = rmtUtil.calRealDiLessValue(
+            dataYs_Temperature_DiLeVa[0, :], Tf, mode="TEMP")
+
+        # result
+        res = {
+            "data1": SpCo_mz_ReVa,
+            "data2": T_mz_ReVa
+        }
+        # return
+        return res
+    except Exception as e:
+        raise

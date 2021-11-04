@@ -28,9 +28,14 @@ DIFF_SETTING = {
 }
 
 solverSetting = {
+    "N1": {
+        "zNo": 100,
+    },
     "N2": {
-        "zNo": 20,
-        "rNo": 5
+        "zNo": 30,
+        "rNo": 5,
+        "tNo": 5,
+        "timesNo": 5
     },
     "S1": {
         "zNo": 20,

@@ -25,12 +25,9 @@ from core.utilities import roundNum, selectFromListByIndex
 from core.config import REACTION_RATE_ACCURACY
 from solvers.solSetting import solverSetting
 from core.eqConstants import CONST_EQ_Sh
-from solvers.solOrCo import OrCoClass
-from solvers.solCatParticle import OrCoCatParticleClass
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiSetMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
-from solvers.solFiDi import FiDiMeshGenerator, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
 from solvers.odeSolver import AdBash3, PreCorr3
-from solvers.solResultAnalysis import setOptimizeRootMethod, sortedResult3
+from solvers.solResultAnalysis import sortResult4, sortResult5
+from solvers.solProgress import printProgressBar
 
 
 class PackedBedHomoReactorClass:
@@ -2712,6 +2709,8 @@ class PackedBedHomoReactorClass:
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
         T = self.modelInput['operating-conditions']['temperature']
+        # process-type
+        processType = self.modelInput['operating-conditions']['process-type']
 
         # reaction list
         reactionDict = self.modelInput['reactions']
@@ -2724,13 +2723,15 @@ class PackedBedHomoReactorClass:
 
         # graph label setting
         labelList = compList.copy()
-        labelList.append("Temperature")
         labelList.append("Pressure")
+        # check
+        if processType != PROCESS_SETTING['ISO-THER']:
+            labelList.append("Temperature")
 
         # component no
         compNo = len(compList)
-        indexTemp = compNo
-        indexPressure = indexTemp + 1
+        indexPressure = compNo
+        indexTemp = indexPressure + 1
 
         # reactor spec
         ReSpec = self.modelInput['reactor']
@@ -2812,16 +2813,21 @@ class PackedBedHomoReactorClass:
         GaHeCoTe0 = (GaDe0*vf*Tf*(Cpf/MiMoWe0)/zf)
 
         # var no (Ci,T,P)
-        varNo = compNo + 2
+        varNo = compNo + \
+            2 if processType != PROCESS_SETTING['ISO-THER'] else compNo + 1
 
         # initial values (dimensionless vars)
+        # Ci, P, T
         IV2D = np.zeros((varNo))
         _SpCoi_DiLeVa = rmtUtil.calDiLessValue(SpCoi0, Cf)
-        IV2D[0:compNo] = SpCoi0/np.max(SpCoi0)
-        _T_DiLeVa = rmtUtil.calDiLessValue(T, Tf, "TEMP")
-        IV2D[indexTemp] = 0  # (T-Tf)/Tf
+        IV2D[0:compNo] = _SpCoi_DiLeVa  # SpCoi0/np.max(SpCoi0)
         _P_DiLeVa = rmtUtil.calDiLessValue(P, Pf)
-        IV2D[indexPressure] = 1  # P/Pf
+        IV2D[indexPressure] = _P_DiLeVa
+        # check
+        if processType != PROCESS_SETTING['ISO-THER']:
+            _T_DiLeVa = rmtUtil.calDiLessValue(T, Tf, "TEMP")
+            IV2D[indexTemp] = _T_DiLeVa
+
         # set
         IV = IV2D.flatten()
 
@@ -2877,60 +2883,127 @@ class PackedBedHomoReactorClass:
             "GaHeCoTe0": GaHeCoTe0,
         }
 
-        # save data
-        # timesNo = solverSetting['S3']['timesNo']
-        timesNo = solverSetting['M9']['zNo']
-
         # REVIEW
         # domain length (dimensionless length)
         DoLe = 1
 
-        # time span
-        t = (0.0, DoLe)
-        # t = np.array([0, DoLe], dtype=np.float64)
-        t_span = np.array([0, DoLe])
-        times = np.linspace(t_span[0], t_span[1], timesNo)
+        # save data
+        timesNo = solverSetting['N1']['zNo']
+        # z segments
+        tNo = solverSetting['N1']['zNo']
+        opTSpan = np.linspace(0, DoLe, tNo + 1)
+
+        # varNoColumns
+        varNoColumns = tNo+1
+        # varNoRows
+        varNoRows = varNo
+
+        # data pack
+        dataYsShape = (varNo, varNoColumns)
+        dataYs = np.zeros(dataYsShape)
+        dataXs = np.zeros(varNoColumns)
+
+        # set
+        dataYs[:, 0] = IV
+        dataXs[0] = 0
+
+        # NOTE
+        # progress-bar
+        # Initial call to print 0% progress
+        printProgressBar(0, tNo, prefix='Progress:',
+                         suffix='Complete', length=50)
 
         # solver selection
         # BDF, Radau, LSODA
         solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
         # set
         paramsSet = (reactionListSorted, reactionStochCoeff,
-                     FunParam, DimensionlessAnalysisParams)
+                     FunParam, DimensionlessAnalysisParams, processType)
         funSet = PackedBedHomoReactorClass.modelEquationN1
 
-        # ode call
-        sol = solve_ivp(funSet, t, IV, method=solverIVP, t_eval=times,
-                        args=(paramsSet,))
+        # time loop
+        for i in range(tNo):
+            # set time span
+            t = np.array([opTSpan[i], opTSpan[i+1]])
+            times = np.linspace(t[0], t[1], timesNo)
 
-        # ode result
-        successStatus = sol.success
-        dataX = sol.t
-        # all results
-        dataYs = sol.y
-        # concentration [mol/m^3]
-        dataYs1 = sol.y[0:compNo, :]
-        labelListYs1 = labelList[0:compNo]
+            # print(f"time ivp: {t} seconds")
+            printProgressBar(i + 1, tNo, prefix='Progress:',
+                             suffix='Complete', length=50)
+
+            # ode call
+            sol = solve_ivp(funSet, t, IV, method=solverIVP, t_eval=times,
+                            args=(paramsSet,))
+
+            # ode result
+            successStatus = sol.success
+            dataX = sol.t
+            # all results
+            dataYs_Loop = sol.y
+
+            # last value
+            _lastVal = dataYs_Loop[:, -1]
+            # save
+            dataYs[:, i+1] = _lastVal
+            dataXs[i+1] = dataX[-1]
+
+            # set initial value
+            IV = _lastVal
+
         # REVIEW
-        # convert molar flowrate to mole fraction
+        # data
+        # -> concentration
+        dataYs_Concentration_DiLeVa = dataYs[0:compNo, :]
+        # -> pressure
+        dataYs_Pressure_DiLeVa = dataYs[indexPressure, :]
+        # -> temperature
+        dataYs_Temperature_DiLeVa = dataYs[indexTemp, :] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+            0, varNoColumns).reshape(varNoColumns)
+
+        # sort out
+        params1 = (compNo, varNoRows, varNoColumns)
+        params2 = (Cif, Tf, Pf, processType)
+        dataYs_Sorted = sortResult4(
+            dataYs, params1, params2)
+        # component concentration [mol/m^3]
+        dataYs_Concentration_ReVa = dataYs_Sorted['data1']
+        # pressure [Pa]
+        dataYs_Pressure_ReVa = dataYs_Sorted['data2']
+        # temperature [K]
+        dataYs_Temperature_ReVa = dataYs_Sorted['data3']
+
+        # REVIEW
         # convert concentration to mole fraction
-        dataYs1_Ctot = np.sum(dataYs1, axis=0)
-        dataYs1_MoFri = dataYs1/dataYs1_Ctot
-        # temperature
-        dataYs2 = sol.y[indexTemp, :]
-        labelListYs3 = labelList[indexTemp]
-        # pressure
-        dataYs3 = sol.y[indexPressure, :]
+        dataYs1_Ctot = np.sum(dataYs_Concentration_ReVa, axis=0)
+        dataYs1_MoFri = dataYs_Concentration_ReVa/dataYs1_Ctot
 
         # FIXME
         # build matrix
-        _dataYs = np.concatenate(
-            (dataYs1_MoFri, [dataYs2]), axis=0)
+        if processType != PROCESS_SETTING['ISO-THER']:
+            dataYs_All = np.concatenate(
+                (dataYs1_MoFri, dataYs_Pressure_ReVa, dataYs_Temperature_ReVa), axis=0)
+        else:
+            dataYs_All = np.concatenate(
+                (dataYs1_MoFri, dataYs_Pressure_ReVa), axis=0)
 
         # NOTE
         # end of computation
         end = timer()
         elapsed = roundNum(end - start)
+
+        # save data
+        dataPack = []
+        dataPack.append({
+            "model": modelId,
+            "successStatus": successStatus,
+            "computation-time": elapsed,
+            "dataTime": [],
+            "dataYCons1": dataYs_Concentration_DiLeVa,
+            "dataYCons2": dataYs_Concentration_ReVa,
+            "dataYTemp1": dataYs_Temperature_DiLeVa,
+            "dataYTemp2": dataYs_Temperature_ReVa,
+            "dataYs": dataYs_All
+        })
 
         # plot info
         plotTitle = f"Steady-State Modeling {modelId} with timesNo: {timesNo} within {elapsed}"
@@ -2938,31 +3011,22 @@ class PackedBedHomoReactorClass:
         # check
         if successStatus is True:
             # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataX, _dataYs)
+            XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
             # -> add label
             dataList = pltc.plots2DSetDataList(XYList, labelList)
             # datalists
-            dataLists = [dataList[0:compNo],
-                         dataList[indexTemp]]
+            dataLists = [dataList[0:compNo], dataList[indexPressure], dataList[indexTemp]
+                         ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo], dataList[indexPressure]]
             # select datalist
-            _dataListsSelected = selectFromListByIndex([0, -1], dataLists)
+            _dataListsSelected = selectFromListByIndex([], dataLists)
             # subplot result
             pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
                             "Concentration (mol/m^3)", plotTitle)
 
         else:
-            _dataYs = []
-            XYList = []
-            dataList = []
+            dataPack = []
 
-        # return
-        res = {
-            "dataYs": _dataYs,
-            "XYList": XYList,
-            "dataList": dataList
-        }
-
-        return res
+        return dataPack
 
     def modelEquationN1(t, y, paramsSet):
         """
@@ -3004,7 +3068,7 @@ class PackedBedHomoReactorClass:
                 GaHeCoTe0: feed heat convective term of gas phase [J/m^3.s]
         """
         # set
-        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams = paramsSet
+        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, processType = paramsSet
         # fun params
         # component symbol list
         comList = FunParam['compList']
@@ -3088,18 +3152,18 @@ class PackedBedHomoReactorClass:
         # components no
         # y: component molar flowrate, total molar flux, temperature, pressure
         compNo = len(comList)
-        indexT = compNo
-        indexP = indexT + 1
+        indexP = compNo
+        indexT = indexP + 1
 
         # NOTE
         ### dimensionless vars ###
         yLoop = np.array(y)
         # concentration species [mol/m^3] => []
         CoSpi = yLoop[0:compNo]
-        # temperature [K] => []
-        T = yLoop[indexT]
         # pressure [Pa] => []
         P = yLoop[indexP]
+        # temperature [K] => []
+        T = yLoop[indexT] if processType != PROCESS_SETTING['ISO-THER'] else 0
 
         # REVIEW
         # dimensionless analysis: real value
@@ -3235,17 +3299,19 @@ class PackedBedHomoReactorClass:
             dxdt_Ci = constC1*(ri[i]/GaMaCoTe0[i])
             dxdtMat[i] = dxdt_Ci
 
-        # energy balance (temperature) [K]
-        dxdt_T = constT1*((-OvHeReT + Qm)/GaHeCoTe0)
-        dxdtMat[indexT] = dxdt_T
-
         # momentum balance (ergun equation)
         dxdt_P = RHS_ergun
         dxdtMat[indexP] = dxdt_P
 
+        # energy balance (temperature) [K]
+        if processType != PROCESS_SETTING['ISO-THER']:
+            # energy balance (temperature) [K]
+            dxdt_T = constT1*((-OvHeReT + Qm)/GaHeCoTe0)
+            dxdtMat[indexT] = dxdt_T
+
         # flatten
         dxdt = dxdtMat.flatten().tolist()
-        print("t: ", t)
+        # print("t: ", t)
 
         return dxdt
 
@@ -3402,6 +3468,10 @@ class PackedBedHomoReactorClass:
         varNoTemp = 1*zNo
         # total var no along the reactor length
         varNoT = varNo*zNo
+        # var NoColumns
+        varNoColumns = zNo
+        # var rows
+        varNoRows = varNo
 
         # initial values at t = 0 and z >> 0
         IVMatrixShape = (varNo, zNo)
@@ -3478,11 +3548,11 @@ class PackedBedHomoReactorClass:
         }
 
         # time span
-        tNo = solverSetting['S2']['tNo']
+        tNo = solverSetting['N2']['tNo']
         opTSpan = np.linspace(0, opT, tNo + 1)
 
         # save data
-        timesNo = solverSetting['S2']['timesNo']
+        timesNo = solverSetting['N2']['timesNo']
 
         # result
         dataPack = []
@@ -3503,12 +3573,20 @@ class PackedBedHomoReactorClass:
                      FunParam, DimensionlessAnalysisParams, processType)
         funSet = PackedBedHomoReactorClass.modelEquationN2
 
+        # NOTE
+        # progress-bar
+        # Initial call to print 0% progress
+        printProgressBar(0, tNo+1, prefix='Progress:',
+                         suffix='Complete', length=50)
+
         # time loop
         for i in range(tNo):
             # set time span
             t = np.array([opTSpan[i], opTSpan[i+1]])
             times = np.linspace(t[0], t[1], timesNo)
-            print(f"time ivp: {t} seconds")
+            # print(f"time ivp: {t} seconds")
+            printProgressBar(i + 1, tNo+1, prefix='Progress:',
+                             suffix='Complete', length=50)
 
             # ode call
             if solverIVP == "AM":
@@ -3541,26 +3619,48 @@ class PackedBedHomoReactorClass:
 
             # REVIEW
             # component concentration [kmol/m^3]
-            dataYs1 = dataYs[0:varNoCon, -1]
-            # 2d matrix
-            dataYs1_Reshaped = np.reshape(dataYs1, (compNo, zNo))
+            dataYs1 = dataYs[:, -1]
+
+            # std format
+            dataYs_Reshaped = np.reshape(
+                dataYs1, (varNoRows, varNoColumns))
+
+            # data
+            # -> concentration
+            dataYs_Concentration_DiLeVa = dataYs_Reshaped[:-1]
+            # -> temperature
+            dataYs_Temperature_DiLeVa = dataYs_Reshaped[-1] if processType != PROCESS_SETTING['ISO-THER'] else np.repeat(
+                0, varNoColumns).reshape(varNoColumns)
+
+            # sort out
+            params1 = (compNo, varNoRows, varNoColumns)
+            params2 = (Cif, Tf, processType)
+            dataYs_Sorted = sortResult5(
+                dataYs_Reshaped, params1, params2)
+            # component concentration [mol/m^3]
+            dataYs_Concentration_ReVa = dataYs_Sorted['data1']
+            # temperature [K]
+            dataYs_Temperature_ReVa = dataYs_Sorted['data2']
+
             # REVIEW
             # convert concentration to mole fraction
-            dataYs1_Ctot = np.sum(dataYs1_Reshaped, axis=0)
-            dataYs1_MoFri = dataYs1_Reshaped/dataYs1_Ctot
-            # temperature - 2d matrix
-            dataYs2 = np.array([dataYs[varNoCon:varNoT, -1]])
+            dataYs1_Ctot = np.sum(dataYs_Concentration_ReVa, axis=0)
+            dataYs1_MoFri = dataYs_Concentration_ReVa/dataYs1_Ctot
 
-            # combine
-            _dataYs = np.concatenate((dataYs1_MoFri, dataYs2), axis=0)
+            # FIXME
+            # build matrix
+            dataYs_All = np.concatenate(
+                (dataYs1_MoFri, dataYs_Temperature_ReVa), axis=0)
 
             # save data
             dataPack.append({
                 "successStatus": successStatus,
                 "dataTime": dataTime[-1],
-                "dataYCons": dataYs1_Reshaped,
-                "dataYTemp": dataYs2,
-                "dataYs": _dataYs
+                "dataYCons1": dataYs_Concentration_DiLeVa,
+                "dataYCons2": dataYs_Concentration_ReVa,
+                "dataYTemp1": dataYs_Temperature_DiLeVa,
+                "dataYTemp2": dataYs_Temperature_ReVa,
+                "dataYs": dataYs_All
             })
 
             for m in range(varNo):
@@ -3593,6 +3693,8 @@ class PackedBedHomoReactorClass:
 
         # plot info
         plotTitle = f"Dynamic Modeling {modelingId} for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
+        xLabelSet = "Dimensionless Reactor Length"
+        yLabelSet = "Dimensionless Concentration"
 
         # REVIEW
         # display result at specific time
@@ -3608,8 +3710,7 @@ class PackedBedHomoReactorClass:
                          dataList[indexTemp]]
             if i == tNo-1:
                 # subplot result
-                pltc.plots2DSub(dataLists, "Reactor Length (m)",
-                                "Concentration (mol/m^3)", plotTitle)
+                pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
 
         # REVIEW
         # display result within time span
@@ -3625,7 +3726,6 @@ class PackedBedHomoReactorClass:
             # build label
             for t in range(tNo):
                 _name = labelList[i] + " at t=" + str(opTSpan[t+1])
-
                 _labelNameTime.append(_name)
 
             dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
@@ -3641,8 +3741,7 @@ class PackedBedHomoReactorClass:
         _dataListsSelected = selectFromListByIndex([1, -1], _dataListsLoop)
 
         # subplot result
-        # pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
-        #                 "Concentration (mol/m^3)", "Dynamic Modeling of 1D Plug-Flow Reactor")
+        pltc.plots2DSub(_dataListsSelected, xLabelSet, yLabelSet, plotTitle)
 
         # return
         res = {
@@ -3852,7 +3951,7 @@ class PackedBedHomoReactorClass:
                 CoSpi_ReVa[i] = rmtUtil.calRealDiLessValue(
                     CoSpi[i], SpCoi0_Set)
 
-            # total concentration [kmol/m^3]
+            # total concentration [mol/m^3]
             CoSp = np.sum(CoSpi)
             # dimensionless analysis: real value
             CoSp_ReVa = np.sum(CoSpi_ReVa)
@@ -4058,15 +4157,26 @@ class PackedBedHomoReactorClass:
                 else:
                     # interior nodes
                     T_b = T_z[z - 1]
+
                 # backward difference
                 dTdz = (T_c - T_b)/dz
+                # convective term [no unit]
+                _convectiveTerm = -1*InGaVe_DiLeVa*GaDe_DiLeVa*GaCpMeanMixEff_DiLeVa*dTdz
+                # heat of reaction [no unit]
+                _heatFormationTerm = (1/GaHeCoTe0)*(-OvHeReT)
+                # heat exchange term [no unit]
+                _heatExchangeTerm = (1/GaHeCoTe0)*Qm
 
-                dxdt_T = const_T2 * \
-                    (-const_T1*dTdz + ((-OvHeReT + Qm)/GaHeCoTe0))
+                # convective flux, enthalpy of reaction, cooling heat
+                # dxdt_T = const_T2 * \
+                #     (-const_T1*dTdz + ((-OvHeReT + Qm)/GaHeCoTe0))
+                dxdt_T = const_T2*(_convectiveTerm +
+                                   _heatFormationTerm + _heatExchangeTerm)
+
                 dxdtMat[indexT][z] = dxdt_T
 
         # flat
         dxdt = dxdtMat.flatten().tolist()
-        print("time: ", t)
+        # print("time: ", t)
 
         return dxdt

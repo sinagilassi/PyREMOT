@@ -106,7 +106,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 523
+Tm = T
 # Ua
 Ua = U*a
 #
@@ -208,7 +208,7 @@ modelInput = {
         "pressure": P,
         "temperature": T,
         "period": opT,
-        "process-type": "iso-thermal",
+        "process-type": "non-iso-thermal",
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -257,7 +257,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-# ssModelingData = res['resModel']['dataYs']
+# ssModelingData = np.array(res['resModel']['dataYs'])
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -266,7 +266,8 @@ res = rmtExe(modelInput)
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-# np.save('ResM1.npy', ssModelingData)
+# if modelInput['model'] == 'N1':
+#     np.save('ResN1.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)
