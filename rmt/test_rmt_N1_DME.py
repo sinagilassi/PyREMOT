@@ -102,11 +102,11 @@ CaBeDe = bulk_rho
 # NOTE
 # external heat
 # overall heat transfer coefficient [J/m^2.s.K]
-U = 50
+U = 100  # 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = T
+Tm = T-1
 # Ua
 Ua = U*a
 #
@@ -203,7 +203,7 @@ reactionRateSet = {
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N2",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

@@ -2820,7 +2820,7 @@ class PackedBedHomoReactorClass:
         # Ci, P, T
         IV2D = np.zeros((varNo))
         _SpCoi_DiLeVa = rmtUtil.calDiLessValue(SpCoi0, Cf)
-        IV2D[0:compNo] = _SpCoi_DiLeVa  # SpCoi0/np.max(SpCoi0)
+        IV2D[0:compNo] = SpCoi0/np.max(SpCoi0)
         _P_DiLeVa = rmtUtil.calDiLessValue(P, Pf)
         IV2D[indexPressure] = _P_DiLeVa
         # check
@@ -2840,6 +2840,20 @@ class PackedBedHomoReactorClass:
         # standard heat of reaction at 25C [kJ/kmol]
         StHeRe25 = np.array(
             list(map(calStandardEnthalpyOfReaction, reactionList)))
+
+        # REVIEW
+        # domain length (dimensionless length)
+        DoLe = 1
+        # save data
+        timesNo = solverSetting['N1']['zNo']
+        # set time span
+        t = np.array([0, DoLe])
+        t_span = np.array([0, DoLe])
+        times = np.linspace(t_span[0], t_span[1], timesNo+1)
+        # varNoColumns
+        varNoColumns = len(times)
+        # varNoRows
+        varNoRows = varNo
 
         # fun parameters
         FunParam = {
@@ -2867,6 +2881,7 @@ class PackedBedHomoReactorClass:
                 "GaCpMeanMix0": GaCpMeanMix0
             },
             "reactionRateExpr": reactionRateExpr,
+
         }
 
         # dimensionless analysis parameters
@@ -2883,72 +2898,40 @@ class PackedBedHomoReactorClass:
             "GaHeCoTe0": GaHeCoTe0,
         }
 
-        # REVIEW
-        # domain length (dimensionless length)
-        DoLe = 1
-
-        # save data
-        timesNo = solverSetting['N1']['zNo']
-        # z segments
-        tNo = solverSetting['N1']['zNo']
-        opTSpan = np.linspace(0, DoLe, tNo + 1)
-
-        # varNoColumns
-        varNoColumns = tNo+1
-        # varNoRows
-        varNoRows = varNo
-
-        # data pack
-        dataYsShape = (varNo, varNoColumns)
-        dataYs = np.zeros(dataYsShape)
-        dataXs = np.zeros(varNoColumns)
-
-        # set
-        dataYs[:, 0] = IV
-        dataXs[0] = 0
+        odeSolverParams = {
+            "timesLength": varNoColumns,
+        }
 
         # NOTE
-        # progress-bar
-        # Initial call to print 0% progress
-        printProgressBar(0, tNo, prefix='Progress:',
-                         suffix='Complete', length=50)
-
         # solver selection
         # BDF, Radau, LSODA
         solverIVP = "LSODA" if solverIVPSet == 'default' else solverIVPSet
         # set
         paramsSet = (reactionListSorted, reactionStochCoeff,
-                     FunParam, DimensionlessAnalysisParams, processType)
+                     FunParam, DimensionlessAnalysisParams, odeSolverParams, processType)
         funSet = PackedBedHomoReactorClass.modelEquationN1
 
-        # time loop
-        for i in range(tNo):
-            # set time span
-            t = np.array([opTSpan[i], opTSpan[i+1]])
-            times = np.linspace(t[0], t[1], timesNo)
+        # NOTE
+        # progress-bar
+        # Initial call to print 0% progress
+        printProgressBar(0, varNoColumns, prefix='Progress:',
+                         suffix='Complete', length=50)
 
-            # print(f"time ivp: {t} seconds")
-            printProgressBar(i + 1, tNo, prefix='Progress:',
-                             suffix='Complete', length=50)
+        # ode call
+        sol = solve_ivp(funSet, t, IV, method=solverIVP, t_eval=times,
+                        args=(paramsSet,))
 
-            # ode call
-            sol = solve_ivp(funSet, t, IV, method=solverIVP, t_eval=times,
-                            args=(paramsSet,))
+        # ode result
+        successStatus = sol.success
+        dataX = sol.t
+        # all results
+        dataYs = sol.y
+        dataXs = dataX
 
-            # ode result
-            successStatus = sol.success
-            dataX = sol.t
-            # all results
-            dataYs_Loop = sol.y
-
-            # last value
-            _lastVal = dataYs_Loop[:, -1]
-            # save
-            dataYs[:, i+1] = _lastVal
-            dataXs[i+1] = dataX[-1]
-
-            # set initial value
-            IV = _lastVal
+        # NOTE
+        # check
+        if successStatus is False:
+            raise
 
         # REVIEW
         # data
@@ -3068,7 +3051,7 @@ class PackedBedHomoReactorClass:
                 GaHeCoTe0: feed heat convective term of gas phase [J/m^3.s]
         """
         # set
-        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, processType = paramsSet
+        reactionListSorted, reactionStochCoeff, FunParam, DimensionlessAnalysisParams, odeSolverParams, processType = paramsSet
         # fun params
         # component symbol list
         comList = FunParam['compList']
@@ -3140,6 +3123,9 @@ class PackedBedHomoReactorClass:
         GaMaCoTe0 = DimensionlessAnalysisParams['GaMaCoTe0']
         # feed heat convective term of gas phase [J/m^3.s]
         GaHeCoTe0 = DimensionlessAnalysisParams['GaHeCoTe0']
+
+        # ode solver
+        timesLength = odeSolverParams['timesLength']
 
         # calculate
         # molar flowrate [kmol/s]
@@ -3216,7 +3202,7 @@ class PackedBedHomoReactorClass:
         GaDe = calDensityIG(MiMoWe, CoSp_ReVa)
         GaDeEOS = calDensityIGFromEOS(P_ReVa, T_ReVa, MiMoWe)
         # dimensionless value
-        GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDe, GaDe0)
+        GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDeEOS, GaDe0)
 
         # NOTE
         # momentum equation
@@ -3224,7 +3210,7 @@ class PackedBedHomoReactorClass:
         # ergun equation
         ergA = 150*GaMiVi*SuGaVe/(PaDi**2)
         ergB = ((1-BeVoFr)**2)/(BeVoFr**3)
-        ergC = 1.75*GaDe*(SuGaVe**2)/PaDi
+        ergC = 1.75*GaDeEOS*(SuGaVe**2)/PaDi
         ergD = (1-BeVoFr)/(BeVoFr**3)
         # dimensionless term
         ergBeta = (Pf/zf)
@@ -3312,6 +3298,15 @@ class PackedBedHomoReactorClass:
         # flatten
         dxdt = dxdtMat.flatten().tolist()
         # print("t: ", t)
+
+        # check progress-bar
+        progressLimit = [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.]
+        # round
+        _tRound = roundNum(t, 1)*100
+        # print("_tRound: ", _tRound)
+        if t in progressLimit:
+            printProgressBar(_tRound, timesLength, prefix='Progress:',
+                             suffix='Complete', length=50)
 
         return dxdt
 
@@ -4011,13 +4006,13 @@ class PackedBedHomoReactorClass:
             GaDe = calDensityIG(MiMoWe, CoSp_ReVa)
             GaDeEOS = calDensityIGFromEOS(P, T_ReVa, MiMoWe)
             # dimensionless value
-            GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDe, GaDe0)
+            GaDe_DiLeVa = rmtUtil.calDiLessValue(GaDeEOS, GaDe0)
 
             # NOTE
             # ergun equation
             ergA = 150*GaMiVi*SuGaVe/(PaDi**2)
             ergB = ((1-BeVoFr)**2)/(BeVoFr**3)
-            ergC = 1.75*GaDe*(SuGaVe**2)/PaDi
+            ergC = 1.75*GaDeEOS*(SuGaVe**2)/PaDi
             ergD = (1-BeVoFr)/(BeVoFr**3)
             RHS_ergun = -1*(ergA*ergB + ergC*ergD)
 
