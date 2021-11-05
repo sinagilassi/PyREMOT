@@ -181,7 +181,7 @@ class rmtCoreClass():
 
     def initReactionRate(self, reactionRateDict):
         """
-            initialize reaction rate expr list
+        initialize reaction rate expr list
         """
         # try/except
         try:
@@ -193,10 +193,11 @@ class rmtCoreClass():
             # reaction rate expression list
             for i in reactionRateDict:
                 if i != "VAR":
-                    _loop = rmtRec(reactionRateDict[i])
+                    # _loop = rmtRec(reactionRateDict[i])
                     # print("reaction rate expr: ",
                     #       _loop.reactionRateFunSet(T=1, P=2, y=3))
                     # add to list
+                    pass
                 else:
                     _loop = reactionRateDict[i]
 

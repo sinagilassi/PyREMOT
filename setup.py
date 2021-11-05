@@ -21,7 +21,8 @@ setup(
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=find_packages(),
-    install_requires=['opencv-python', 'numpy', 'scipy', 'matplotlib'],
+    install_requires=['opencv-python', 'numpy',
+                      'scipy', 'matplotlib', 'timeit'],
     keywords=['python', 'chemical engineering', 'packed-bed reactor',
               'homogenous reactor', 'reaction engineering'],
     classifiers=[
