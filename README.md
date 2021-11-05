@@ -3,6 +3,7 @@
 
 Python Reactor Modeling Tools (PyREMOT) is an open-source package which can be used for process simulation, optimization, and parameter estimation. The current version consists of homogenous models for steady-state and dynamic conditions. 
 
+You can visit [dashboard](https://pyremot.herokuapp.com/) to build model input and load examples! 
 
 ## Installation
 
@@ -11,8 +12,6 @@ You can install this package
 ```bash
   pip install PyREMOT
 ```
-
-
 
 ## Documentation
 
