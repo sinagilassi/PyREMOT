@@ -242,5 +242,5 @@ For any question, you can conatct me on [LinkedIn](https://www.linkedin.com/in/s
 
 ## Authors
 
-- [@katherinepeterson](https://www.github.com/sinagilassi)
+- [@sinagilassi](https://www.github.com/sinagilassi)
 
