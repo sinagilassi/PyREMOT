@@ -223,18 +223,24 @@ And for dynamic cases,
     }
 
 Concentration results: 
+
     dataYCons1: dimensionless concentration 
+    
     dataYCons2: concentraton [mol/m^3.s]
 
 Temperature results:
+
     dataYTemp1: dimensionless temperature 
+    
     dataYTemp2: Temperature [K]
 
 All modeling results is also saved in dataYs. 
-
 
 ## FAQ
 
 For any question, you can conatct me on [LinkedIn](https://www.linkedin.com/in/sina-gilassi/) or [Twitter](https://twitter.com/sinagilassi). 
 
+## Authors
+
+- [@katherinepeterson](https://www.github.com/sinagilassi)
 
