@@ -83,3 +83,27 @@ def selectRandomList(myList, no, labelNameTime):
         "data2": labelNameTime_3
     }
     return res
+
+
+def selectRandomForList(myList, no):
+    """
+    select sorted random index from array
+    args:
+        myList: 2D array 
+        no: number of element to be selected (scaler)
+    """
+    # array shape
+    myListShape = np.shape(myList)
+
+    # set elements
+    myListIndex = [*range(myListShape[0])]
+    myListIndex_2 = myListIndex[1:-1]
+    myListIndex_3 = np.sort(np.random.choice(myListIndex_2, no, replace=False))
+    # set
+    a = myList[0]
+    b = myListIndex_3
+    c = myList[-1]
+    # combine
+    myList_2 = [a, *b, c]
+    # res
+    return myList_2

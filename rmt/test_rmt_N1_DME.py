@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 1
+opT = 0.5
 
 # set feed mole fraction
 # H2/COx ratio
@@ -232,7 +232,7 @@ HeTrCo0 = 1731
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N1",
+    "model": "N2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -266,6 +266,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "default",
+        "display-result": "False"
     },
     "test-const": {
         "numerical-method": "fem",
@@ -286,7 +287,7 @@ modelInput = {
 res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
 
-dataYs = res['resModel'][0]['dataYs']
+# dataYs = res['resModel'][0]['dataYs']
 
 # save modeling result
 # with open('res.json', 'w') as f:

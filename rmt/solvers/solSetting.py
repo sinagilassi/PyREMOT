@@ -32,7 +32,7 @@ solverSetting = {
         "zNo": 100,
     },
     "N2": {
-        "zNo": 30,
+        "zNo": 20,
         "rNo": 5,
         "tNo": 5,
         "timesNo": 5

@@ -5,7 +5,9 @@
 import numpy as np
 # internal
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from library.plot import plotClass as pltc
 from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+from core.utilities import roundNum, selectFromListByIndex, selectRandomForList
 
 
 def setOptimizeRootMethod(y, params1, params2, param3=0):
@@ -295,5 +297,154 @@ def sortResult5(y, params1, params2):
         }
         # return
         return res
+    except Exception as e:
+        raise
+
+# NOTE
+# plot results
+
+
+def plotResultsSteadyState(dataPack):
+    '''
+    plot results
+    args:
+        dataPack:
+            modelId: model id,
+            processType: process type,
+            successStatus: ode success status,
+            computation-time: elapsed time [s],
+            dataShape: dataShape,
+            labelList: labelList,
+            indexList: indexList,
+            dataTime: [],
+            dataXs: dataXs,
+            dataYCons1: dataYs_Concentration_DiLeVa,
+            dataYCons2: dataYs_Concentration_ReVa,
+            dataYTemp1: dataYs_Temperature_DiLeVa,
+            dataYTemp2: dataYs_Temperature_ReVa,
+            dataYs: dataYs_All
+    '''
+    # try/except
+    try:
+        # model info
+        modelId = dataPack[0]['modelId']
+        processType = dataPack[0]['processType']
+        # calculation status
+        successStatus = dataPack[0]['successStatus']
+        # data
+        dataXs = dataPack[0]['dataXs']
+        dataYs_All = dataPack[0]['dataYs']
+        labelList = dataPack[0]['labelList']
+        indexList = dataPack[0]['indexList']
+        elapsed = dataPack[0]['computation-time']
+        # set
+        plotTitle = f"Steady-State Modeling {modelId}, computation-time {elapsed}"
+        xLabelSet = "Reactor Length (m)"
+        yLabelSet = "Concentration (mol/m^3)"
+        compNo = indexList[0]
+        indexPressure = indexList[1]
+        indexTemp = indexList[2]
+
+        # check
+        if successStatus is True:
+            # plot setting: build (x,y) series
+            XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
+            # -> add label
+            dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # datalists
+            dataLists = [dataList[0:compNo], dataList[indexPressure], dataList[indexTemp]
+                         ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo], dataList[indexPressure]]
+            # select datalist
+            _dataListsSelected = selectFromListByIndex([], dataLists)
+            # subplot result
+            pltc.plots2DSub(_dataListsSelected, xLabelSet,
+                            yLabelSet, plotTitle)
+            pass
+        else:
+            dataPack = []
+    except Exception as e:
+        raise
+
+
+def plotResultsDynamic(resPack, tNo):
+    '''
+    plot results
+    args:
+        resPack: 
+            computation-time: elapsed time [s]
+            dataPack:
+                modelId: model id,
+                processType: process type,
+                successStatus: ode success status,
+                dataShape: dataShape,
+                labelList: labelList,
+                indexList: indexList,
+                dataTime: [],
+                dataXs: dataXs,
+                dataYCons1: dataYs_Concentration_DiLeVa,
+                dataYCons2: dataYs_Concentration_ReVa,
+                dataYTemp1: dataYs_Temperature_DiLeVa,
+                dataYTemp2: dataYs_Temperature_ReVa,
+                dataYs: dataYs_All
+
+    '''
+    # try/except
+    try:
+        # get
+        elapsed = resPack['computation-time']
+        dataPack = resPack['dataPack']
+
+        # model info
+        modelId = dataPack[0]['modelId']
+        processType = dataPack[0]['processType']
+        # calculation status
+        successStatus = dataPack[0]['successStatus']
+        # data
+        dataXs = dataPack[0]['dataXs']
+        dataYs_All = dataPack[0]['dataYs']
+        labelList = dataPack[0]['labelList']
+        indexList = dataPack[0]['indexList']
+
+        # set
+        plotTitle = f"Steady-State Modeling {modelId}, computation-time {elapsed}"
+        xLabelSet = "Reactor Length (m)"
+        yLabelSet = "Concentration (mol/m^3)"
+        compNo = indexList[0]
+        indexPressure = indexList[1]
+        indexTemp = indexList[2]
+
+        # random tNo
+        tNoList = list(range(tNo))
+        tNoRandomList = selectRandomForList(tNoList, 2)
+
+        # REVIEW
+        # display result at specific time
+        for i in tNoRandomList:
+
+            # calculation status
+            successStatus = dataPack[i]['successStatus']
+
+            # check
+            if successStatus is True:
+                # data
+                dataXs = dataPack[i]['dataXs']
+                dataYs_All = dataPack[i]['dataYs']
+                labelList = dataPack[i]['labelList']
+                indexList = dataPack[i]['indexList']
+
+                # plot setting: build (x,y) series
+                XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
+                # -> add label
+                dataList = pltc.plots2DSetDataList(XYList, labelList)
+                # datalists
+                dataLists = [dataList[0:compNo], dataList[indexTemp]
+                             ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo]]
+                # select datalist
+                _dataListsSelected = selectFromListByIndex([], dataLists)
+                # subplot result
+                pltc.plots2DSub(_dataListsSelected, xLabelSet,
+                                yLabelSet, plotTitle)
+            else:
+                dataPack = []
     except Exception as e:
         raise

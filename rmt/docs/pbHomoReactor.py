@@ -26,7 +26,7 @@ from core.config import REACTION_RATE_ACCURACY
 from solvers.solSetting import solverSetting
 from core.eqConstants import CONST_EQ_Sh
 from solvers.odeSolver import AdBash3, PreCorr3
-from solvers.solResultAnalysis import sortResult4, sortResult5
+from solvers.solResultAnalysis import sortResult4, sortResult5, plotResultsSteadyState, plotResultsDynamic
 from solvers.solProgress import printProgressBar
 
 
@@ -2703,6 +2703,8 @@ class PackedBedHomoReactorClass:
         # solver setting
         solverConfig = self.modelInput['solver-config']
         solverIVPSet = solverConfig['ivp']
+        displayResultGet = solverConfig['display-result']
+        displayResult = True if displayResultGet == "True" else False
 
         # model info
         modelId = self.modelInput['model']
@@ -2732,6 +2734,8 @@ class PackedBedHomoReactorClass:
         compNo = len(compList)
         indexPressure = compNo
         indexTemp = indexPressure + 1
+        # index list
+        indexList = [compNo, indexPressure, indexTemp]
 
         # reactor spec
         ReSpec = self.modelInput['reactor']
@@ -2899,7 +2903,7 @@ class PackedBedHomoReactorClass:
         }
 
         odeSolverParams = {
-            "timesLength": varNoColumns,
+            "timesLength": varNoColumns-1,
         }
 
         # NOTE
@@ -2927,10 +2931,13 @@ class PackedBedHomoReactorClass:
         # all results
         dataYs = sol.y
         dataXs = dataX
+        dataShape = np.array(dataX).shape
 
         # NOTE
         # check
         if successStatus is False:
+            dataPack = []
+            print('ODE Error')
             raise
 
         # REVIEW
@@ -2977,10 +2984,15 @@ class PackedBedHomoReactorClass:
         # save data
         dataPack = []
         dataPack.append({
-            "model": modelId,
+            "modelId": modelId,
+            "processType": processType,
             "successStatus": successStatus,
             "computation-time": elapsed,
+            "dataShape": dataShape,
+            "labelList": labelList,
+            "indexList": indexList,
             "dataTime": [],
+            "dataXs": dataXs,
             "dataYCons1": dataYs_Concentration_DiLeVa,
             "dataYCons2": dataYs_Concentration_ReVa,
             "dataYTemp1": dataYs_Temperature_DiLeVa,
@@ -2988,26 +3000,11 @@ class PackedBedHomoReactorClass:
             "dataYs": dataYs_All
         })
 
-        # plot info
-        plotTitle = f"Steady-State Modeling {modelId} with timesNo: {timesNo} within {elapsed}"
-
+        # NOTE
+        ### display result ###
         # check
-        if successStatus is True:
-            # # plot setting: build (x,y) series
-            # XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
-            # # -> add label
-            # dataList = pltc.plots2DSetDataList(XYList, labelList)
-            # # datalists
-            # dataLists = [dataList[0:compNo], dataList[indexPressure], dataList[indexTemp]
-            #              ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo], dataList[indexPressure]]
-            # # select datalist
-            # _dataListsSelected = selectFromListByIndex([], dataLists)
-            # # subplot result
-            # pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
-            #                 "Concentration (mol/m^3)", plotTitle)
-            pass
-        else:
-            dataPack = []
+        if displayResult is True:
+            plotResultsSteadyState(dataPack)
 
         return dataPack
 
@@ -3331,6 +3328,8 @@ class PackedBedHomoReactorClass:
         # solver setting
         solverConfig = self.modelInput['solver-config']
         solverIVPSet = solverConfig['ivp']
+        displayResultGet = solverConfig['display-result']
+        displayResult = True if displayResultGet == "True" else False
 
         # operating conditions
         P = self.modelInput['operating-conditions']['pressure']
@@ -3359,6 +3358,8 @@ class PackedBedHomoReactorClass:
         indexTemp = compNo
         indexPressure = indexTemp + 1
         indexVelocity = indexPressure + 1
+        # index list
+        indexList = [compNo, indexPressure, indexTemp]
 
         # reactor spec
         ReSpec = self.modelInput['reactor']
@@ -3606,6 +3607,7 @@ class PackedBedHomoReactorClass:
                     raise
                 # time interval
                 dataTime = sol.t
+                dataShape = np.array(dataTime[-1]).shape
                 # all results
                 # components, temperature layers
                 dataYs = sol.y
@@ -3652,9 +3654,14 @@ class PackedBedHomoReactorClass:
 
             # save data
             dataPack.append({
-                "model": modelId,
+                "modelId": modelId,
+                "processType": processType,
                 "successStatus": successStatus,
+                "dataShape": dataShape,
+                "labelList": labelList,
+                "indexList": indexList,
                 "dataTime": dataTime[-1],
+                "dataXs": dataXs,
                 "dataYCons1": dataYs_Concentration_DiLeVa,
                 "dataYCons2": dataYs_Concentration_ReVa,
                 "dataYTemp1": dataYs_Temperature_DiLeVa,
@@ -3674,60 +3681,19 @@ class PackedBedHomoReactorClass:
         end = timer()
         elapsed = roundNum(end - start)
 
-        # # NOTE
-        # # plot info
-        # plotTitle = f"Dynamic Modeling {modelingId} for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
-        # xLabelSet = "Dimensionless Reactor Length"
-        # yLabelSet = "Dimensionless Concentration"
+        # res
+        resPack = {
+            "computation-time": elapsed,
+            "dataPack": dataPack
+        }
 
-        # # REVIEW
-        # # display result at specific time
-        # for i in range(tNo):
-        #     # var list
-        #     _dataYs = dataPack[i]['dataYs']
-        #     # plot setting: build (x,y) series
-        #     XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
-        #     # -> add label
-        #     dataList = pltc.plots2DSetDataList(XYList, labelList)
-        #     # datalists
-        #     dataLists = [dataList[0:compNo],
-        #                  dataList[indexTemp]]
-        #     if i == tNo-1:
-        #         # subplot result
-        #         pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
+        # NOTE
+        ### display result ###
+        # check
+        if displayResult is True:
+            plotResultsDynamic(resPack, tNo)
 
-        # # REVIEW
-        # # display result within time span
-        # _dataListsLoop = []
-        # _labelNameTime = []
-
-        # for i in range(varNo):
-        #     # var list
-        #     _dataPacktime = dataPacktime[i]
-        #     # plot setting: build (x,y) series
-        #     XYList = pltc.plots2DSetXYList(dataXs, _dataPacktime)
-        #     # -> add label
-        #     # build label
-        #     for t in range(tNo):
-        #         _name = labelList[i] + " at t=" + str(opTSpan[t+1])
-        #         _labelNameTime.append(_name)
-
-        #     dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
-        #     # datalists
-        #     _dataListsLoop.append(dataList[0:tNo])
-        #     # reset
-        #     _labelNameTime = []
-
-        # # select items
-        # # indices = [0, 2, -1]
-        # # selected_elements = [_dataListsLoop[index] for index in indices]
-        # # select datalist
-        # _dataListsSelected = selectFromListByIndex([1, -1], _dataListsLoop)
-
-        # # subplot result
-        # pltc.plots2DSub(_dataListsSelected, xLabelSet, yLabelSet, plotTitle)
-
-        return dataPack
+        return resPack
 
     def modelEquationN2(t, y, paramsSet):
         """

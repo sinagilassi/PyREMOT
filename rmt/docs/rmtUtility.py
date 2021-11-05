@@ -181,7 +181,7 @@ class rmtUtilityClass:
         try:
             # reaction list
             reactionList = rmtUtilityClass.buildReactionList(reactionDict)
-            print(f"reaction list: {reactionList}")
+            # print(f"reaction list: {reactionList}")
 
             # sorted reaction list
             reactionListSorted = []
@@ -191,15 +191,15 @@ class rmtUtilityClass:
                 reaType = reaction.replace("<", "").replace(">", "")
                 # reactant/products list
                 compR = reaType.replace(r" ", "").split("=")
-                print(f"compR1 {compR}")
+                # print(f"compR1 {compR}")
 
                 # componets
                 reactantList = re.findall(
                     r"([0-9.]*)([a-zA-Z0-9.]+)", compR[0])
-                print(f"reactantList {reactantList}")
+                # print(f"reactantList {reactantList}")
                 productList = re.findall(r"([0-9.]*)([a-zA-Z0-9.]+)", compR[1])
-                print(f"productList {productList}")
-                print("------------------")
+                # print(f"productList {productList}")
+                # print("------------------")
 
                 # reactant coefficient
                 _loop1 = [{"symbol": i[1], "coeff": -1*float(i[0])} if len(i[0]) != 0 else {"symbol": i[1], "coeff": -1.0}
