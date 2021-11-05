@@ -177,9 +177,58 @@ reactor and catalyst characteristics:
     # display-result [-]
     diRe = "True"
 
+
 After setting all modules, you can find 'model input' in python format in the summary panel. Then, copy the content of this file in your python framework and run it!
 
 You can also find an example on PyREMOT dashboard, load it and then have a look at the summary panel.
 
+## Run  
 
+As the downloaded python file contains modelInput varibale, you can directly run the model as:
+
+    # model input
+    modelInput = {...}
+    # start modeling
+    res = rmtExe(modelInput)
+
+## Result Format
+
+For steady-state cases, the modeling result is stored in an array named dataPack: 
+
+    # res
+    dataPack = []
+    dataPack.append({
+        "modelId": modelId,
+        "processType": processType,
+        "successStatus": successStatus,
+        "computation-time": elapsed,
+        "dataShape": dataShape,
+        "labelList": labelList,
+        "indexList": indexList,
+        "dataTime": [],
+        "dataXs": dataXs,
+        "dataYCons1": dataYs_Concentration_DiLeVa,
+        "dataYCons2": dataYs_Concentration_ReVa,
+        "dataYTemp1": dataYs_Temperature_DiLeVa,
+        "dataYTemp2": dataYs_Temperature_ReVa,
+        "dataYs": dataYs_All
+    })
+
+And for dynamic cases, 
+
+    # res
+    resPack = {
+        "computation-time": elapsed,
+        "dataPack": dataPack
+    }
+
+Concentration results: 
+    dataYCons1: dimensionless concentration 
+    dataYCons2: concentraton [mol/m^3.s]
+
+Temperature results:
+    dataYTemp1: dimensionless temperature 
+    dataYTemp2: Temperature [K]
+
+All modeling results is also saved in dataYs. 
 
