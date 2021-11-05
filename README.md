@@ -26,7 +26,9 @@ PyREMOT UI dashboard conatins some panels as:
 
 this code is automaticly converted to python as:
 
+  ```python
     compList = ["H2","CO2","H2O","CO","CH3OH","DME"]
+  ```
 
 3- REACTIONS
 
@@ -38,11 +40,13 @@ define reacions as:
 
 then:
 
+```python
     reactionSet = {
     "R1":"CO2+3H2<=>CH3OH+H2O",
     "R2":"CO+H2O<=>H2+CO2",
     "R3":"2CH3OH<=>DME+H2O"
     }
+```
 
 In order to define reaction rate expressions, there are two code sections as
 
@@ -81,6 +85,7 @@ a) define parameters:
 
 then converted:
 
+ ```python
     varis0 = {
     "RT": lambda x: x['R_CONST']*x['T'],
     "K1": lambda x: 35.45*math.exp(-1.7069e4/x['RT']),
@@ -113,6 +118,7 @@ then converted:
     "ra4": lambda x:  x['PH2O'] - (1/x['KP2'])*((x['PCO2']*x['PH2'])/x['PCO']),
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3'])
     }
+```
 
 
 b) define the final form of reaction rate expressions: 
@@ -123,16 +129,19 @@ b) define the final form of reaction rate expressions:
 
 then converted:
 
+ ```python
     rates0 = {
     "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
     "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
     "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
     }
+  ```
 
 4- PROPERTIES
 
 feed properties:
 
+ ```python
     # mole-fraction [-]
     MoFri0 = [0.499985, 0.2499925, 1e-05, 0.2499925, 1e-05, 1e-05]
     # molar-flowrate [mol/s]
@@ -143,11 +152,13 @@ feed properties:
     T = 523
     # process-type [-]
     PrTy = "non-iso-thermal"
+  ```
 
 5- REACTOR
 
 reactor and catalyst characteristics: 
 
+ ```python
     # reactor-length [m]
     ReLe = 1
     # reactor-inner-diameter [m]
@@ -162,20 +173,25 @@ reactor and catalyst characteristics:
     CaDe = 1920
     # particle-specific-heat-capacity  [J/kg.K]
     CaSpHeCa = 960
+```
 
 6- HEAT-EXCHANGER
 
+```python
     # overall-heat-transfer-coefficient [J/m^2.s.K]
     U = 50
     # medium-temperature [K]
     Tm = 523
+```
 
 7- SOLVER
 
+```python
     # ode-solver [-]
     ivp = "default"
     # display-result [-]
     diRe = "True"
+ ```
 
 
 After setting all modules, you can find 'model input' in python format in the summary panel. Then, copy the content of this file in your python framework and run it!
@@ -186,15 +202,18 @@ You can also find an example on PyREMOT dashboard, load it and then have a look 
 
 As the downloaded python file contains modelInput varibale, you can directly run the model as:
 
+```python
     # model input
     modelInput = {...}
     # start modeling
     res = rmtExe(modelInput)
+ ```
 
 ## Result Format
 
 For steady-state cases, the modeling result is stored in an array named dataPack: 
 
+```python
     # res
     dataPack = []
     dataPack.append({
@@ -213,14 +232,17 @@ For steady-state cases, the modeling result is stored in an array named dataPack
         "dataYTemp2": dataYs_Temperature_ReVa,
         "dataYs": dataYs_All
     })
+```
 
 And for dynamic cases, 
 
+```python
     # res
     resPack = {
         "computation-time": elapsed,
         "dataPack": dataPack
     }
+```
 
 Concentration results: 
 
