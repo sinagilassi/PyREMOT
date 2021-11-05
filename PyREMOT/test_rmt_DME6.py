@@ -13,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from PyREMOT import rmtExe
+from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 10
+opT = 0.5
 
 # set feed mole fraction
 # H2/COx ratio
@@ -119,8 +119,32 @@ externalHeat = {
     "MeTe": Tm
 }
 
+# gas viscosity [Pa.s]
+GaVii = np.array([1, 1, 1, 1, 1, 1])
 # gas mixture viscosity [Pa.s]
 GaMiVi = 1e-5
+# diffusivity coefficient - gas phase [m^2/s]
+# GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
+GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
+                  2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
+# thermal conductivity - gas phase [J/s.m.K]
+# GaThCoi = np.zeros(compNo)  # f(T);
+GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
+                    0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
+# mixture thermal conductivity - gas phase [J/s.m.K]
+# convert
+GaThCoMix = 0.125
+
+# NOTE
+### TEST ###
+# bulk concentration
+GaSpCoi = ct0
+# mass transfer coefficient [m/s]
+MaTrCo0 = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
+                    0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
+# heat transfer coefficient - gas/solid [J/m^2.s.K]
+HeTrCo0 = 1731
+
 
 # NOTE
 # reaction rates
@@ -130,6 +154,8 @@ varis0 = {
     # T,P,NoFri
     #  mole fraction
     "CaDe": CaDe,
+    # catalyst bed dencity
+    "CaBeDe": bulk_rho,
     # catalyst porosity
     "CaPo": CaPo,
     # vars key/value
@@ -189,9 +215,9 @@ varis0 = {
 
 # reaction rates
 rates0 = {
-    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaDe'],
-    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaDe'],
-    "r3": lambda x: x['K3']*x['ra5']*x['CaDe']
+    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
+    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
+    "r3": lambda x: x['K3']*x['ra5']*x['CaBeDe']
 }
 
 # reaction rate
@@ -200,13 +226,23 @@ reactionRateSet = {
     "RATES": rates0
 }
 
+# NOTE
+# model ids
+# M11
+# T1, T2
+# M12
+
+# M1
+
 # model input - feed
 modelInput = {
-    "model": "M11",
+    "model": "M14",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
-        "period": opT
+        "period": opT,
+        "process-type": "non-iso-thermal",
+        "numerical-method": "fdm"
     },
     "feed": {
         "mole-fraction": MoFri0,
@@ -215,7 +251,11 @@ modelInput = {
         "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
+        "viscosity": GaVii,
         "mixture-viscosity": GaMiVi,
+        "diffusivity": GaDii,
+        "thermal-conductivity": GaThCoi,
+        "mixture-thermal-conductivity": GaThCoMix,
         "components": {
             "shell": compList,
             "tube": [],
@@ -238,9 +278,29 @@ modelInput = {
         "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "default"
+        "ivp": "LSODA",
+        "root": "fsolve",
+        "mesh": "normal"
+    },
+    "test-const": {
+        "numerical-method": "fem",
+        "Cbi": GaSpCoi,
+        "Tb": T,
+        "MaTrCo0": MaTrCo0,
+        "HeTrCo0": HeTrCo0
     }
 }
+
+# NOTE
+# fsolve, then adjust initial guess 0.5, fdm
+# oc, initial guess would be dimensionless
+# root
+# fsolve
+# least_squares
+# Radau
+# LSODA
+# BDF
+# normal
 
 # run exe
 res = rmtExe(modelInput)

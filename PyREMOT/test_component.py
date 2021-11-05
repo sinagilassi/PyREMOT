@@ -7,7 +7,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from PyREMOT import rmtExe, rmtCom
+from rmt import rmtExe, rmtCom
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 

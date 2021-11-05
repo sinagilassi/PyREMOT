@@ -1,6 +1,11 @@
 # TEST
-# DYNAMIC MODELING
+# STATIC MODELING
 # ----------------
+
+# REVIEW
+# check unit
+# flowrate [mol/s]
+# rate formation [mol/m^3.s]
 
 # import packages/modules
 import numpy as np
@@ -8,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from PyREMOT import rmtExe
+from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
@@ -30,8 +35,8 @@ feedMoFr = setFeedMoleFraction(H2COxRatio, CO2COxRatio)
 # print(f"feed mole fraction: {feedMoFr}")
 
 # mole fraction
-y0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
-              feedMoFr[3], feedMoFr[4], feedMoFr[5]])
+MoFri0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
+                   feedMoFr[3], feedMoFr[4], feedMoFr[5]])
 # print(f"component mole fraction: {y0}")
 
 # concentration [kmol/m3]
@@ -56,10 +61,12 @@ rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
 VoFlRa = InGaVe*rea_CSA
 #  flowrate at STP [m3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
-#  molar flowrate @ ideal gas[kmol/s]
-Ft0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)/1000
-#  initial concentration[kmol/m^3]
-Ct0 = Ft0/VoFlRa
+#  molar flowrate @ ideal gas [mol/s]
+MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
+#  initial concentration[mol/m3]
+Ct0 = MoFlRa0/VoFlRa
+# initial density [kg/m^3]
+# GaDe = Ct0
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -86,6 +93,12 @@ PaDi = cat_d
 CaDe = cat_rho
 # particle specific heat capacity [kJ/kg.K]
 CaSpHeCa = cat_Cp/1000
+# catalyst porosity
+CaPo = cat_por
+# catalyst tortuosity
+CaTo = cat_tor
+# catalyst thermal conductivity [J/K.m.s]
+CaThCo = therCop
 # catalyst bed dencity  [kg/m^3]
 CaBeDe = bulk_rho
 
@@ -96,7 +109,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 523
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -116,7 +129,9 @@ varis0 = {
     # loopVars
     # T,P,NoFri
     #  mole fraction
-    "CaBeDe": CaBeDe,
+    "CaDe": CaDe,
+    # catalyst porosity
+    "CaPo": CaPo,
     # vars key/value
     "RT": lambda x: x['R_CONST']*x['T'],
     #  kinetic constant
@@ -172,11 +187,11 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates [mol/m^3.s]
+# reaction rates
 rates0 = {
-    "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
-    "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
-    "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
+    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaDe'],
+    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaDe'],
+    "r3": lambda x: x['K3']*x['ra5']*x['CaDe']
 }
 
 # reaction rate
@@ -185,21 +200,19 @@ reactionRateSet = {
     "RATES": rates0
 }
 
-# M0: plug-flow reactor
-# M1/M2: packed-bed reactor
-
 # model input - feed
 modelInput = {
-    "model": "M2",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
         "period": opT
     },
     "feed": {
-        "mole-fraction": 0,
-        "molar-flowrate": 0,
+        "mole-fraction": MoFri0,
+        "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
+        "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
         "mixture-viscosity": GaMiVi,
@@ -219,21 +232,37 @@ modelInput = {
         "BeVoFr": bed_por,
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
-        "CaSpHeCa": CaSpHeCa
+        "CaSpHeCa": CaSpHeCa,
+        "CaPo": CaPo,
+        "CaTo": CaTo,
+        "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "LSODA"
+        "ivp": "default"
     }
 }
 
-# solver
-# Radau
-# LSODA
-# BDF
 # run exe
 res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
 
 # save modeling result
-# with open('modelingRes.json', 'w') as f:
+# with open('res.json', 'w') as f:
 #     json.dump(res, f)
+
+# steady-state results
+# concentration
+# total concentration
+# ssModelingData = res['resModel']['dataYs']
+
+# save modeling result [txt]
+# np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
+# load
+# c = np.loadtxt('ssModeling.txt', dtype=np.float64)
+# print("c: ", c, " c Shape: ", c.shape)
+
+# save binary file
+# np.save('ssModeling.npy', ssModelingData)
+# load
+# b2Load = np.load('res3.npy')
+# print("b2Load: ", b2Load, b2Load.shape)

@@ -17,7 +17,7 @@ You can install this package
 The main method is called as:
 
 ```python
-    from PyREMOT import rmtExe
+    from rmt import rmtExe
 
     # model inputs
     # using dashboard to build model inputs
@@ -30,7 +30,7 @@ The main method is called as:
 Check component list available in the current version:
 
 ```python
-    from PyREMOT import rmtCom
+    from rmt import rmtCom
 
     # display component list
     res = rmtCom()

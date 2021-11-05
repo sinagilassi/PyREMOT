@@ -8,22 +8,15 @@
 # rate formation [mol/m^3.s]
 
 # import packages/modules
-import time
-# import resource
-#
 import numpy as np
 import math
 import json
 from data import *
 from core import constants as CONST
-from PyREMOT import rmtExe
+from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
-# NOTE
-# running time
-# time_start = time.perf_counter()
-# insert code here ...
 
 # operating conditions
 # pressure [Pa]
@@ -31,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 50
+opT = 0.5
 
 # set feed mole fraction
 # H2/COx ratio
@@ -48,7 +41,8 @@ MoFri0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
 
 # concentration [kmol/m3]
 ct0 = calConcentration(feedMoFr, P, T)
-# print(f"component concentration: {ct0}")
+# conversion
+ct0_CONV = 1e3*ct0
 
 # total concentration [kmol/m3]
 ct0T = calTotalConcentration(ct0)
@@ -62,16 +56,30 @@ InGaVe = SuGaVe/bed_por
 Fl0 = ct0T*SuGaVe
 # print(f"feed flux: {Ft0}")
 
-#  cross section of reactor x porosity [m2]
+# cross section of reactor x porosity [m^2]
 rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
-#  flowrate @ P & T [m3/s]
+# real flowrate @ P & T [m^3/s]
 VoFlRa = InGaVe*rea_CSA
-#  flowrate at STP [m3/s]
+#  flowrate at STP [m^3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 #  molar flowrate @ ideal gas [mol/s]
 MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
 #  initial concentration[mol/m3]
 Ct0 = MoFlRa0/VoFlRa
+# molar flux
+MoFl0 = MoFlRa0/(rea_CSA/bed_por)
+# or
+MoFl0_2 = Ct0*InGaVe*bed_por
+
+# component all
+compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
+
+# reactions
+reactionSet = {
+    "R1": "CO2 + 3H2 <=> CH3OH + H2O",
+    "R2": "CO + H2O <=> H2 + CO2",
+    "R3": "2CH3OH <=> DME + H2O",
+}
 
 # NOTE
 # reactor
@@ -88,35 +96,28 @@ PaDi = cat_d
 CaDe = cat_rho
 # particle specific heat capacity [kJ/kg.K]
 CaSpHeCa = cat_Cp/1000
-# catalyst porosity
-CaPo = cat_por
-# catalyst tortuosity
-CaTo = cat_tor
-# catalyst thermal conductivity [J/K.m.s]
-CaThCo = therCop
 # catalyst bed dencity  [kg/m^3]
 CaBeDe = bulk_rho
 
 # NOTE
-# component all
-compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
-
-# reactions
-reactionSet = {
-    "R1": "CO2 + 3H2 <=> CH3OH + H2O",
-    "R2": "CO + H2O <=> H2 + CO2",
-    "R3": "2CH3OH <=> DME + H2O",
+# external heat
+# overall heat transfer coefficient [J/m^2.s.K]
+U = 100  # 50
+# effective heat transfer area per unit of reactor volume [m^2/m^3]
+a = 4/ReInDi
+# medium temperature [K]
+Tm = T-1
+# Ua
+Ua = U*a
+#
+externalHeat = {
+    "OvHeTrCo": U,
+    "EfHeTrAr": a,
+    "MeTe": Tm
 }
-# NOTE
-### TEST ###
-# bulk concentration
-GaSpCoi = ct0
-# mass transfer coefficient [m/s]
-MaTrCo0 = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
-                    0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
-# heat transfer coefficient - gas/solid [J/m^2.s.K]
-HeTrCo0 = 1731
 
+# gas mixture viscosity [Pa.s]
+GaMiVi = 1e-5
 
 # NOTE
 # reaction rates
@@ -125,11 +126,7 @@ varis0 = {
     # loopVars
     # T,P,NoFri
     #  mole fraction
-    "CaDe": CaDe,
-    # catalyst bed dencity
-    "CaBeDe": bulk_rho,
-    # catalyst porosity
-    "CaPo": CaPo,
+    "CaBeDe": CaBeDe,
     # vars key/value
     "RT": lambda x: x['R_CONST']*x['T'],
     #  kinetic constant
@@ -199,39 +196,55 @@ reactionRateSet = {
 }
 
 # NOTE
-# external heat
-# overall heat transfer coefficient [J/m^2.s.K]
-U = 50
-# effective heat transfer area per unit of reactor volume [m^2/m^3]
-a = 4/ReInDi
-# medium temperature [K]
-Tm = 523
-# Ua
-Ua = U*a
-#
-externalHeat = {
-    "OvHeTrCo": U,
-    "EfHeTrAr": a,
-    "MeTe": Tm
-}
-
+### partile ###
+# gas viscosity [Pa.s]
+GaVii = np.array([1, 1, 1, 1, 1, 1])
 # gas mixture viscosity [Pa.s]
 GaMiVi = 1e-5
+# diffusivity coefficient - gas phase [m^2/s]
+# GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
+GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
+                  2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
+# thermal conductivity - gas phase [J/s.m.K]
+# GaThCoi = np.zeros(compNo)  # f(T);
+GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
+                    0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
+# mixture thermal conductivity - gas phase [J/s.m.K]
+# convert
+GaThCoMix = 0.125
 
+# NOTE
+### TEST ###
+# bulk concentration
+GaSpCoi = ct0
+# mass transfer coefficient [m/s]
+MaTrCo0 = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
+                    0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
+# heat transfer coefficient - gas/solid [J/m^2.s.K]
+HeTrCo0 = 1731
+
+
+# M0: plug-flow reactor
+# M1/M2: packed-bed reactor
+# N1: steady-state dimensionless homogenous modeling
+# N2: dynamic dimensionless homogenous modeling
+
+# NOTE
 # model input - feed
 modelInput = {
-    "model": "M7",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
-        "period": opT
+        "period": opT,
+        "process-type": "non-iso-thermal",
     },
     "feed": {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
-        "molar-flux": 0,
+        "molar-flux": MoFl0,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0*1000,
+        "concentration": ct0_CONV,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
@@ -252,13 +265,29 @@ modelInput = {
         "CaSpHeCa": CaSpHeCa
     },
     "solver-config": {
-        "ivp": "default"
+        "ivp": "default",
+        "display-result": "True"
+    },
+    "test-const": {
+        "numerical-method": "fem",
+        "Cbi": GaSpCoi,
+        "Tb": T,
+        "MaTrCo0": MaTrCo0,
+        "HeTrCo0": HeTrCo0
     }
 }
+
+# default
+# Radau
+# LSODA
+# BDF
+# normal
 
 # run exe
 res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
+
+# dataYs = res['resModel'][0]['dataYs']
 
 # save modeling result
 # with open('res.json', 'w') as f:
@@ -267,7 +296,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-ssModelingData = res['resModel']['dataYs']
+# ssModelingData = np.array(res['resModel']['dataYs'])
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -276,12 +305,8 @@ ssModelingData = res['resModel']['dataYs']
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-# np.save('ResM3.npy', ssModelingData)
+# if modelInput['model'] == 'N1':
+#     np.save('ResN1.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)
-
-
-# time_elapsed = (time.perf_counter() - time_start)
-# memMb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0/1024.0
-# print("%5.1f secs %5.1f MByte" % (time_elapsed, memMb))

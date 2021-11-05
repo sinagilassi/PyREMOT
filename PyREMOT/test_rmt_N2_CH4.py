@@ -13,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from PyREMOT import rmtExe
+from rmt import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
@@ -105,8 +105,11 @@ CaBeDe = bulk_rho
 MoFri0 = np.array([MoFr_CH4, MoFr_C2H4, MoFr_H2])
 # concentration [kmol/m3]
 ct0 = calConcentration(MoFri0, P, T, 'kmol/m^3')
+# conversion
+ct0_CONV = 1e3*ct0
 # total concentration [kmol/m3]
 ct0T = calTotalConcentration(ct0)
+
 
 # inlet fixed bed interstitial gas velocity [m/s]
 InGaVe = SuGaVe/bed_por
@@ -136,7 +139,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 0  # T
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -187,7 +190,7 @@ varis0 = {
     # T,P,NoFri,SpCoi
     # other vars
     # [m^3/(mol*s)]
-    "k0": 0.0072,
+    "k0": 0.0072*1e-1,
     "y_CH4": lambda x: x['MoFri'][0],
     "C_CH4": lambda x: x['SpCoi'][0]
 }
@@ -209,18 +212,19 @@ reactionRateSet = {
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N1",
+    "model": "N2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
-        "period": opT
+        "period": opT,
+        "process-type": "non-iso-thermal"
     },
     "feed": {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
         "molar-flux": MoFl0,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0,
+        "concentration": ct0_CONV,
         "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
