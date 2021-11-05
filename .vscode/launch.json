@@ -8,7 +8,7 @@
       "name": "Static Modeling [M1]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME2.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME2.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -16,7 +16,7 @@
       "name": "Static Modeling CH4 [M1]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_C2.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_C2.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -24,7 +24,7 @@
       "name": "Dynamic Modeling [M2]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -32,7 +32,7 @@
       "name": "Static Modeling [M3]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME3.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME3.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -40,7 +40,7 @@
       "name": "Static Modeling [M4]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME4.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME4.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -48,7 +48,7 @@
       "name": "Dynamic Modeling [M5]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME5.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME5.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -56,7 +56,7 @@
       "name": "Dynamic Modeling [M6]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME6.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME6.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -64,7 +64,7 @@
       "name": "Dynamic Modeling CH4 [M6]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_C6.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_C6.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -72,7 +72,7 @@
       "name": "Static Modeling DME [M7]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_DME6.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_DME6.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -80,7 +80,7 @@
       "name": "Static Modeling CH4 [M7]",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_CH4_6.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_CH4_6.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -88,7 +88,7 @@
       "name": "Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}\\PyREMOT\\solvers\\solOrCo.py",
+      "program": "${workspaceFolder}\\pyremot\\solvers\\solOrCo.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -96,7 +96,7 @@
       "name": "Mesh Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}\\PyREMOT\\testMesh.py",
+      "program": "${workspaceFolder}\\pyremot\\testMesh.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -104,7 +104,7 @@
       "name": "ODE Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}\\PyREMOT\\solvers\\odeSolver.py",
+      "program": "${workspaceFolder}\\pyremot\\solvers\\odeSolver.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -112,7 +112,7 @@
       "name": "FEM Test",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}\\PyREMOT\\testFiEl.py",
+      "program": "${workspaceFolder}\\pyremot\\testFiEl.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -120,7 +120,7 @@
       "name": "Static Modeling [N1] CH4 ",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_N2_CH4.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_N2_CH4.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -128,7 +128,7 @@
       "name": "Static Modeling [N1] DME ",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_rmt_N1_DME.py",
+      "program": "${workspaceFolder}/pyremot/test_rmt_N1_DME.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     },
@@ -136,7 +136,7 @@
       "name": "Check Component List",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/PyREMOT/test_component.py",
+      "program": "${workspaceFolder}/pyremot/test_component.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
     }
