@@ -232,3 +232,9 @@ Temperature results:
 
 All modeling results is also saved in dataYs. 
 
+
+## FAQ
+
+For any question, you can conatct me on [LinkedIn](https://www.linkedin.com/in/sina-gilassi/) or [Twitter](https://twitter.com/sinagilassi). 
+
+
