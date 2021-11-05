@@ -1,2 +1,2 @@
-from PyREMOT.rmt import rmtExe
-from PyREMOT.rmt import rmtCom
+from pyremot.rmt import rmtExe
+from pyremot.rmt import rmtCom
