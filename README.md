@@ -40,13 +40,13 @@ define reacions as:
 
 then:
 
-    ```python
+```python
     reactionSet = {
     "R1":"CO2+3H2<=>CH3OH+H2O",
     "R2":"CO+H2O<=>H2+CO2",
     "R3":"2CH3OH<=>DME+H2O"
     }
-    ```
+```
 
 In order to define reaction rate expressions, there are two code sections as
 
