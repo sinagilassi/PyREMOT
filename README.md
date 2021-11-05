@@ -14,5 +14,30 @@ You can install this package
 
 ## Documentation
 
-The RMT UI is available to initialize reaction modeling projects. This UI has 
+
+## Documentation
+
+PyREMOT UI dashboard conatins some panels as: 
+
+1- MODEL SELECTION
+
+2- COMPONENTS
+
+3- REACTIONS
+
+4- PROPERTIES
+
+5- REACTOR
+
+6- HEAT-EXCHANGER
+
+7- SOLVER
+
+After setting all modules, you can find 'model input' in python format in the summary panel. Then, copy the content of this file in your python framework and run it!
+
+You can also find an example on PyREMOT dashboard, load it and then have a look at the summary panel.
+
+
+
+
 
