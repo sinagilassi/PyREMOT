@@ -10,7 +10,7 @@ from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 def main():
     """
-        Reactor Modeling Tools in Python
+    Python Reactor Modeling Tools (PyREMOT) 
     """
     pass
 
@@ -74,6 +74,19 @@ def rmtExe(modelInput):
         return res
     except Exception as e:
         print(e)
+        raise
+
+
+def rmtCom():
+    '''
+    display components available in the current version 
+    '''
+    try:
+        # print(componentSymbolList)
+        # name list
+        compListName = ','
+        return compListName.join(componentSymbolList)
+    except Exception as e:
         raise
 
 

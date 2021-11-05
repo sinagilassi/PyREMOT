@@ -131,6 +131,14 @@
       "program": "${workspaceFolder}/rmt/test_rmt_N1_DME.py",
       "console": "integratedTerminal",
       "python": "${command:python.interpreterPath}"
+    },
+    {
+      "name": "Check Component List",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/rmt/test_component.py",
+      "console": "integratedTerminal",
+      "python": "${command:python.interpreterPath}"
     }
   ]
 }

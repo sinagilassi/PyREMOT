@@ -2,7 +2,7 @@
 # ---------------------
 
 # import packages/modules
-import numpy as np
+# import numpy as np
 
 # molecular weight [g/mol]
 MW_H2 = 2.0
@@ -14,6 +14,10 @@ MW_DME = 46.07
 MW_N2 = 28
 MW_CH4 = 16.04
 MW_C2H4 = 28.05
+MW_C3H6 = 42.08
+MW_C3H8 = 44.1
+MW_C4H10 = 58.12
+
 # ->
 MWi = [MW_H2, MW_CO2, MW_H2O, MW_CO, MW_CH3OH, MW_DME]
 
@@ -27,6 +31,9 @@ Tc_DME = 400
 Tc_N2 = 126.192
 Tc_CH4 = 190.56
 Tc_C2H4 = 282.34
+Tc_C3H6 = 369.9
+Tc_C3H8 = 369.15
+Tc_C4H10 = 425
 
 # critical pressure [bar]
 Pc_CO2 = 73.74
@@ -38,6 +45,10 @@ Pc_DME = 53
 Pc_N2 = 33.98
 Pc_CH4 = 45.99
 Pc_C2H4 = 50.41
+Pc_C3H6 = 46.0
+Pc_C3H8 = 42.5
+Pc_C4H10 = 38.0
+
 
 # acentric factor
 w_CO2 = 0.239
@@ -49,6 +60,10 @@ w_DME = 0.200
 w_N2 = 0.039
 w_CH4 = 0.011
 w_C2H4 = 0.087
+w_C3H6 = 0.137
+w_C3H8 = 0.149
+w_C4H10 = 0.197
+
 
 # heat of formation at 25C [kJ/mol]
 dHf25_CO2 = -393.51
@@ -66,7 +81,7 @@ dHf25_C2H4 = 52.32
 dHf25_C3H6 = 20.4
 dHf25_C3H8 = -103.9
 dHf25_C4H10 = -126.2
-dHf25_C2H6O = -235.0
+# dHf25_C2H6O = -235.0
 
 # standard gibbs free energy at 25 C [kJ/mol]
 dGf25_CO2 = -394.6
@@ -84,7 +99,7 @@ dGf25_C2H4 = 68.17
 dGf25_C3H6 = 62.76
 dGf25_C3H8 = -23.50
 dGf25_C4H10 = -17.2
-dGf25_C2H6O = -168.4
+# dGf25_C2H6O = -168.4
 
 
 # component database
@@ -260,6 +275,63 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_C2H4
+            }
+        },
+        {
+            "symbol": "C3H6",
+            "MW": MW_C3H6,
+            "Pc": Pc_C3H6,
+            "Tc": Tc_C3H6,
+            "w": w_C3H6,
+            "Cp": {
+                "unit": "kJ/kmol.K",
+                "expr": "3.151 + 23.812E-02*T + -12.176E-05*(T**2) + 24.603E-09*(T**3)"
+            },
+            "dHf25": {
+                "unit": "kJ/mol",
+                "val": dHf25_C3H6
+            },
+            "dGf25": {
+                "unit": "kJ/mol",
+                "val": dGf25_C3H6
+            }
+        },
+        {
+            "symbol": "C3H8",
+            "MW": MW_C3H8,
+            "Pc": Pc_C3H8,
+            "Tc": Tc_C3H8,
+            "w": w_C3H8,
+            "Cp": {
+                "unit": "kJ/kmol.K",
+                "expr": "-4.042 + 30.456E-02*T + -15.711E-05*(T**2) + 31.716E-09*(T**3)"
+            },
+            "dHf25": {
+                "unit": "kJ/mol",
+                "val": dHf25_C3H8
+            },
+            "dGf25": {
+                "unit": "kJ/mol",
+                "val": dGf25_C3H8
+            }
+        },
+        {
+            "symbol": "C4H10",
+            "MW": MW_C4H10,
+            "Pc": Pc_C4H10,
+            "Tc": Tc_C4H10,
+            "w": w_C4H10,
+            "Cp": {
+                "unit": "kJ/kmol.K",
+                "expr": "-7.908 + 41.573E-02*T + -22.992E-05*(T**2) + 49.875E-09*(T**3)"
+            },
+            "dHf25": {
+                "unit": "kJ/mol",
+                "val": dHf25_C4H10
+            },
+            "dGf25": {
+                "unit": "kJ/mol",
+                "val": dGf25_C4H10
             }
         },
     ]
