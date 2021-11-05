@@ -26,7 +26,9 @@ PyREMOT UI dashboard conatins some panels as:
 
 this code is automaticly converted to python as:
 
+  ```python
     compList = ["H2","CO2","H2O","CO","CH3OH","DME"]
+  ```
 
 3- REACTIONS
 
