@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 DESCRIPTION = 'Python Reactor Modeling Tools (PyREMOT)'
 LONG_DESCRIPTION = 'PyREMOT consists of some numerical models of packed-bed reactors which can be used for parameters estimation/simulation/optimization cases.'
 
@@ -22,7 +22,7 @@ setup(
     long_description=long_description,
     packages=find_packages(),
     install_requires=['opencv-python', 'numpy',
-                      'scipy', 'matplotlib'],
+                      'scipy', 'matplotlib', 'time'],
     keywords=['python', 'chemical engineering', 'packed-bed reactor',
               'homogenous reactor', 'reaction engineering'],
     classifiers=[

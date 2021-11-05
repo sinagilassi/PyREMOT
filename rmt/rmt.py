@@ -2,6 +2,7 @@
 # ---------------------------------
 
 # import packages/modules
+import time
 import timeit
 from docs.rmtCore import rmtCoreClass
 from data.componentData import componentSymbolList
