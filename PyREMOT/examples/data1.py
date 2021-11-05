@@ -13,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from rmt import rmtExe
+from PyREMOT import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 50
+opT = 10
 
 # set feed mole fraction
 # H2/COx ratio
@@ -55,20 +55,18 @@ InGaVe = SuGaVe/bed_por
 Fl0 = ct0T*SuGaVe
 # print(f"feed flux: {Ft0}")
 
-# cross section of reactor x porosity [m^2]
+#  cross section of reactor x porosity [m2]
 rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
-# real flowrate @ P & T [m^3/s]
+#  flowrate @ P & T [m3/s]
 VoFlRa = InGaVe*rea_CSA
-#  flowrate at STP [m^3/s]
+#  flowrate at STP [m3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 #  molar flowrate @ ideal gas [mol/s]
 MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
 #  initial concentration[mol/m3]
 Ct0 = MoFlRa0/VoFlRa
-# molar flux
-MoFl0 = MoFlRa0/(rea_CSA/bed_por)
-# or
-MoFl0_2 = Ct0*InGaVe*bed_por
+# initial density [kg/m^3]
+# GaDe = Ct0
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -95,6 +93,12 @@ PaDi = cat_d
 CaDe = cat_rho
 # particle specific heat capacity [kJ/kg.K]
 CaSpHeCa = cat_Cp/1000
+# catalyst porosity
+CaPo = cat_por
+# catalyst tortuosity
+CaTo = cat_tor
+# catalyst thermal conductivity [J/K.m.s]
+CaThCo = therCop
 # catalyst bed dencity  [kg/m^3]
 CaBeDe = bulk_rho
 
@@ -105,7 +109,7 @@ U = 50
 # effective heat transfer area per unit of reactor volume [m^2/m^3]
 a = 4/ReInDi
 # medium temperature [K]
-Tm = 523
+Tm = 0
 # Ua
 Ua = U*a
 #
@@ -125,7 +129,9 @@ varis0 = {
     # loopVars
     # T,P,NoFri
     #  mole fraction
-    "CaBeDe": CaBeDe,
+    "CaDe": CaDe,
+    # catalyst porosity
+    "CaPo": CaPo,
     # vars key/value
     "RT": lambda x: x['R_CONST']*x['T'],
     #  kinetic constant
@@ -181,11 +187,11 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates [mol/m^3.s]
+# reaction rates
 rates0 = {
-    "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
-    "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
-    "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
+    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaDe'],
+    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaDe'],
+    "r3": lambda x: x['K3']*x['ra5']*x['CaDe']
 }
 
 # reaction rate
@@ -194,21 +200,19 @@ reactionRateSet = {
     "RATES": rates0
 }
 
-# M0: plug-flow reactor
-# M1/M2: packed-bed reactor
-
-# NOTE
 # model input - feed
 modelInput = {
-    "model": "N1",
+    "model": "M11",
     "operating-conditions": {
         "pressure": P,
-        "temperature": T
+        "temperature": T,
+        "period": opT
     },
     "feed": {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
-        "molar-flux": MoFl0,
+        "molar-flux": 0,
+        "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
         "mixture-viscosity": GaMiVi,
@@ -228,7 +232,10 @@ modelInput = {
         "BeVoFr": bed_por,
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
-        "CaSpHeCa": CaSpHeCa
+        "CaSpHeCa": CaSpHeCa,
+        "CaPo": CaPo,
+        "CaTo": CaTo,
+        "CaThCo": CaThCo
     },
     "solver-config": {
         "ivp": "default"
@@ -255,7 +262,7 @@ res = rmtExe(modelInput)
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-# np.save('ResM1.npy', ssModelingData)
+# np.save('ssModeling.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)

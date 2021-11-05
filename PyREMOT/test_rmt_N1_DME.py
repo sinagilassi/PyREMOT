@@ -13,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from rmt import rmtExe
+from PyREMOT import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 

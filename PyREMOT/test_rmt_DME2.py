@@ -1,6 +1,11 @@
 # TEST
-# DYNAMIC MODELING
+# STATIC MODELING
 # ----------------
+
+# REVIEW
+# check unit
+# flowrate [mol/s]
+# rate formation [mol/m^3.s]
 
 # import packages/modules
 import numpy as np
@@ -8,7 +13,7 @@ import math
 import json
 from data import *
 from core import constants as CONST
-from rmt import rmtExe
+from PyREMOT import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
@@ -19,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 10
+opT = 50
 
 # set feed mole fraction
 # H2/COx ratio
@@ -30,8 +35,8 @@ feedMoFr = setFeedMoleFraction(H2COxRatio, CO2COxRatio)
 # print(f"feed mole fraction: {feedMoFr}")
 
 # mole fraction
-y0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
-              feedMoFr[3], feedMoFr[4], feedMoFr[5]])
+MoFri0 = np.array([feedMoFr[0], feedMoFr[1], feedMoFr[2],
+                   feedMoFr[3], feedMoFr[4], feedMoFr[5]])
 # print(f"component mole fraction: {y0}")
 
 # concentration [kmol/m3]
@@ -50,16 +55,20 @@ InGaVe = SuGaVe/bed_por
 Fl0 = ct0T*SuGaVe
 # print(f"feed flux: {Ft0}")
 
-#  cross section of reactor x porosity [m2]
+# cross section of reactor x porosity [m^2]
 rea_CSA = rmtUtil.reactorCrossSectionArea(bed_por, rea_D)
-#  flowrate @ P & T [m3/s]
+# real flowrate @ P & T [m^3/s]
 VoFlRa = InGaVe*rea_CSA
-#  flowrate at STP [m3/s]
+#  flowrate at STP [m^3/s]
 VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
-#  molar flowrate @ ideal gas[kmol/s]
-Ft0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)/1000
-#  initial concentration[kmol/m^3]
-Ct0 = Ft0/VoFlRa
+#  molar flowrate @ ideal gas [mol/s]
+MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
+#  initial concentration[mol/m3]
+Ct0 = MoFlRa0/VoFlRa
+# molar flux
+MoFl0 = MoFlRa0/(rea_CSA/bed_por)
+# or
+MoFl0_2 = Ct0*InGaVe*bed_por
 
 # component all
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -188,18 +197,18 @@ reactionRateSet = {
 # M0: plug-flow reactor
 # M1/M2: packed-bed reactor
 
+# NOTE
 # model input - feed
 modelInput = {
-    "model": "M2",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
-        "temperature": T,
-        "period": opT
+        "temperature": T
     },
     "feed": {
-        "mole-fraction": 0,
-        "molar-flowrate": 0,
-        "molar-flux": 0,
+        "mole-fraction": MoFri0,
+        "molar-flowrate": MoFlRa0,
+        "molar-flux": MoFl0,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0,
         "mixture-viscosity": GaMiVi,
@@ -222,18 +231,31 @@ modelInput = {
         "CaSpHeCa": CaSpHeCa
     },
     "solver-config": {
-        "ivp": "LSODA"
+        "ivp": "default"
     }
 }
 
-# solver
-# Radau
-# LSODA
-# BDF
 # run exe
 res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
 
 # save modeling result
-# with open('modelingRes.json', 'w') as f:
+# with open('res.json', 'w') as f:
 #     json.dump(res, f)
+
+# steady-state results
+# concentration
+# total concentration
+# ssModelingData = res['resModel']['dataYs']
+
+# save modeling result [txt]
+# np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
+# load
+# c = np.loadtxt('ssModeling.txt', dtype=np.float64)
+# print("c: ", c, " c Shape: ", c.shape)
+
+# save binary file
+# np.save('ResM1.npy', ssModelingData)
+# load
+# b2Load = np.load('res3.npy')
+# print("b2Load: ", b2Load, b2Load.shape)

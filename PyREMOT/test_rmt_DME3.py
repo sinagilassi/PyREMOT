@@ -8,15 +8,22 @@
 # rate formation [mol/m^3.s]
 
 # import packages/modules
+import time
+# import resource
+#
 import numpy as np
 import math
 import json
 from data import *
 from core import constants as CONST
-from rmt import rmtExe
+from PyREMOT import rmtExe
 from core.utilities import roundNum
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
+# NOTE
+# running time
+# time_start = time.perf_counter()
+# insert code here ...
 
 # operating conditions
 # pressure [Pa]
@@ -24,7 +31,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 0.5
+opT = 50
 
 # set feed mole fraction
 # H2/COx ratio
@@ -65,18 +72,6 @@ VoFlRaSTP = rmtUtil.volumetricFlowrateSTP(VoFlRa, P, T)
 MoFlRa0 = rmtUtil.VoFlRaSTPToMoFl(VoFlRaSTP)
 #  initial concentration[mol/m3]
 Ct0 = MoFlRa0/VoFlRa
-# initial density [kg/m^3]
-# GaDe = Ct0
-
-# component all
-compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
-
-# reactions
-reactionSet = {
-    "R1": "CO2 + 3H2 <=> CH3OH + H2O",
-    "R2": "CO + H2O <=> H2 + CO2",
-    "R3": "2CH3OH <=> DME + H2O",
-}
 
 # NOTE
 # reactor
@@ -103,38 +98,15 @@ CaThCo = therCop
 CaBeDe = bulk_rho
 
 # NOTE
-# external heat
-# overall heat transfer coefficient [J/m^2.s.K]
-U = 50
-# effective heat transfer area per unit of reactor volume [m^2/m^3]
-a = 4/ReInDi
-# medium temperature [K]
-Tm = 0
-# Ua
-Ua = U*a
-#
-externalHeat = {
-    "OvHeTrCo": U,
-    "EfHeTrAr": a,
-    "MeTe": Tm
+# component all
+compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
+
+# reactions
+reactionSet = {
+    "R1": "CO2 + 3H2 <=> CH3OH + H2O",
+    "R2": "CO + H2O <=> H2 + CO2",
+    "R3": "2CH3OH <=> DME + H2O",
 }
-
-# gas viscosity [Pa.s]
-GaVii = np.array([1, 1, 1, 1, 1, 1])
-# gas mixture viscosity [Pa.s]
-GaMiVi = 1e-5
-# diffusivity coefficient - gas phase [m^2/s]
-# GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
-GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
-                  2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
-# thermal conductivity - gas phase [J/s.m.K]
-# GaThCoi = np.zeros(compNo)  # f(T);
-GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
-                    0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
-# mixture thermal conductivity - gas phase [J/s.m.K]
-# convert
-GaThCoMix = 0.125
-
 # NOTE
 ### TEST ###
 # bulk concentration
@@ -213,11 +185,11 @@ varis0 = {
     "ra5": lambda x: (math.pow(x['PCH3OH'], 2)/x['PH2O'])-(x['PCH3OCH3']/x['KP3']),
 }
 
-# reaction rates
+# reaction rates [mol/m^3.s]
 rates0 = {
-    "r1": lambda x: x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
-    "r2": lambda x: x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
-    "r3": lambda x: x['K3']*x['ra5']*x['CaBeDe']
+    "r1": lambda x: 1000*x['K1']*(x['ra1']/(math.pow(x['ra2'], 3)))*(1-x['ra3'])*x['CaBeDe'],
+    "r2": lambda x: 1000*x['K2']*(1/x['ra2'])*x['ra4']*x['CaBeDe'],
+    "r3": lambda x: 1000*x['K3']*x['ra5']*x['CaBeDe']
 }
 
 # reaction rate
@@ -227,35 +199,40 @@ reactionRateSet = {
 }
 
 # NOTE
-# model ids
-# M11
-# T1, T2
-# M12
+# external heat
+# overall heat transfer coefficient [J/m^2.s.K]
+U = 50
+# effective heat transfer area per unit of reactor volume [m^2/m^3]
+a = 4/ReInDi
+# medium temperature [K]
+Tm = 523
+# Ua
+Ua = U*a
+#
+externalHeat = {
+    "OvHeTrCo": U,
+    "EfHeTrAr": a,
+    "MeTe": Tm
+}
 
-# M1
+# gas mixture viscosity [Pa.s]
+GaMiVi = 1e-5
 
 # model input - feed
 modelInput = {
-    "model": "M14",
+    "model": "M7",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
-        "period": opT,
-        "process-type": "non-iso-thermal",
-        "numerical-method": "fdm"
+        "period": opT
     },
     "feed": {
         "mole-fraction": MoFri0,
         "molar-flowrate": MoFlRa0,
         "molar-flux": 0,
-        "superficial-velocity": SuGaVe,
         "volumetric-flowrate": VoFlRa,
-        "concentration": ct0,
-        "viscosity": GaVii,
+        "concentration": ct0*1000,
         "mixture-viscosity": GaMiVi,
-        "diffusivity": GaDii,
-        "thermal-conductivity": GaThCoi,
-        "mixture-thermal-conductivity": GaThCoMix,
         "components": {
             "shell": compList,
             "tube": [],
@@ -272,35 +249,12 @@ modelInput = {
         "BeVoFr": bed_por,
         "CaBeDe": bulk_rho,
         "CaDe": CaDe,
-        "CaSpHeCa": CaSpHeCa,
-        "CaPo": CaPo,
-        "CaTo": CaTo,
-        "CaThCo": CaThCo
+        "CaSpHeCa": CaSpHeCa
     },
     "solver-config": {
-        "ivp": "LSODA",
-        "root": "fsolve",
-        "mesh": "normal"
-    },
-    "test-const": {
-        "numerical-method": "fem",
-        "Cbi": GaSpCoi,
-        "Tb": T,
-        "MaTrCo0": MaTrCo0,
-        "HeTrCo0": HeTrCo0
+        "ivp": "default"
     }
 }
-
-# NOTE
-# fsolve, then adjust initial guess 0.5, fdm
-# oc, initial guess would be dimensionless
-# root
-# fsolve
-# least_squares
-# Radau
-# LSODA
-# BDF
-# normal
 
 # run exe
 res = rmtExe(modelInput)
@@ -313,7 +267,7 @@ res = rmtExe(modelInput)
 # steady-state results
 # concentration
 # total concentration
-# ssModelingData = res['resModel']['dataYs']
+ssModelingData = res['resModel']['dataYs']
 
 # save modeling result [txt]
 # np.savetxt('ssModeling.txt', ssModelingData, fmt='%.10e')
@@ -322,7 +276,12 @@ res = rmtExe(modelInput)
 # print("c: ", c, " c Shape: ", c.shape)
 
 # save binary file
-# np.save('ssModeling.npy', ssModelingData)
+# np.save('ResM3.npy', ssModelingData)
 # load
 # b2Load = np.load('res3.npy')
 # print("b2Load: ", b2Load, b2Load.shape)
+
+
+# time_elapsed = (time.perf_counter() - time_start)
+# memMb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024.0/1024.0
+# print("%5.1f secs %5.1f MByte" % (time_elapsed, memMb))
