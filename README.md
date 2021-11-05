@@ -9,7 +9,7 @@ Python Reactor Modeling Tools (PyREMOT) is an open-source package which can be u
 You can install this package 
 
 ```bash
-  pip install rmtpy
+  pip install PyREMOT
 ```
 
 
