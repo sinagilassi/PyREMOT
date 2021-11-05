@@ -174,6 +174,8 @@ reactor and catalyst characteristics:
 
     # ode-solver [-]
     ivp = "default"
+    # display-result [-]
+    diRe = "True"
 
 After setting all modules, you can find 'model input' in python format in the summary panel. Then, copy the content of this file in your python framework and run it!
 
