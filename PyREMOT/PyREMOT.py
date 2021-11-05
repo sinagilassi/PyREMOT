@@ -18,7 +18,7 @@ def main():
 
 def rmtExe(modelInput):
     """
-        This script check model input, then starts computation
+    This script check model input, then starts computation
     """
     # try/exception
     try:
