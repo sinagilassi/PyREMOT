@@ -16,6 +16,30 @@ You can install this package
 
 ## Documentation
 
+The main method is called as:
+
+```python
+    from rmt import rmtExe
+    
+    # model inputs
+    # using dashboard to build model inputs
+    modelInput = {...}
+    
+    # run 
+    res = rmtExe(modelInput)
+  ```
+
+Check component list available in the current version:
+
+```python
+    from rmt import rmtCom
+    
+    # display component list
+    res = rmtCom()
+    print(res)
+    
+  ```
+
 PyREMOT UI dashboard conatins some panels as: 
 
 1- MODEL SELECTION
