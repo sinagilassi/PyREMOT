@@ -2993,19 +2993,19 @@ class PackedBedHomoReactorClass:
 
         # check
         if successStatus is True:
-            # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
-            # -> add label
-            dataList = pltc.plots2DSetDataList(XYList, labelList)
-            # datalists
-            dataLists = [dataList[0:compNo], dataList[indexPressure], dataList[indexTemp]
-                         ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo], dataList[indexPressure]]
-            # select datalist
-            _dataListsSelected = selectFromListByIndex([], dataLists)
-            # subplot result
-            pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
-                            "Concentration (mol/m^3)", plotTitle)
-
+            # # plot setting: build (x,y) series
+            # XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
+            # # -> add label
+            # dataList = pltc.plots2DSetDataList(XYList, labelList)
+            # # datalists
+            # dataLists = [dataList[0:compNo], dataList[indexPressure], dataList[indexTemp]
+            #              ] if processType != PROCESS_SETTING['ISO-THER'] else [dataList[0:compNo], dataList[indexPressure]]
+            # # select datalist
+            # _dataListsSelected = selectFromListByIndex([], dataLists)
+            # # subplot result
+            # pltc.plots2DSub(_dataListsSelected, "Reactor Length (m)",
+            #                 "Concentration (mol/m^3)", plotTitle)
+            pass
         else:
             dataPack = []
 
@@ -3325,6 +3325,8 @@ class PackedBedHomoReactorClass:
 
         # modeling id
         modelingId = modelTypes['N1']['id']
+        # model info
+        modelId = self.modelInput['model']
 
         # solver setting
         solverConfig = self.modelInput['solver-config']
@@ -3610,6 +3612,7 @@ class PackedBedHomoReactorClass:
 
             # check
             if successStatus is False:
+                dataPack = []
                 raise
 
             # REVIEW
@@ -3649,6 +3652,7 @@ class PackedBedHomoReactorClass:
 
             # save data
             dataPack.append({
+                "model": modelId,
                 "successStatus": successStatus,
                 "dataTime": dataTime[-1],
                 "dataYCons1": dataYs_Concentration_DiLeVa,
@@ -3670,81 +3674,60 @@ class PackedBedHomoReactorClass:
         end = timer()
         elapsed = roundNum(end - start)
 
-        # NOTE
-        # steady-state result
-        # txt
-        # ssModelingResult = np.loadtxt('ssModeling.txt', dtype=np.float64)
-        # binary
-        # ssModelingResult = np.load('ResM1.npy')
-        # ssdataXs = np.linspace(0, ReLe, zNo)
-        # ssXYList = pltc.plots2DSetXYList(dataXs, ssModelingResult)
-        # ssdataList = pltc.plots2DSetDataList(ssXYList, labelList)
-        # datalists
-        # ssdataLists = [ssdataList[0:compNo],
-        #                ssdataList[indexTemp]]
-        # subplot result
-        # pltc.plots2DSub(ssdataLists, "Reactor Length (m)",
-        #                 "Concentration (mol/m^3)", "1D Plug-Flow Reactor")
+        # # NOTE
+        # # plot info
+        # plotTitle = f"Dynamic Modeling {modelingId} for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
+        # xLabelSet = "Dimensionless Reactor Length"
+        # yLabelSet = "Dimensionless Concentration"
 
-        # plot info
-        plotTitle = f"Dynamic Modeling {modelingId} for opT: {opT} with zNo: {zNo}, tNo: {tNo} within {elapsed} seconds"
-        xLabelSet = "Dimensionless Reactor Length"
-        yLabelSet = "Dimensionless Concentration"
+        # # REVIEW
+        # # display result at specific time
+        # for i in range(tNo):
+        #     # var list
+        #     _dataYs = dataPack[i]['dataYs']
+        #     # plot setting: build (x,y) series
+        #     XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
+        #     # -> add label
+        #     dataList = pltc.plots2DSetDataList(XYList, labelList)
+        #     # datalists
+        #     dataLists = [dataList[0:compNo],
+        #                  dataList[indexTemp]]
+        #     if i == tNo-1:
+        #         # subplot result
+        #         pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
 
-        # REVIEW
-        # display result at specific time
-        for i in range(tNo):
-            # var list
-            _dataYs = dataPack[i]['dataYs']
-            # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataXs, _dataYs)
-            # -> add label
-            dataList = pltc.plots2DSetDataList(XYList, labelList)
-            # datalists
-            dataLists = [dataList[0:compNo],
-                         dataList[indexTemp]]
-            if i == tNo-1:
-                # subplot result
-                pltc.plots2DSub(dataLists, xLabelSet, yLabelSet, plotTitle)
+        # # REVIEW
+        # # display result within time span
+        # _dataListsLoop = []
+        # _labelNameTime = []
 
-        # REVIEW
-        # display result within time span
-        _dataListsLoop = []
-        _labelNameTime = []
+        # for i in range(varNo):
+        #     # var list
+        #     _dataPacktime = dataPacktime[i]
+        #     # plot setting: build (x,y) series
+        #     XYList = pltc.plots2DSetXYList(dataXs, _dataPacktime)
+        #     # -> add label
+        #     # build label
+        #     for t in range(tNo):
+        #         _name = labelList[i] + " at t=" + str(opTSpan[t+1])
+        #         _labelNameTime.append(_name)
 
-        for i in range(varNo):
-            # var list
-            _dataPacktime = dataPacktime[i]
-            # plot setting: build (x,y) series
-            XYList = pltc.plots2DSetXYList(dataXs, _dataPacktime)
-            # -> add label
-            # build label
-            for t in range(tNo):
-                _name = labelList[i] + " at t=" + str(opTSpan[t+1])
-                _labelNameTime.append(_name)
+        #     dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
+        #     # datalists
+        #     _dataListsLoop.append(dataList[0:tNo])
+        #     # reset
+        #     _labelNameTime = []
 
-            dataList = pltc.plots2DSetDataList(XYList, _labelNameTime)
-            # datalists
-            _dataListsLoop.append(dataList[0:tNo])
-            # reset
-            _labelNameTime = []
+        # # select items
+        # # indices = [0, 2, -1]
+        # # selected_elements = [_dataListsLoop[index] for index in indices]
+        # # select datalist
+        # _dataListsSelected = selectFromListByIndex([1, -1], _dataListsLoop)
 
-        # select items
-        # indices = [0, 2, -1]
-        # selected_elements = [_dataListsLoop[index] for index in indices]
-        # select datalist
-        _dataListsSelected = selectFromListByIndex([1, -1], _dataListsLoop)
+        # # subplot result
+        # pltc.plots2DSub(_dataListsSelected, xLabelSet, yLabelSet, plotTitle)
 
-        # subplot result
-        pltc.plots2DSub(_dataListsSelected, xLabelSet, yLabelSet, plotTitle)
-
-        # return
-        res = {
-            "XYList": XYList,
-            "dataList": dataList
-        }
-
-        return res
+        return dataPack
 
     def modelEquationN2(t, y, paramsSet):
         """

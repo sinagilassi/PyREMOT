@@ -424,7 +424,7 @@ class rmtCoreClass():
 
     def T2Init(self, internalData, reactionListSorted, reactionStochCoeffList):
         """
-        dynamic model of catalyst diffusion-reaction
+        steady-state model of catalyst diffusion-reaction
         """
         # init reactor
         reInit = pMod(self.modelInput, internalData,

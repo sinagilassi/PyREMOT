@@ -24,7 +24,7 @@ P = 5*1e6
 # temperature [K]
 T = 523
 # operation period [s]
-opT = 5
+opT = 1
 
 # set feed mole fraction
 # H2/COx ratio
@@ -195,6 +195,35 @@ reactionRateSet = {
     "RATES": rates0
 }
 
+# NOTE
+### partile ###
+# gas viscosity [Pa.s]
+GaVii = np.array([1, 1, 1, 1, 1, 1])
+# gas mixture viscosity [Pa.s]
+GaMiVi = 1e-5
+# diffusivity coefficient - gas phase [m^2/s]
+# GaDii = np.zeros(compNo)  # gas_diffusivity_binary(yi,T,P0);
+GaDii = np.array([6.61512999110972e-06,	2.12995183554984e-06,	1.39108654241678e-06,
+                  2.20809430865725e-06,	9.64429037148681e-07,	8.74374373632434e-07])
+# thermal conductivity - gas phase [J/s.m.K]
+# GaThCoi = np.zeros(compNo)  # f(T);
+GaThCoi = np.array([0.278863993072407, 0.0353728593093126,	0.0378701882504170,
+                    0.0397024608654616,	0.0412093811132403, 0.0457183034548015])
+# mixture thermal conductivity - gas phase [J/s.m.K]
+# convert
+GaThCoMix = 0.125
+
+# NOTE
+### TEST ###
+# bulk concentration
+GaSpCoi = ct0
+# mass transfer coefficient [m/s]
+MaTrCo0 = np.array([0.0273301866548795,	0.0149179341780856,	0.0108707796723462,
+                    0.0157945517381349,	0.0104869502041277,	0.00898673624257253])
+# heat transfer coefficient - gas/solid [J/m^2.s.K]
+HeTrCo0 = 1731
+
+
 # M0: plug-flow reactor
 # M1/M2: packed-bed reactor
 # N1: steady-state dimensionless homogenous modeling
@@ -236,7 +265,14 @@ modelInput = {
         "CaSpHeCa": CaSpHeCa
     },
     "solver-config": {
-        "ivp": "default"
+        "ivp": "default",
+    },
+    "test-const": {
+        "numerical-method": "fem",
+        "Cbi": GaSpCoi,
+        "Tb": T,
+        "MaTrCo0": MaTrCo0,
+        "HeTrCo0": HeTrCo0
     }
 }
 
@@ -249,6 +285,8 @@ modelInput = {
 # run exe
 res = rmtExe(modelInput)
 # print(f"modeling result: {res}")
+
+dataYs = res['resModel'][0]['dataYs']
 
 # save modeling result
 # with open('res.json', 'w') as f:
