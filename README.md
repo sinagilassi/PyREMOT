@@ -1,7 +1,7 @@
 
-# Reactor Modeling Tools 
+# Python Reactor Modeling Tools 
 
-Reactor Modeling Tools (RMT) is a python package which can be used for simulation, optimization, and parameter estimation. This current version of this app contains both homogenous/heterogenous models which are run under steady-state and dynamic conditions. 
+Python Reactor Modeling Tools (PyREMOT) is an open-source package which can be used for process simulation, optimization, and parameter estimation. The current version consists of homogenous models for steady-state and dynamic conditions. 
 
 
 ## Installation
