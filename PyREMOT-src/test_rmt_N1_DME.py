@@ -266,7 +266,7 @@ modelInput = {
     },
     "solver-config": {
         "ivp": "default",
-        "display-result": "False"
+        "display-result": "True"
     },
     "test-const": {
         "numerical-method": "fem",
