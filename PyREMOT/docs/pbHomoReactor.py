@@ -99,7 +99,7 @@ class PackedBedHomoReactorClass:
         # tSpan = np.linspace(0, rea_L, 25)
 
         # ode call
-        sol = solve_ivp(PackedBedReactorClass.modelEquationM1,
+        sol = solve_ivp(PackedBedHomoReactorClass.modelEquationM1,
                         t, IV, method="LSODA", t_eval=times, args=(P, T))
 
         # ode result
@@ -3133,7 +3133,7 @@ class PackedBedHomoReactorClass:
         SuGaVe0 = InGaVe0*BeVoFr
 
         # components no
-        # y: component molar flowrate, total molar flux, temperature, pressure
+        # y: component molar concentraton, pressure, temperature
         compNo = len(comList)
         indexP = compNo
         indexT = indexP + 1
@@ -3844,7 +3844,7 @@ class PackedBedHomoReactorClass:
         v_z[0] = SuGaVe0
 
         # components no
-        # y: component molar flowrate, total molar flux, temperature, pressure
+        # y: component molar concentration, temperature, pressure
         compNo = len(comList)
         indexT = compNo
         indexP = indexT + 1

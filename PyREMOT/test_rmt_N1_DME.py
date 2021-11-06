@@ -232,7 +232,7 @@ HeTrCo0 = 1731
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N1",
+    "model": "N2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

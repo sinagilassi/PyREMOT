@@ -340,7 +340,8 @@ def plotResultsSteadyState(dataPack):
         # set
         plotTitle = f"Steady-State Modeling {modelId}, computation-time {elapsed}"
         xLabelSet = "Reactor Length (m)"
-        yLabelSet = "Concentration (mol/m^3)"
+        yLabelSet = ("Concentration (mol/$m^3$)",
+                     "Pressure (bar)", "Temperature (K)")
         compNo = indexList[0]
         indexPressure = indexList[1]
         indexTemp = indexList[2]
@@ -357,9 +358,12 @@ def plotResultsSteadyState(dataPack):
             # select datalist
             _dataListsSelected = selectFromListByIndex([], dataLists)
             # subplot result
-            pltc.plots2DSub(_dataListsSelected, xLabelSet,
-                            yLabelSet, plotTitle)
-            pass
+            # pltc.plots2DSub(_dataListsSelected, xLabelSet,
+            #                 yLabelSet, plotTitle)
+            # individual figure
+            for f in range(len(_dataListsSelected)):
+                pltc.plots2D(_dataListsSelected[f], xLabelSet,
+                             yLabelSet[f], plotTitle)
         else:
             dataPack = []
     except Exception as e:
@@ -379,7 +383,7 @@ def plotResultsDynamic(resPack, tNo):
                 dataShape: dataShape,
                 labelList: labelList,
                 indexList: indexList,
-                dataTime: [],
+                dataTime: time interval,
                 dataXs: dataXs,
                 dataYCons1: dataYs_Concentration_DiLeVa,
                 dataYCons2: dataYs_Concentration_ReVa,
@@ -408,7 +412,7 @@ def plotResultsDynamic(resPack, tNo):
         # set
         plotTitle = f"Steady-State Modeling {modelId}, computation-time {elapsed}"
         xLabelSet = "Reactor Length (m)"
-        yLabelSet = "Concentration (mol/m^3)"
+        yLabelSet = ("Concentration (mol/$m^3$)", "Temperature (K)")
         compNo = indexList[0]
         indexPressure = indexList[1]
         indexTemp = indexList[2]
@@ -423,14 +427,15 @@ def plotResultsDynamic(resPack, tNo):
 
             # calculation status
             successStatus = dataPack[i]['successStatus']
-
+            # time
+            dataTime = dataPack[i]['dataTime']
+            # update title
+            plotTitle_Update = plotTitle + f" at t={dataTime}"
             # check
             if successStatus is True:
                 # data
                 dataXs = dataPack[i]['dataXs']
                 dataYs_All = dataPack[i]['dataYs']
-                labelList = dataPack[i]['labelList']
-                indexList = dataPack[i]['indexList']
 
                 # plot setting: build (x,y) series
                 XYList = pltc.plots2DSetXYList(dataXs, dataYs_All)
@@ -442,8 +447,12 @@ def plotResultsDynamic(resPack, tNo):
                 # select datalist
                 _dataListsSelected = selectFromListByIndex([], dataLists)
                 # subplot result
-                pltc.plots2DSub(_dataListsSelected, xLabelSet,
-                                yLabelSet, plotTitle)
+                # pltc.plots2DSub(_dataListsSelected, xLabelSet,
+                #                 yLabelSet, plotTitle)
+                # individual figure
+                for f in range(len(_dataListsSelected)):
+                    pltc.plots2D(_dataListsSelected[f], xLabelSet,
+                                 yLabelSet[f], plotTitle_Update)
             else:
                 dataPack = []
     except Exception as e:
