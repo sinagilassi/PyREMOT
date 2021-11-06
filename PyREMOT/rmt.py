@@ -31,17 +31,17 @@ def rmtExe(modelInput):
         # print(f"model type: {modelType}")
 
         # operating conditions
-        pressure = modelInput['operating-conditions']['pressure']
+        # pressure = modelInput['operating-conditions']['pressure']
         # print(f"pressure: {pressure}")
-        temperature = modelInput['operating-conditions']['temperature']
+        # temperature = modelInput['operating-conditions']['temperature']
         # print(f"temperature: {temperature}")
 
         # feed
-        FeMoFri = modelInput['feed']['mole-fraction']
+        # FeMoFri = modelInput['feed']['mole-fraction']
         # print(f"FeMoFri: {FeMoFri}")
-        FeFlRa = modelInput['feed']['molar-flowrate']
+        # FeFlRa = modelInput['feed']['molar-flowrate']
         # print(f"FeFlRa: {FeFlRa}")
-        MoFl = modelInput['feed']['molar-flux']
+        # MoFl = modelInput['feed']['molar-flux']
         # print(f"MoFl: {MoFl}")
         FeCom = modelInput['feed']['components']
         # print(f"FeCom: {FeCom}")
