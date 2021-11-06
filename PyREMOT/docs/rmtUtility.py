@@ -322,18 +322,18 @@ class rmtUtilityClass:
             # all
             compList0 = []
             # shell
-            shellComp = componentDataDict['shell']
+            shellComp = componentDataDict.get('shell')
             if shellComp:
                 compList0.extend(shellComp)
-            # FIXME
-            # # tube
-            # tubeComp = componentDataDict['tube']
-            # if tubeComp:
-            #     compList0.extend(tubeComp)
-            # # medium
-            # mediumComp = componentDataDict['medium']
-            # if mediumComp:
-            #     compList0.extend(mediumComp)
+            # REVIEW
+            # tube
+            tubeComp = componentDataDict.get('tube')
+            if tubeComp:
+                compList0.extend(tubeComp)
+            # medium
+            mediumComp = componentDataDict.get('medium')
+            if mediumComp:
+                compList0.extend(mediumComp)
             # all
             compList = list(dict.fromkeys(compList0))
             return compList
