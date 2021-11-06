@@ -22,6 +22,7 @@ chrome-profiler-events*.json
 *.launch
 .settings/
 *.sublime-workspace
+**/__pycache__
 
 # IDE - VSCode
 .vscode/*
@@ -49,3 +50,6 @@ Thumbs.db
 # python
 PyREMOT.egg-info/*
 build/*
+
+# desired files
+test_rmt_C2.py

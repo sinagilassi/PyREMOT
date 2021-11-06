@@ -8,7 +8,8 @@ CONST_EQ_GAS_DIFFUSIVITY = {
 
 # gas viscosity
 CONST_EQ_GAS_VISCOSITY = {
-    "eq1GasViscosity": 1
+    "eq1": 1,
+    "eq2": 2
 }
 
 # sherwood number

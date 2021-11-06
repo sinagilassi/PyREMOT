@@ -2,20 +2,22 @@
 # STATIC MODELING
 # ----------------
 
+from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from core.utilities import roundNum
+from rmt import rmtExe
+from core import constants as CONST
+from data import *
+import json
+import math
+import numpy as np
+
+
 # REVIEW
 # check unit
 # flowrate [mol/s]
 # rate formation [mol/m^3.s]
 
 # import packages/modules
-import numpy as np
-import math
-import json
-from data import *
-from core import constants as CONST
-from rmt import rmtExe
-from core.utilities import roundNum
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 
 # operating conditions
@@ -232,7 +234,7 @@ HeTrCo0 = 1731
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N2",
+    "model": "N1",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -240,16 +242,10 @@ modelInput = {
         "process-type": "non-iso-thermal",
     },
     "feed": {
-        "mole-fraction": MoFri0,
-        "molar-flowrate": MoFlRa0,
-        "molar-flux": MoFl0,
         "volumetric-flowrate": VoFlRa,
         "concentration": ct0_CONV,
-        "mixture-viscosity": GaMiVi,
         "components": {
             "shell": compList,
-            "tube": [],
-            "medium": []
         }
     },
     "reactions": reactionSet,
@@ -267,13 +263,6 @@ modelInput = {
     "solver-config": {
         "ivp": "default",
         "display-result": "True"
-    },
-    "test-const": {
-        "numerical-method": "fem",
-        "Cbi": GaSpCoi,
-        "Tb": T,
-        "MaTrCo0": MaTrCo0,
-        "HeTrCo0": HeTrCo0
     }
 }
 

@@ -4,9 +4,9 @@
 # import packages/modules
 import time
 import timeit
-from docs.rmtCore import rmtCoreClass
-from data.componentData import componentSymbolList
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtCore import rmtCoreClass
+from PyREMOT.data.componentData import componentSymbolList
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 
 def main():

@@ -16,18 +16,18 @@ from .rmtUtility import rmtUtilityClass as rmtUtil
 from .rmtThermo import *
 from .fluidFilm import *
 from .rmtReaction import reactionRateExe, componentFormationRate
-from .gasTransPor import calTest
-from core.errors import errGeneralClass as errGeneral
-from core.setting import modelTypes
-from data.inputDataReactor import *
-from core import constants as CONST
-from core.utilities import roundNum, selectFromListByIndex
-from core.config import REACTION_RATE_ACCURACY
-from solvers.solSetting import solverSetting
-from core.eqConstants import CONST_EQ_Sh
-from solvers.odeSolver import AdBash3, PreCorr3
-from solvers.solResultAnalysis import sortResult4, sortResult5, plotResultsSteadyState, plotResultsDynamic
-from solvers.solProgress import printProgressBar
+from .gasTransPor import calGasViscosity, calMixturePropertyM1
+from PyREMOT.core.errors import errGeneralClass as errGeneral
+from PyREMOT.core.setting import modelTypes
+from PyREMOT.data.inputDataReactor import *
+from PyREMOT.core import constants as CONST
+from PyREMOT.core.utilities import roundNum, selectFromListByIndex
+from PyREMOT.core.config import REACTION_RATE_ACCURACY
+from PyREMOT.solvers.solSetting import solverSetting
+from PyREMOT.core.eqConstants import CONST_EQ_Sh
+from PyREMOT.solvers.odeSolver import AdBash3, PreCorr3
+from PyREMOT.solvers.solResultAnalysis import sortResult4, sortResult5, plotResultsSteadyState, plotResultsDynamic
+from PyREMOT.solvers.solProgress import printProgressBar
 
 
 class PackedBedHomoReactorClass:
@@ -2774,7 +2774,9 @@ class PackedBedHomoReactorClass:
         a = 4/ReInDi  # ExHe['EfHeTrAr']
 
         # gas mixture viscosity [Pa.s]
-        GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        # GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        GaVii0 = calGasViscosity(compList, T)
+        GaMiVi = calMixturePropertyM1(compNo, GaVii0, MoFri0, MoWei)
 
         # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
         # Cp mean list
@@ -3405,7 +3407,9 @@ class PackedBedHomoReactorClass:
         a = 4/ReInDi  # ExHe['EfHeTrAr']
 
         # gas mixture viscosity [Pa.s]
-        GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        # GaMiVi = self.modelInput['feed']['mixture-viscosity']
+        GaVii0 = calGasViscosity(compList, T)
+        GaMiVi = calMixturePropertyM1(compNo, GaVii0, MoFri0, MoWei)
 
         # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
         # Cp mean list

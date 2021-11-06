@@ -7,16 +7,20 @@ import numpy as np
 import re
 # internals
 from core.constants import Tref, R_CONST
-from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
+from data.componentData import viscosityEqList
+from data.dataGasViscosity import viscosityList
 from core.utilities import roundNum
 from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY, CONST_EQ_GAS_VISCOSITY
 from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from data.dataGasViscosity import eq1GasViscosityData, eq2GasViscosityData
+from data.dataGasViscosity import viscosityList
 
 
 def main():
     pass
 
+
+# NOTE
+### diffusivity ###
 
 def calGasDiffusivity(equation, compList, params):
     """ 
@@ -123,29 +127,8 @@ def calGaDiEq1(compList, params):
     # res
     return Di
 
-
-def calGasViscosity(equation, compList, params):
-    """ 
-    calculate gas viscosity []
-    args:
-        params: changes with equation
-        eq1: Chapman-Enskog
-    """
-    # viscosity list
-    visList = []
-    # component check
-    for i in range(len(compList)):
-        _loopEqName = compList[i]['viscosity']
-        _loopSymbol = compList[i]['symbol']
-        # choose equation
-        if _loopEqName == 1:
-            # eq input
-            _eqParams = rmtUtil.extractSingleCompData(
-                _loopSymbol, eq1GasViscosityData, "viscosity")
-            _loopRes = calGaDiEq1(_eqParams)
-            visList.append(_loopRes)
-        else:
-            return -1
+# NOTE
+### viscosity ###
 
 
 def calGasVisEq1(params, T):
@@ -166,6 +149,123 @@ def calGasVisEq1(params, T):
         return _res
     except Exception as e:
         raise
+
+
+def calGasVisEq2(eqExpr, T):
+    """ 
+    gas viscosity equation - Pa.s
+    args:
+        eqExpr: equation expression
+        T: temperature [K]
+    """
+    # try/except
+    try:
+        return eval(eqExpr)
+    except Exception as e:
+        raise
+
+
+def calGasViscosity(comList, T):
+    """
+        cal: gas viscosity at low pressure 
+        unit: [Pa.s]
+
+        args:
+            comList: component name list
+            T: temperature [K]
+    """
+    # try/except
+    try:
+        # heat capacity
+        _Vii = []
+
+        # load data
+        loadEqData = viscosityEqList
+        loadData = viscosityList
+
+        for i in comList:
+            # get id
+            eqIdData = [item['id']
+                        for item in loadEqData if i == item['symbol']]
+            # get eq parameters
+            eqData = [{"eqParams": item['eqParams'], "eqExpr": item['eqExpr']}
+                      for item in loadData if i == item['symbol']]
+            # check
+            _eqLen = len(eqIdData) + len(eqData)
+            if _eqLen > 0:
+                _eqIdSet = eqIdData[0]
+                _eqData = eqData[0]
+                if _eqIdSet == 1:
+                    _eqParams = _eqData.get('eqParams')
+                    _res = calGasVisEq1(_eqParams, T)
+                    _Vii.append(_res)
+                elif _eqIdSet == 2:
+                    _eqExpr = _eqData.get('eqExpr')
+                    # build fun
+                    _res = calGasVisEq2(_eqExpr, T)
+                    _Vii.append(_res)
+                else:
+                    print('viscosity data not found, update app database!')
+                    raise
+            else:
+                print("component not found, update the app database!")
+                raise
+
+        # convert to numpy array
+        Vii = np.array(_Vii)
+
+        # res
+        return Vii
+    except Exception as e:
+        print(e)
+
+
+def calMixturePropertyM1(compNo, Xi, MoFri, MWi):
+    '''
+    calculate mixture property M1
+        Method of Wilke
+    args:
+        compNo: component number
+        Xi: property name []
+        MoFri: mole fraction [-]
+        MWi: molecular weight [g/mol]
+    '''
+    try:
+
+        # wilke res
+        wilkeCo = np.zeros((compNo, compNo))
+        for i in range(compNo):
+            for j in range(compNo):
+                if i == j:
+                    wilkeCo[i, j] = 1
+                else:
+                    if i < j:
+                        # wilke coefficient mix
+                        A = 1 + sqrt(Xi[i]/Xi[j])*((MWi[j]/MWi[i])**(1/4))
+                        AA = A**2
+                        B = 8*(1+(MWi[i]/MWi[j]))
+                        BB = sqrt(B)
+                        wilkeCo[i, j] = AA/BB
+                    else:
+                        C = (Xi[i]/Xi[j])*(MWi[j]/MWi[i]) * wilkeCo[j, i]
+                        wilkeCo[i, j] = C
+        # vars
+        A = np.zeros(compNo)
+        B = np.zeros((compNo, compNo))
+        # mixture property
+        mixProp = np.zeros(compNo)
+        for i in range(compNo):
+            A[i] = Xi[i]*MoFri[i]
+            for j in range(compNo):
+                B[i, j] = MoFri[j]*wilkeCo[i, j]
+            # set
+            mixProp[i] = A[i]/np.sum(B[i, :])
+
+        mixPropVal = np.sum(mixProp)
+        # res
+        return mixPropVal
+    except Exception as e:
+        print(e)
 
 
 def calTest():

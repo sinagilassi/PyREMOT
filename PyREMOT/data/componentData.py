@@ -5,6 +5,9 @@
 # import numpy as np
 
 # molecular weight [g/mol]
+from core.eqConstants import CONST_EQ_GAS_VISCOSITY
+
+
 MW_H2 = 2.0
 MW_CO2 = 44.01
 MW_H2O = 18.01
@@ -123,7 +126,10 @@ componentDataStore = {
                 "unit": "kJ/mol",
                 "val": dGf25_CO2
             },
-            "viscosity": ["eq1GasViscosity"]
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
+            }
         },
         {
             "symbol": "H2",
@@ -142,6 +148,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_H2
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -161,6 +171,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_CH3OH
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -180,6 +194,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_H2O
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -199,6 +217,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_CO
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -218,6 +240,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_DME
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq2"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -237,6 +263,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_N2
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -256,6 +286,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_CH4
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -275,6 +309,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_C2H4
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -294,6 +332,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_C3H6
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -313,6 +355,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_C3H8
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
         {
@@ -332,6 +378,10 @@ componentDataStore = {
             "dGf25": {
                 "unit": "kJ/mol",
                 "val": dGf25_C4H10
+            },
+            "viscosity": {
+                "id": CONST_EQ_GAS_VISCOSITY["eq1"],
+                "unit": "Pa.s"
             }
         },
     ]
@@ -362,3 +412,8 @@ standardHeatOfFormationList = tuple([
 standardGibbsFreeEnergyOfFormationList = tuple([
     {"symbol": item['symbol'], "dGf25": item['dGf25']['val'], "unit": item['dGf25']['unit']} for item in componentData])
 # print(standardGibbsFreeEnergyOfFormationList)
+
+# viscosity equation list
+viscosityEqList = tuple([
+    {"symbol": item['symbol'], "id": item['viscosity']['id'], "unit": item['viscosity']['unit']} for item in componentData
+])
