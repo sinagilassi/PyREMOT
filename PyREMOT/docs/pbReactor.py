@@ -5,31 +5,35 @@
 import math as MATH
 import numpy as np
 from numpy.lib import math
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy.optimize import fsolve
 from scipy import optimize
 # internal
-from .modelSetting import MODEL_SETTING, PROCESS_SETTING
-from .rmtUtility import rmtUtilityClass as rmtUtil
-from .rmtThermo import *
-from .fluidFilm import *
-from .rmtReaction import reactionRateExe, componentFormationRate
-from .gasTransPor import calTest
-from core.errors import errGeneralClass as errGeneral
-from data.inputDataReactor import *
-from core import constants as CONST
-from core.utilities import roundNum, selectFromListByIndex
-from core.config import REACTION_RATE_ACCURACY
-from solvers.solSetting import solverSetting
-from core.eqConstants import CONST_EQ_Sh
-from solvers.solOrCo import OrCoClass
-from solvers.solCatParticle import OrCoCatParticleClass
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiSetMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
-from solvers.solFiDi import FiDiMeshGenerator, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
-from solvers.odeSolver import AdBash3, PreCorr3
-from solvers.solResultAnalysis import setOptimizeRootMethod, sortedResult3
+from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.docs.fluidFilm import *
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+from PyREMOT.docs.gasTransPor import calTest
+# library
+from PyREMOT.library.plot import plotClass as pltc
+# data
+from PyREMOT.data.inputDataReactor import *
+# core
+from PyREMOT.core.errors import errGeneralClass as errGeneral
+from PyREMOT.core import constants as CONST
+from PyREMOT.core.utilities import roundNum, selectFromListByIndex
+from PyREMOT.core.config import REACTION_RATE_ACCURACY
+# solvers
+from PyREMOT.solvers.solSetting import solverSetting
+from PyREMOT.core.eqConstants import CONST_EQ_Sh
+from PyREMOT.solvers.solOrCo import OrCoClass
+from PyREMOT.solvers.solCatParticle import OrCoCatParticleClass
+from PyREMOT.solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiSetMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
+from PyREMOT.solvers.solFiDi import FiDiMeshGenerator, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
+from PyREMOT.solvers.odeSolver import AdBash3, PreCorr3
+from PyREMOT.solvers.solResultAnalysis import setOptimizeRootMethod, sortedResult3
 
 
 class PackedBedReactorClass:

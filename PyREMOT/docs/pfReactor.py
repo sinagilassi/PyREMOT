@@ -4,17 +4,20 @@
 # import packages/modules
 import math as MATH
 import numpy as np
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 # internal
-from core.errors import errGeneralClass as errGeneral
-from data.inputDataReactor import *
-from .rmtReaction import reactionRateExe, componentFormationRate
-from core import constants as CONST
-from core.utilities import roundNum
-from core.config import REACTION_RATE_ACCURACY
-from .rmtUtility import rmtUtilityClass as rmtUtil
-from .rmtThermo import *
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+# library
+from PyREMOT.library.plot import plotClass as pltc
+# data
+from PyREMOT.data.inputDataReactor import *
+# core
+from PyREMOT.core.errors import errGeneralClass as errGeneral
+from PyREMOT.core import constants as CONST
+from PyREMOT.core.utilities import roundNum
+from PyREMOT.core.config import REACTION_RATE_ACCURACY
 
 
 class PlugFlowReactorClass:

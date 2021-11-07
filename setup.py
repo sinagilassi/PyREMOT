@@ -7,7 +7,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
     long_description = "\n" + fh.read()
 
-VERSION = '1.0.14'
+VERSION = '1.0.15'
 DESCRIPTION = 'Python Reactor Modeling Tools (PyREMOT)'
 LONG_DESCRIPTION = 'PyREMOT consists of some numerical models of packed-bed reactors which can be used for parameters estimation/simulation/optimization cases.'
 
