@@ -89,15 +89,15 @@ a) define parameters:
 "KP1": math.exp(x['Ln_KP1']);
 "log_KP2": 2167/x['T'] - 0.5194 * math.log10(x['T']) + 1.037e-3*x['T'] - 2.331e-7 * (math.pow(x['T'], 2)) - 1.2777;
 "KP2": math.pow(10, x['log_KP2']);
-"Ln_KP3": 4019/x['T'] + 3.707 * math.log(x['T']) - 2.783e-3*x['T'] + 3.8e-7 _ (math.pow(x['T'], 2)) - 6.56e-4/(math.pow(x['T'], 3)) - 26.64;
+"Ln*KP3": 4019/x['T'] + 3.707 * math.log(x['T']) - 2.783e-3*x['T'] + 3.8e-7 * (math.pow(x['T'], 2)) - 6.56e-4/(math.pow(x['T'], 3)) - 26.64;
 "KP3": math.exp(x['Ln_KP3']);
-"yi_H2": x['MoFri'][0];
+"yi*H2": x['MoFri'][0];
 "yi_CO2": x['MoFri'][1];
 "yi_H2O": x['MoFri'][2];
 "yi_CO": x['MoFri'][3];
 "yi_CH3OH": x['MoFri'][4];
 "yi_DME": x['MoFri'][5];
-"PH2": x['P']_(x['yi_H2'])_1e-5;
+"PH2": x['P']*(x['yi_H2'])_1e-5;
 "PCO2": x['P']_(x['yi_CO2'])_1e-5;
 "PH2O": x['P']_(x['yi_H2O'])_1e-5;
 "PCO": x['P']_(x['yi_CO'])_1e-5;
@@ -113,6 +113,7 @@ then converted:
 
 ```python
    varis0 = {
+   "CaBeDe" : lambda x: x['CaBeDe'],
    "RT": lambda x: x['R_CONST']*x['T'],
    "K1": lambda x: 35.45*math.exp(-1.7069e4/x['RT']),
    "K2": lambda x: 7.3976*math.exp(-2.0436e4/x['RT']),
