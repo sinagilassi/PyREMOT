@@ -77,7 +77,7 @@ In order to define reaction rate expressions, there are two code sections as
 **_ Add ; in the end of each line _**
 
 a) define parameters:
-"CaBeDe" : x['CaBeDe'];
+"CaBeDe" : CaBeDe;
 "RT": x['R_CONST']*x['T'];
 "K1": 35.45*math.exp(-1.7069e4/x['RT']);
 "K2": 7.3976*math.exp(-2.0436e4/x['RT']);
@@ -113,7 +113,7 @@ then converted:
 
 ```python
    varis0 = {
-   "CaBeDe" : lambda x: x['CaBeDe'],
+   "CaBeDe" : CaBeDe,
    "RT": lambda x: x['R_CONST']*x['T'],
    "K1": lambda x: 35.45*math.exp(-1.7069e4/x['RT']),
    "K2": lambda x: 7.3976*math.exp(-2.0436e4/x['RT']),
