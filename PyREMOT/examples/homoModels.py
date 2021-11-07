@@ -6,25 +6,30 @@ import math as MATH
 import numpy as np
 from numpy.core.fromnumeric import reshape
 from numpy.lib import math
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy import optimize
 
 # internal
-from core.utilities import roundNum, selectFromListByIndex
-from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+# core
+from PyREMOT.core.utilities import roundNum, selectFromListByIndex
+from PyREMOT.core import constants as CONST
+# library
+from PyREMOT.library.plot import plotClass as pltc
+# docs
+from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.docs.gasTransPor import calTest
+from PyREMOT.docs.fluidFilm import *
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+# data
 from data.inputDataReactor import *
-from core import constants as CONST
-from solvers.solSetting import solverSetting
-from solvers.solResultAnalysis import setOptimizeRootMethod
-from solvers.solFiDi import FiDiMeshGenerator
-from docs.rmtReaction import reactionRateExe, componentFormationRate
-from docs.fluidFilm import *
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from docs.rmtThermo import *
-from docs.gasTransPor import calTest
+# solvers
+from PyREMOT.solvers.solSetting import solverSetting
+from PyREMOT.solvers.solResultAnalysis import setOptimizeRootMethod
+from PyREMOT.solvers.solFiDi import FiDiMeshGenerator
+from PyREMOT.solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiDerivative1, FiDiDerivative2, FiDiNonUniformDerivative1, FiDiNonUniformDerivative2
 
 
 class HomoModelClass:

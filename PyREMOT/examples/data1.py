@@ -11,11 +11,11 @@
 import numpy as np
 import math
 import json
-from data import *
-from core import constants as CONST
-from rmt import rmtExe
-from core.utilities import roundNum
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.data import *
+from PyREMOT.core import constants as CONST
+from PyREMOT.rmt import rmtExe
+from PyREMOT.core.utilities import roundNum
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 
 
 # operating conditions

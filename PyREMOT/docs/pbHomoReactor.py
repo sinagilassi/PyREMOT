@@ -5,7 +5,6 @@
 import math as MATH
 import numpy as np
 from numpy.lib import math
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy.optimize import fsolve
@@ -17,6 +16,8 @@ from PyREMOT.docs.rmtThermo import *
 from PyREMOT.docs.fluidFilm import *
 from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
 from PyREMOT.docs.gasTransPor import calGasViscosity, calMixturePropertyM1
+# library
+from PyREMOT.library.plot import plotClass as pltc
 # data
 from PyREMOT.data import *
 # core

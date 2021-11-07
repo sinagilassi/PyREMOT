@@ -5,28 +5,33 @@
 import math as MATH
 import numpy as np
 from numpy.lib import math
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy import optimize
 from scipy.optimize import fsolve
 # internal
-from data.inputDataReactor import *
-from core import constants as CONST
-from solvers.solSetting import solverSetting
-from docs.rmtReaction import reactionRateExe, componentFormationRate
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from docs.rmtThermo import *
-from solvers.solOrCo import OrCoClass
-from solvers.solFiEl import FiElClass
-from docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
-from solvers.solCatParticle import OrCoCatParticleClass
-from solvers.solCatParticle2 import FiElCatParticleClass
-from docs.gasTransPor import calTest
-from core.utilities import roundNum, selectFromListByIndex, selectRandomList
-from solvers.solResultAnalysis import sortResult2
-from solvers.odeSolver import AdBash3, PreCorr3
+# data
+from PyREMOT.data.inputDataReactor import *
+# library
+from PyREMOT.library.plot import plotClass as pltc
+# core
+from PyREMOT.core import constants as CONST
+from PyREMOT.core.utilities import roundNum, selectFromListByIndex, selectRandomList
+# solvers
+from PyREMOT.solvers.solSetting import solverSetting
+from PyREMOT.solvers.solResultAnalysis import sortResult2
+from PyREMOT.solvers.odeSolver import AdBash3, PreCorr3
+from PyREMOT.solvers.solCatParticle import OrCoCatParticleClass
+from PyREMOT.solvers.solCatParticle2 import FiElCatParticleClass
+from PyREMOT.solvers.solOrCo import OrCoClass
+from PyREMOT.solvers.solFiEl import FiElClass
+from PyREMOT.solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix, FiDiBuildCMatrix_DiLe, FiDiBuildTMatrix_DiLe
+# docs
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+from PyREMOT.docs.gasTransPor import calTest
 
 
 class ParticleModelClass:

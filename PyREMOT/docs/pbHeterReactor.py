@@ -5,7 +5,6 @@
 # import packages/modules
 import math as MATH
 import numpy as np
-from library.plot import plotClass as pltc
 from scipy.integrate import solve_ivp
 from timeit import default_timer as timer
 from scipy import optimize
@@ -18,6 +17,8 @@ from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
 from PyREMOT.docs.gasTransPor import calTest
 from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 from PyREMOT.docs.rmtThermo import *
+# library
+from PyREMOT.library.plot import plotClass as pltc
 # core
 from PyREMOT.core.errors import errGeneralClass as errGeneral
 from PyREMOT.core.eqConstants import CONST_EQ_Sh

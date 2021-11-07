@@ -7,13 +7,13 @@ from scipy.optimize import fsolve
 from scipy.integrate import odeint, solve_ivp
 import matplotlib.pyplot as plt
 # internal
-from docs.rmtCore import rmtCoreClass
-from docs.rmtReaction import reactionRateExe, componentFormationRate
-from solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from reactionList import *
-from docs.rmtThermo import *
-from data1 import *
+from PyREMOT.docs.rmtCore import rmtCoreClass
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+from PyREMOT.solvers.solFiDi import FiDiBuildCMatrix, FiDiBuildTMatrix
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.examples.reactionList import *
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.examples.data1 import *
 
 # ode no
 # 3: concentration
