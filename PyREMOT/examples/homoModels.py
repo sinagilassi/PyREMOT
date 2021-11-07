@@ -24,7 +24,7 @@ from PyREMOT.docs.gasTransPor import calTest
 from PyREMOT.docs.fluidFilm import *
 from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
 # data
-from data.inputDataReactor import *
+from PyREMOT.data.inputDataReactor import *
 # solvers
 from PyREMOT.solvers.solSetting import solverSetting
 from PyREMOT.solvers.solResultAnalysis import setOptimizeRootMethod
