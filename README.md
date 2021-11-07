@@ -163,10 +163,10 @@ then converted:
 feed properties:
 
 ```python
-   # mole-fraction [-]
-   MoFri0 = [0.499985, 0.2499925, 1e-05, 0.2499925, 1e-05, 1e-05]
-   # molar-flowrate [mol/s]
-   MoFlRa0 = 0.26223
+   # species-concentration [mol/m^3]
+   SpCoi = [574.8978, 287.4489, 1.15e-02, 287.4489, 1.15e-02, 1.15e-02]
+   # flowrate @ P & T [m^3/s]
+   VoFlRa = 0.000228
    # pressure [Pa]
    P = 5000000
    # temperature [K]
