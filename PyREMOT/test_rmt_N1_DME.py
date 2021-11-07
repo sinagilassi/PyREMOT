@@ -2,15 +2,17 @@
 # STATIC MODELING
 # ----------------
 
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from core.utilities import roundNum
-from rmt import rmtExe
-from core import constants as CONST
-from data import *
+# external
 import json
 import math
 import numpy as np
-
+# internal
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.core import roundNum
+from PyREMOT.core import constants as CONST
+from PyREMOT.data import *
+# main
+from PyREMOT import rmtExe
 
 # REVIEW
 # check unit
@@ -234,7 +236,7 @@ HeTrCo0 = 1731
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N1",
+    "model": "N2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,

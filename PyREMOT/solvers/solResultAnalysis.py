@@ -5,9 +5,9 @@
 import numpy as np
 # internal
 from PyREMOT.library import plotClass as pltc
-from PyREMOT.core import roundNum, selectFromListByIndex, selectRandomForList
+from PyREMOT.core.utilities import roundNum, selectFromListByIndex, selectRandomForList
 from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
-from PyREMOT.docs import MODEL_SETTING, PROCESS_SETTING
+from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
 
 
 def setOptimizeRootMethod(y, params1, params2, param3=0):

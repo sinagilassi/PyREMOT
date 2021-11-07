@@ -9,7 +9,11 @@
       "type": "python",
       "request": "launch",
       "program": "${file}",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${cwd}"
+      }
     },
     {
       "name": "Static Modeling [M1]",

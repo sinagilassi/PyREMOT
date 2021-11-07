@@ -6,8 +6,8 @@
 import time
 import timeit
 # local modules
-from PyREMOT.docs import rmtCoreClass
-from PyREMOT.docs import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtCore import rmtCoreClass
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 from PyREMOT.data import componentSymbolList
 
 
