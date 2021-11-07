@@ -2,9 +2,10 @@
 
 # import package/module
 import numpy as np
-import core.constants as CONST
-from core.utilities import roundNum
-from core.config import MOLE_FRACTION_ACCURACY, CONCENTRATION_ACCURACY
+# internals
+import PyREMOT.core as CONST
+from PyREMOT.core import roundNum
+from PyREMOT.core import MOLE_FRACTION_ACCURACY, CONCENTRATION_ACCURACY
 
 
 def setFeedMoleFraction(H2COxRatio, CO2COxRatio):

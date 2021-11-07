@@ -2,7 +2,7 @@
 # -----------------------
 
 # import package/module
-import numpy as np
+# import numpy as np
 
 
 # # universal gas constant [J/mol.K]

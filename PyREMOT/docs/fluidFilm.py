@@ -4,7 +4,8 @@
 # import packages/modules
 from math import sqrt
 import numpy as np
-from core.eqConstants import CONST_EQ_Sh
+# internals
+from PyREMOT.core import CONST_EQ_Sh
 
 
 def main():

@@ -1,8 +1,8 @@
 # initialize modeling
 
 # import package/module
-import data
-from .rmtUtility import *
+# import data
+# from .rmtUtility import *
 
 
 # # temperature [K]

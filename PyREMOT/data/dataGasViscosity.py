@@ -141,6 +141,5 @@ GasViscosityData = [
 ]
 
 # viscosity equation list
-viscosityList = tuple([
-    {"symbol": item['symbol'], "eqParams": item['eqParams'], "eqExpr": item['eqExpr'], "unit": item['unit']} for item in GasViscosityData
-])
+viscosityList = tuple([{"symbol": item['symbol'], "eqParams": item['eqParams'],
+                      "eqExpr": item['eqExpr'], "unit": item['unit']} for item in GasViscosityData])

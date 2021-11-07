@@ -2,19 +2,21 @@
 # ----------------------------
 
 # import packages/modules
-from data.inputDataReactor import *
-from core.setting import modelTypes, M1, M2, M3, M4, M5, M6, M7, M8, M9
-# from docs.pbReactor import runM1
-from docs.cReactor import conventionalReactorClass as cRec
-from docs.pbReactor import PackedBedReactorClass as pbRec
-from docs.batchReactor import batchReactorClass as bRec
-from docs.pfReactor import PlugFlowReactorClass as pfRec
-from docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
-from docs.pbHomoReactor import PackedBedHomoReactorClass as pbHomoRec
-from data.componentData import componentDataStore
-from examples.particleModels import ParticleModelClass as pMod
-from examples.homoModels import HomoModelClass as hMod
-from .rmtUtility import rmtUtilityClass as rmtUtil
+# internal
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.cReactor import conventionalReactorClass as cRec
+from PyREMOT.docs.pbReactor import PackedBedReactorClass as pbRec
+from PyREMOT.docs.batchReactor import batchReactorClass as bRec
+from PyREMOT.docs.pfReactor import PlugFlowReactorClass as pfRec
+from PyREMOT.docs.pbHeterReactor import PackedBedHeteroReactorClass as pbHeterRec
+from PyREMOT.docs.pbHomoReactor import PackedBedHomoReactorClass as pbHomoRec
+# data
+from PyREMOT.data import *
+# core
+from PyREMOT.core import modelTypes, M1, M2, M3, M4, M5, M6, M7, M8, M9
+# example
+from PyREMOT.examples import ParticleModelClass as pMod
+from PyREMOT.examples import HomoModelClass as hMod
 
 
 class rmtCoreClass():
@@ -84,6 +86,7 @@ class rmtCoreClass():
 
         # select model type
         modelMode = self.modelMode
+        # select
         if modelMode == modelTypes['M0']['id']:
             return self.M0Init(_internalDataSet, _reactionListSortedSet, _reactionStochCoeffListSet)
         elif modelMode == modelTypes['M1']['id']:

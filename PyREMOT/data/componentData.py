@@ -5,7 +5,7 @@
 # import numpy as np
 
 # molecular weight [g/mol]
-from core.eqConstants import CONST_EQ_GAS_VISCOSITY
+from PyREMOT.core.eqConstants import CONST_EQ_GAS_VISCOSITY
 
 
 MW_H2 = 2.0
@@ -388,7 +388,7 @@ componentDataStore = {
 }
 
 # database
-componentData = componentDataStore['payload']
+componentDataSource = componentDataStore['payload']
 
 
 def retriveData(mode):
@@ -397,23 +397,22 @@ def retriveData(mode):
 
 # component symbol
 componentSymbolList = tuple([
-    item['symbol'] for item in componentData])
+    item['symbol'] for item in componentDataSource])
 
 # heat capacity at constant pressure [kJ/kmol.K]
 heatCapacityAtConstatPresureList = tuple([
-    {"symbol": item['symbol'], "Cp": item['Cp']['expr'], "unit": item['Cp']['unit']} for item in componentData])
+    {"symbol": item['symbol'], "Cp": item['Cp']['expr'], "unit": item['Cp']['unit']} for item in componentDataSource])
 
 # heat of formation [kJ/mol]
 standardHeatOfFormationList = tuple([
-    {"symbol": item['symbol'], "dHf25": item['dHf25']['val'], "unit": item['dHf25']['unit']} for item in componentData])
+    {"symbol": item['symbol'], "dHf25": item['dHf25']['val'], "unit": item['dHf25']['unit']} for item in componentDataSource])
 # print(standardHeatOfFormationList)
 
 # standard Gibbs free energy of formation [kJ/mol]
 standardGibbsFreeEnergyOfFormationList = tuple([
-    {"symbol": item['symbol'], "dGf25": item['dGf25']['val'], "unit": item['dGf25']['unit']} for item in componentData])
+    {"symbol": item['symbol'], "dGf25": item['dGf25']['val'], "unit": item['dGf25']['unit']} for item in componentDataSource])
 # print(standardGibbsFreeEnergyOfFormationList)
 
 # viscosity equation list
-viscosityEqList = tuple([
-    {"symbol": item['symbol'], "id": item['viscosity']['id'], "unit": item['viscosity']['unit']} for item in componentData
-])
+viscosityEqList = tuple([{"symbol": item['symbol'], "id": item['viscosity']
+                        ['id'], "unit": item['viscosity']['unit']} for item in componentDataSource])
