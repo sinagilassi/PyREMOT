@@ -6,13 +6,15 @@ from math import sqrt
 import numpy as np
 import re
 # internals
-from core.constants import Tref, R_CONST
-from data.componentData import viscosityEqList
-from data.dataGasViscosity import viscosityList
-from core.utilities import roundNum
-from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY, CONST_EQ_GAS_VISCOSITY
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from data.dataGasViscosity import viscosityList
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+# core
+from PyREMOT.core import Tref, R_CONST
+from PyREMOT.core import roundNum
+from PyREMOT.core import CONST_EQ_GAS_DIFFUSIVITY, CONST_EQ_GAS_VISCOSITY
+# data
+from PyREMOT.data import viscosityEqList
+from PyREMOT.data import viscosityList
+from PyREMOT.data import viscosityList
 
 
 def main():

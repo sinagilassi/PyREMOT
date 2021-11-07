@@ -3,7 +3,7 @@
 
 # import packages/modules
 import numpy as np
-from .config import ROUND_FUN_ACCURACY
+from PyREMOT.core.config import ROUND_FUN_ACCURACY
 
 
 def roundNum(value, ACCURACY=ROUND_FUN_ACCURACY):

@@ -4,7 +4,7 @@
 # import packages/modules
 import math as MATH
 import numpy as np
-from library.plot import plotClass as pltc
+from PyREMOT.library import plotClass as pltc
 
 
 class batchReactorClass:

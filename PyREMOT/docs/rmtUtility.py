@@ -6,10 +6,8 @@
 import numpy as np
 import re
 from typing import List
-from core import constants as CONST
-# add err class
-
-#
+# internals
+from PyREMOT.core import constants as CONST
 
 
 class rmtUtilityClass:

@@ -4,7 +4,8 @@
 # import module/packages
 import numpy as np
 import matplotlib.pyplot as plt
-from solvers.solSetting import DIFF_SETTING
+# internals
+from PyREMOT.solvers.solSetting import DIFF_SETTING
 
 
 def FiDiBuildCMatrix(compNo, DoLe, rNo, yi, params, mode="default"):

@@ -3,9 +3,9 @@
 
 # import packages/modules
 import types
-import math
-from core import constants as CONST
 import numpy as np
+# internals
+from PyREMOT.core import constants as CONST
 
 
 def reactionRateExe(loopVars, varDict, rateDict):

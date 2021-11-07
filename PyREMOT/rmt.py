@@ -2,11 +2,13 @@
 # ---------------------------------
 
 # import packages/modules
+# external
 import time
 import timeit
-from PyREMOT.docs.rmtCore import rmtCoreClass
-from PyREMOT.data.componentData import componentSymbolList
-from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+# local modules
+from PyREMOT.docs import rmtCoreClass
+from PyREMOT.docs import rmtUtilityClass as rmtUtil
+from PyREMOT.data import componentSymbolList
 
 
 def main():
@@ -83,7 +85,6 @@ def rmtCom():
     display components available in the current version 
     '''
     try:
-        # print(componentSymbolList)
         # name list
         compListName = ','
         return compListName.join(componentSymbolList)

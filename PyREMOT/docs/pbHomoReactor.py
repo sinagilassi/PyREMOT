@@ -11,23 +11,26 @@ from timeit import default_timer as timer
 from scipy.optimize import fsolve
 from scipy import optimize
 # internal
-from .modelSetting import MODEL_SETTING, PROCESS_SETTING
-from .rmtUtility import rmtUtilityClass as rmtUtil
-from .rmtThermo import *
-from .fluidFilm import *
-from .rmtReaction import reactionRateExe, componentFormationRate
-from .gasTransPor import calGasViscosity, calMixturePropertyM1
-from PyREMOT.core.errors import errGeneralClass as errGeneral
-from PyREMOT.core.setting import modelTypes
-from PyREMOT.data.inputDataReactor import *
+from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.docs.rmtThermo import *
+from PyREMOT.docs.fluidFilm import *
+from PyREMOT.docs.rmtReaction import reactionRateExe, componentFormationRate
+from PyREMOT.docs.gasTransPor import calGasViscosity, calMixturePropertyM1
+# data
+from PyREMOT.data import *
+# core
+from PyREMOT.core import errGeneralClass as errGeneral
+from PyREMOT.core import modelTypes
 from PyREMOT.core import constants as CONST
-from PyREMOT.core.utilities import roundNum, selectFromListByIndex
-from PyREMOT.core.config import REACTION_RATE_ACCURACY
-from PyREMOT.solvers.solSetting import solverSetting
-from PyREMOT.core.eqConstants import CONST_EQ_Sh
-from PyREMOT.solvers.odeSolver import AdBash3, PreCorr3
-from PyREMOT.solvers.solResultAnalysis import sortResult4, sortResult5, plotResultsSteadyState, plotResultsDynamic
-from PyREMOT.solvers.solProgress import printProgressBar
+from PyREMOT.core import roundNum, selectFromListByIndex
+from PyREMOT.core import REACTION_RATE_ACCURACY
+from PyREMOT.core import CONST_EQ_Sh
+# solver
+from PyREMOT.solvers import solverSetting
+from PyREMOT.solvers import AdBash3, PreCorr3
+from PyREMOT.solvers import sortResult4, sortResult5, plotResultsSteadyState, plotResultsDynamic
+from PyREMOT.solvers import printProgressBar
 
 
 class PackedBedHomoReactorClass:

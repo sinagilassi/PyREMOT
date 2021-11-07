@@ -5,10 +5,8 @@
 import numpy as np
 import re
 # internals
-from core.constants import Tref, R_CONST
-from data.componentData import heatCapacityAtConstatPresureList, standardHeatOfFormationList
-from core.utilities import roundNum
-# from .rmtUtility import
+from PyREMOT.core import Tref, R_CONST
+from PyREMOT.data import heatCapacityAtConstatPresureList, standardHeatOfFormationList
 
 
 def main():
