@@ -18,3 +18,9 @@ CONST_EQ_Sh = {
     "Rosner": 2,
     "Garner-and-Keey": 3
 }
+
+# thermal conductivity
+CONST_EQ_GAS_THERMAL_CONDUCTIVITY = {
+    "eq1": 1,
+    "eq2": 2
+}

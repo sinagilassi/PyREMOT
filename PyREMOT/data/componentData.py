@@ -5,7 +5,7 @@
 # import numpy as np
 
 # molecular weight [g/mol]
-from PyREMOT.core.eqConstants import CONST_EQ_GAS_VISCOSITY
+from PyREMOT.core.eqConstants import CONST_EQ_GAS_VISCOSITY, CONST_EQ_GAS_THERMAL_CONDUCTIVITY
 
 
 MW_H2 = 2.0
@@ -129,6 +129,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -152,6 +155,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -175,6 +181,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -198,6 +207,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -221,6 +233,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -244,6 +259,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq2"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -267,6 +285,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -290,6 +311,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -313,6 +337,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -336,6 +363,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -359,6 +389,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
         {
@@ -382,6 +415,9 @@ componentDataStore = {
             "viscosity": {
                 "id": CONST_EQ_GAS_VISCOSITY["eq1"],
                 "unit": "Pa.s"
+            },
+            "thermal-conductivity": {
+                "id": CONST_EQ_GAS_THERMAL_CONDUCTIVITY["eq1"],
             }
         },
     ]
@@ -416,3 +452,7 @@ standardGibbsFreeEnergyOfFormationList = tuple([
 # viscosity equation list
 viscosityEqList = tuple([{"symbol": item['symbol'], "id": item['viscosity']
                         ['id'], "unit": item['viscosity']['unit']} for item in componentDataSource])
+
+# thermal conductivity list
+thermalConductivityEqList = tuple([{"symbol": item['symbol'], "id": item['thermal-conductivity']
+                                    ['id']} for item in componentDataSource])

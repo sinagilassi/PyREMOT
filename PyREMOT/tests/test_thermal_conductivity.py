@@ -1,7 +1,7 @@
-# CALCULATE GAS DIFFUSIVITY
-# ---------------------------
+# CALCULATE GAS THERMAL CONDUCTIVITY
+# ------------------------------------
 
-# import module/package
+# import modules/packages
 # externals
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,14 +11,14 @@ from PyREMOT.library.saveResult import saveResultClass as sRes
 from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 from PyREMOT.core.utilities import *
 from PyREMOT.docs.rmtThermo import *
-# transport properties
 from PyREMOT.core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
-from PyREMOT.docs.gasTransPor import calGasDiffusivity
-# component data
-from PyREMOT.data.componentData import componentDataStore
+from PyREMOT.docs.gasTransPor import calGasThermalConductivity, calGasViscosity, calMixturePropertyM1
+from PyREMOT.data.componentData import componentDataStore, viscosityEqList
 
 # component list
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
+# component number
+compNo = len(compList)
 
 # app data
 appData = componentDataStore['payload']
@@ -38,11 +38,10 @@ for i in compDataIndex:
     compData.append(appData[i])
 
 # mole fraction
-MoFri = [0.50,	0.25,	0.0001,
-         0.25	, 0.0001,	0.0001]
+MoFri = [0.50, 0.25, 0.0001, 0.25, 0.0001, 0.0001]
 
 # temperature [K]
-T = 523
+T = 271.15
 # pressure [Pa]
 P = 3500000
 
@@ -53,22 +52,10 @@ Tci = rmtUtil.extractCompData(compData, "Tc")
 # critical pressure [Pa]
 Pci = rmtUtil.extractCompData(compData, "Pc")
 
-# prepare data
-paramsData = {
-    "MoFri": MoFri,
-    "T": T,
-    "P": P,
-    "MWi": MWi,
-    "CrTei": Tci,
-    "CrPri": Pci
-}
-
-# diffusivity coefficient of components in the mixture
-res = calGasDiffusivity(
-    CONST_EQ_GAS_DIFFUSIVITY['Chapman-Enskog'], compList, paramsData)
+# thermal conductivity of components in the mixture
+TheConi = calGasThermalConductivity(compList, T)
 # log
-print("Dij: ", res)
-
-# save modeling result
-# with open('test3.txt', 'a') as f:
-#     f.write(str(res))
+print("TheConi: ", TheConi)
+# mixture
+TheConMix = calMixturePropertyM1(compNo, TheConi, MoFri, MWi)
+print("TheConMix: ", TheConMix)

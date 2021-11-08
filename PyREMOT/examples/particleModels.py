@@ -17,6 +17,7 @@ from PyREMOT.library.plot import plotClass as pltc
 # core
 from PyREMOT.core import constants as CONST
 from PyREMOT.core.utilities import roundNum, selectFromListByIndex, selectRandomList
+from PyREMOT.core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
 # solvers
 from PyREMOT.solvers.solSetting import solverSetting
 from PyREMOT.solvers.solResultAnalysis import sortResult2
@@ -32,6 +33,9 @@ from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 from PyREMOT.docs.rmtThermo import *
 from PyREMOT.docs.modelSetting import MODEL_SETTING, PROCESS_SETTING
 from PyREMOT.docs.gasTransPor import calTest
+from PyREMOT.docs.gasTransPor import calGasDiffusivity
+from PyREMOT.docs.gasTransPor import calGasViscosity, calMixturePropertyM1
+from PyREMOT.docs.gasTransPor import calGasThermalConductivity
 
 
 class ParticleModelClass:
@@ -1161,45 +1165,70 @@ class ParticleModelClass:
         # bed void fraction - porosity
         BeVoFr = ReSpec['BeVoFr']
 
+        # FIXME
+        # concentration kmol/m^3.s
         ## inlet values ##
         # inlet volumetric flowrate at T,P [m^3/s]
         VoFlRa0 = self.modelInput['feed']['volumetric-flowrate']
-        # inlet species concentration [kmol/m^3]
+        # inlet species concentration [mol/m^3]
         SpCoi0 = np.array(self.modelInput['feed']['concentration'])
-        # inlet total concentration [kmol/m^3]
+        # inlet total concentration [mol/m^3]
         SpCo0 = np.sum(SpCoi0)
+
+        # mole fraction in the gas phase
+        MoFri0 = np.array(rmtUtil.moleFractionFromConcentrationSpecies(SpCoi0))
+
         # inlet superficial velocity [m/s]
-        SuGaVe0 = self.modelInput['feed']['superficial-velocity']
+        SuGaVe0 = VoFlRa0/CrSeAr
         # reaction rate expression
         reactionRateExpr = self.modelInput['reaction-rates']
 
         # component molecular weight [g/mol]
         MoWei = rmtUtil.extractCompData(self.internalData, "MW")
+        # critical temperature [K]
+        Tci = rmtUtil.extractCompData(self.internalData, "Tc")
+        # critical pressure [Pa]
+        Pci = rmtUtil.extractCompData(self.internalData, "Pc")
 
         # external heat
         ExHe = self.modelInput['external-heat']
+        # cooling temperature [K]
+        Tm = ExHe['MeTe']
+        # overall heat transfer coefficient [J/s.m2.K]
+        U = ExHe['OvHeTrCo']
+        # heat transfer area over volume [m^2/m^3]
+        a = 4/ReInDi
 
         # diffusivity coefficient - gas phase [m^2/s]
-        GaDii0 = self.modelInput['feed']['diffusivity']
+        GaDii0_paramsData = {
+            "MoFri": MoFri0,
+            "T": T,
+            "P": P,
+            "MWi": MoWei,
+            "CrTei": Tci,
+            "CrPri": Pci
+        }
+        # diffusivity coefficient of components in the mixture
+        GaDii0 = calGasDiffusivity(
+            CONST_EQ_GAS_DIFFUSIVITY['Chapman-Enskog'], compList, GaDii0_paramsData)
+
         # gas viscosity [Pa.s]
-        GaVii0 = self.modelInput['feed']['viscosity']
+        GaVii0 = calGasViscosity(compList, T)
         # gas mixture viscosity [Pa.s]
-        GaViMix0 = self.modelInput['feed']['mixture-viscosity']
+        GaMiVi = calMixturePropertyM1(compNo, GaVii0, MoFri0, MoWei)
 
         # thermal conductivity - gas phase [J/s.m.K]
-        GaThCoi0 = self.modelInput['feed']['thermal-conductivity']
+        GaThCoi0 = calGasThermalConductivity(compList, T)
         # mixture thermal conductivity - gas phase [J/s.m.K]
-        GaThCoMix0 = self.modelInput['feed']['mixture-thermal-conductivity']
+        GaThCoMix0 = calMixturePropertyM1(compNo, GaThCoi0, MoFri0, MoWei)
 
         ### calculation ###
-        # mole fraction in the gas phase
-        MoFri0 = np.array(rmtUtil.moleFractionFromConcentrationSpecies(SpCoi0))
 
         # mixture molecular weight [kg/mol]
         MiMoWe0 = rmtUtil.mixtureMolecularWeight(MoFri0, MoWei, "kg/mol")
 
         # gas density [kg/m^3]
-        GaDe0 = calDensityIG(MiMoWe0, SpCo0*1000)
+        GaDe0 = calDensityIG(MiMoWe0, SpCo0)
 
         # heat capacity at constant pressure of mixture Cp [kJ/kmol.K] | [J/mol.K]
         # Cp mean list
@@ -1299,12 +1328,11 @@ class ParticleModelClass:
         BUp2D = np.zeros(BMatrixShape)
         BLower2D = np.zeros(BMatrixShape)
         # initialize IV2D
-        # -> concentration [kmol/m^3]
+        # -> concentration [mol/m^3] -> [-]
         for m in range(compNo):
             for i in range(rNo):
                 # FIXME
                 # solid phase
-                # SpCoi0[m]/np.max(SpCoi0)
                 IV2D[m][i] = SpCoi0[m]/np.max(SpCoi0)
                 # set bounds
                 BUp2D[m][i] = 1
@@ -1352,13 +1380,17 @@ class ParticleModelClass:
                 "CrSeAr": CrSeAr,
                 "MoWei": MoWei,
                 "StHeRe25": StHeRe25,
-                "GaMiVi": GaViMix0,
+                "GaMiVi": GaMiVi,
                 "varNo": varNo,
                 "varNoT": varNoT,
                 "reactionListNo": reactionListNo,
             },
             "ReSpec": ReSpec,
-            "ExHe": ExHe,
+            "ExHe": {
+                "OvHeTrCo": U,
+                "EfHeTrAr": a,
+                "MeTe": Tm
+            },
             "constBC1": {
                 "VoFlRa0": VoFlRa0,
                 "SpCoi0": SpCoi0,
@@ -1396,7 +1428,7 @@ class ParticleModelClass:
 
         # NOTE
         ### dimensionless analysis ###
-        # concentration [kmol/m^3]
+        # concentration [mol/m^3]
         Cif = np.copy(SpCoi0)
         # total concentration
         Cf = SpCo0
@@ -1416,10 +1448,10 @@ class ParticleModelClass:
         rf = PaDi/2
 
         # solid phase
-        # mass convective term - (list) [kmol/m^3.s]
+        # mass convective term - (list) [mol/m^3.s]
         _Cif = Cif if MODEL_SETTING['GaMaCoTe0'] != "MAX" else np.repeat(
             np.max(Cif), compNo)
-        # mass diffusive term - (list)  [kmol/m^3.s]
+        # mass diffusive term - (list)  [mol/m^3.s]
         SoMaDiTe0 = (Dif*_Cif)/rf**2
         # heat diffusive term [kJ/m^3.s]
         SoHeDiTe0 = (GaThCoMix0*Tf/rf**2)*1e-3

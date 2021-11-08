@@ -14,7 +14,8 @@ from PyREMOT.core import CONST_EQ_GAS_DIFFUSIVITY, CONST_EQ_GAS_VISCOSITY
 # data
 from PyREMOT.data import viscosityEqList
 from PyREMOT.data import viscosityList
-from PyREMOT.data import viscosityList
+from PyREMOT.data.dataGasThermalConductivity import TherConductivityList
+from PyREMOT.data.componentData import thermalConductivityEqList
 
 
 def main():
@@ -222,6 +223,9 @@ def calGasViscosity(comList, T):
         print(e)
 
 
+# NOTE
+### mixture property ###
+
 def calMixturePropertyM1(compNo, Xi, MoFri, MWi):
     '''
     calculate mixture property M1
@@ -268,6 +272,90 @@ def calMixturePropertyM1(compNo, Xi, MoFri, MWi):
         return mixPropVal
     except Exception as e:
         print(e)
+
+
+# NOTE
+### thermal conductivity ###
+
+def calGasThermalConductivity(comList, T):
+    """
+        cal: gas thermal conductivity at low pressure 
+        unit: [W/m.K]
+
+        args:
+            comList: component name list
+            T: temperature [K]
+    """
+    # try/except
+    try:
+        # thermal conductivity list
+        _ThCoi = []
+
+        # load data
+        loadEqData = thermalConductivityEqList
+        loadData = TherConductivityList
+
+        for i in comList:
+            # get id
+            eqIdData = [item['id']
+                        for item in loadEqData if i == item['symbol']]
+            # get eq parameters
+            eqData = [{"eqParams": item['eqParams'], "eqExpr": item['eqExpr']}
+                      for item in loadData if i == item['symbol']]
+            # check
+            _eqLen = len(eqIdData) + len(eqData)
+            if _eqLen > 0:
+                _eqIdSet = eqIdData[0]
+                _eqData = eqData[0]
+                if _eqIdSet == 1:
+                    _eqParams = _eqData.get('eqParams')
+                    _res = calGasTherCondEq1(_eqParams, T)
+                    _ThCoi.append(_res)
+                elif _eqIdSet == 2:
+                    _eqExpr = _eqData.get('eqExpr')
+                    # build fun
+                    _res = calGasVisEq2(_eqExpr, T)
+                    _ThCoi.append(_res)
+                else:
+                    print('viscosity data not found, update app database!')
+                    raise
+            else:
+                print("component not found, update the app database!")
+                raise
+
+        # convert to numpy array
+        ThCoi = np.array(_ThCoi)
+
+        # res
+        return ThCoi
+    except Exception as e:
+        print(e)
+
+
+def calGasTherCondEq1(params, T):
+    """ 
+    gas thermal conductivity equation 1 - W/m.K
+    args:
+        params: 
+            equation parameters list [C1, C2, C3, C4]
+        T: temperature [K]
+    """
+    # try/except
+    try:
+        C1 = params[0]
+        C2 = params[1]
+        C3 = params[2]
+        C4 = params[3]
+        _var1 = C1*(T**C2)
+        _var2 = 1 + (C3/T) + C4/(T**2)
+        _res = _var1/_var2
+        return _res
+    except Exception as e:
+        raise
+
+
+def calGasTherCondEq2(eqExpr, T):
+    pass
 
 
 def calTest():
