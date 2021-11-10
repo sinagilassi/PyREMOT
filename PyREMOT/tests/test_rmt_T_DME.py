@@ -98,10 +98,19 @@ ReInDi = rea_D
 PaDi = cat_d
 # particle density [kg/m^3]
 CaDe = cat_rho
-# particle specific heat capacity [kJ/kg.K]
-CaSpHeCa = cat_Cp/1000
+# FIXME
+# particle specific heat capacity [J/kg.K]
+CaSpHeCa = cat_Cp
 # catalyst bed dencity  [kg/m^3]
 CaBeDe = bulk_rho
+# catalyst porosity
+CaPo = 0.87
+# bed void fraction
+BeVoFr = 0.45
+# catalyst tortuosity
+CaTo = 2
+# catalyst thermal conductivity [J/K.m.s]
+CaThCo = 960
 
 # NOTE
 # external heat
@@ -236,7 +245,7 @@ HeTrCo0 = 1731
 # NOTE
 # model input - feed
 modelInput = {
-    "model": "N2",
+    "model": "T2",
     "operating-conditions": {
         "pressure": P,
         "temperature": T,
@@ -257,21 +266,18 @@ modelInput = {
         "ReInDi": ReInDi,
         "ReLe": ReLe,
         "PaDi": PaDi,
-        "BeVoFr": bed_por,
+        "BeVoFr": BeVoFr,
         "CaBeDe": bulk_rho,
+        "CaPo": CaPo,
+        "CaTo": CaTo,
         "CaDe": CaDe,
-        "CaSpHeCa": CaSpHeCa
+        "CaSpHeCa": CaSpHeCa,
+        "CaThCo": CaThCo
     },
     "solver-config": {
-        "ivp": "default",
+        "root": "default",
         "display-result": "True",
-        "numerical-method": "fem"
-    },
-    "particle": {
-        "Cbi": GaSpCoi,
-        "Tb": T,
-        "MaTrCo0": MaTrCo0,
-        "HeTrCo0": HeTrCo0
+        "numerical-method": "fdm"
     }
 }
 
