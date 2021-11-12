@@ -12,7 +12,7 @@ You can also run your modeling on Google Colaboratory.
 
 2- [Dynamic pseudo-homogeneous model](https://colab.research.google.com/drive/1UN5nhSigfIZ95gYHU5hThCagL2iXcpdk?usp=sharing)
 
-## Installation
+## Getting started
 
 You can install this package
 
