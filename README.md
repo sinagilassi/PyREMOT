@@ -1,6 +1,6 @@
 # Python Reactor Modeling Tools
 
-![PyPI - License](https://img.shields.io/pypi/l/PyREMOT) [![Downloads](https://pepy.tech/badge/pyremot)](https://pepy.tech/project/pyremot)
+![PyPI - License](https://img.shields.io/pypi/l/PyREMOT) ![PyPI - Downloads](https://img.shields.io/pypi/dm/PyREMOT)
 
 Python Reactor Modeling Tools (PyREMOT) is an open-source package which can be used for process simulation, optimization, and parameter estimation. The current version consists of homogeneous models for steady-state and dynamic conditions.
 
