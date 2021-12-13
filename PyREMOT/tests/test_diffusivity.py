@@ -1,16 +1,21 @@
-# heat of reaction
+# CALCULATE GAS DIFFUSIVITY
+# ---------------------------
+
+# import module/package
+# externals
 import numpy as np
-from library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
-from library.saveResult import saveResultClass as sRes
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from core.utilities import *
-from docs.rmtThermo import *
+# internals
+from PyREMOT.library.plot import plotClass as pltc
+from PyREMOT.library.saveResult import saveResultClass as sRes
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.core.utilities import *
+from PyREMOT.docs.rmtThermo import *
 # transport properties
-from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
-from docs.gasTransPor import calGasDiffusivity
+from PyREMOT.core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
+from PyREMOT.docs.gasTransPor import calGasDiffusivity
 # component data
-from data.componentData import componentDataStore
+from PyREMOT.data.componentData import componentDataStore
 
 # component list
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -33,8 +38,7 @@ for i in compDataIndex:
     compData.append(appData[i])
 
 # mole fraction
-MoFri = [0.50,	0.25,	0.0001,
-         0.25	, 0.0001,	0.0001]
+MoFri = [0.50, 0.25, 0.0001, 0.25, 0.0001, 0.0001]
 
 # temperature [K]
 T = 523
@@ -65,5 +69,5 @@ res = calGasDiffusivity(
 print("Dij: ", res)
 
 # save modeling result
-with open('test3.txt', 'a') as f:
-    f.write(str(res))
+# with open('test3.txt', 'a') as f:
+#     f.write(str(res))

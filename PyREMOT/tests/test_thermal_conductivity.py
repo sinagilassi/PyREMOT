@@ -1,15 +1,18 @@
-# heat of reaction
+# CALCULATE GAS THERMAL CONDUCTIVITY
+# ------------------------------------
+
+# import modules/packages
+# externals
 import numpy as np
-from PyREMOT.library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
+# internals
+from PyREMOT.library.plot import plotClass as pltc
 from PyREMOT.library.saveResult import saveResultClass as sRes
 from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
 from PyREMOT.core.utilities import *
 from PyREMOT.docs.rmtThermo import *
-# transport properties
 from PyREMOT.core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
-from PyREMOT.docs.gasTransPor import calGasViscosity, calMixturePropertyM1
-# component data
+from PyREMOT.docs.gasTransPor import calGasThermalConductivity, calGasViscosity, calMixturePropertyM1
 from PyREMOT.data.componentData import componentDataStore, viscosityEqList
 
 # component list
@@ -49,10 +52,10 @@ Tci = rmtUtil.extractCompData(compData, "Tc")
 # critical pressure [Pa]
 Pci = rmtUtil.extractCompData(compData, "Pc")
 
-# viscosity of components in the mixture
-Vii = calGasViscosity(compList, T)
+# thermal conductivity of components in the mixture
+TheConi = calGasThermalConductivity(compList, T)
 # log
-print("GaVii: ", Vii)
-# viscosity mixture
-ViiMix = calMixturePropertyM1(compNo, Vii, MoFri, MWi)
-print("GaVii Mix: ", ViiMix)
+print("TheConi: ", TheConi)
+# mixture
+TheConMix = calMixturePropertyM1(compNo, TheConi, MoFri, MWi)
+print("TheConMix: ", TheConMix)
