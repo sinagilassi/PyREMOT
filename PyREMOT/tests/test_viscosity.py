@@ -1,16 +1,16 @@
 # heat of reaction
 import numpy as np
-from library.plot import plotClass as pltc
+from PyREMOT.library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
-from library.saveResult import saveResultClass as sRes
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from core.utilities import *
-from docs.rmtThermo import *
+from PyREMOT.library.saveResult import saveResultClass as sRes
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.core.utilities import *
+from PyREMOT.docs.rmtThermo import *
 # transport properties
-from core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
-from docs.gasTransPor import calGasViscosity, calMixturePropertyM1
+from PyREMOT.core.eqConstants import CONST_EQ_GAS_DIFFUSIVITY
+from PyREMOT.docs.gasTransPor import calGasViscosity, calMixturePropertyM1
 # component data
-from data.componentData import componentDataStore, viscosityEqList
+from PyREMOT.data.componentData import componentDataStore, viscosityEqList
 
 # component list
 compList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
@@ -35,10 +35,10 @@ for i in compDataIndex:
     compData.append(appData[i])
 
 # mole fraction
-MoFri = [0.50, 0.25, 0.0001, 0.25, 0.0001, 0.0001]
+MoFri = [0.4998, 0.2499, 0.0001, 0.2499, 0.0001, 0.0001]
 
 # temperature [K]
-T = 350
+T = 523
 # pressure [Pa]
 P = 3500000
 

@@ -38,10 +38,10 @@ for i in compDataIndex:
     compData.append(appData[i])
 
 # mole fraction
-MoFri = [0.50, 0.25, 0.0001, 0.25, 0.0001, 0.0001]
+MoFri = [0.4998, 0.2499, 0.0001, 0.2499, 0.0001, 0.0001]
 
 # temperature [K]
-T = 271.15
+T = 523
 # pressure [Pa]
 P = 3500000
 

@@ -184,12 +184,13 @@ def calStandardEnthalpyOfReaction(reaExpr):
         # print(f"dHf25iReactantList {dHf25iReactantList}")
         # print(f"dHf25iProductList {dHf25iProductList}")
 
-        # standard heat of formation at 25 [kJ/kmol]
+        # standard heat of formation at 25 [kJ/mol]
         dHf25iProductListSum = np.sum(dHf25iProductList)
         dHf25iReactantListSum = np.sum(dHf25iReactantList)
         # print(f"dHf25iProductListSum {dHf25iProductListSum}")
         # print(f"dHf25iReactantListSum {dHf25iReactantListSum}")
 
+        # kj/mol => kJ/kmol
         dHf25 = (dHf25iProductListSum-dHf25iReactantListSum)*1000.00
         # res
         return dHf25

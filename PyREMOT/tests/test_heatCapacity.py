@@ -1,11 +1,12 @@
 # heat of reaction
 import numpy as np
-from library.plot import plotClass as pltc
 import matplotlib.pyplot as plt
-from library.saveResult import saveResultClass as sRes
-from docs.rmtUtility import rmtUtilityClass as rmtUtil
-from core.utilities import *
-from docs.rmtThermo import *
+# internals
+from PyREMOT.library.plot import plotClass as pltc
+from PyREMOT.library.saveResult import saveResultClass as sRes
+from PyREMOT.docs.rmtUtility import rmtUtilityClass as rmtUtil
+from PyREMOT.core.utilities import *
+from PyREMOT.docs.rmtThermo import *
 
 
 # component list
@@ -15,7 +16,7 @@ comList = ["H2", "CO2", "H2O", "CO", "CH3OH", "DME"]
 MoFri = [0.4998, 0.2499, 0.0001, 0.2499, 0.0001, 0.0001]
 
 # temperature [K]
-T = 900
+T = 523
 
 # reactions
 R1 = "CO2 + 3H2 <=> CH3OH + H2O"

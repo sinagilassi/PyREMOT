@@ -85,7 +85,7 @@ GasTherConductivityData = [
     },
     {
         "symbol": "C2H4",
-        "eqParams": [8.6806E-06, 1.4559, 299.72, -29, 403],
+        "eqParams": [8.6806E-06, 1.4559, 299.72, -29.403],
         "eqExpr": '',
         "unit": "W/m.K",
         "range": {
