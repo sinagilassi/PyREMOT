@@ -2,6 +2,8 @@
 
 ![PyPI - License](https://img.shields.io/pypi/l/PyREMOT) ![PyPI - Downloads](https://img.shields.io/pypi/dm/PyREMOT)
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1a1TUPt_9H-l77yfuBVv1CXoA3uI4j1Rt?usp=sharing) [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1UN5nhSigfIZ95gYHU5hThCagL2iXcpdk?usp=sharing)
+
 Python Reactor Modeling Tools (PyREMOT) is an open-source package which can be used for process simulation, optimization, and parameter estimation. The current version consists of homogeneous models for steady-state and dynamic conditions.
 
 You can visit [dashboard](https://pyremot.herokuapp.com/) to build model input and load examples!
